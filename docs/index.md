@@ -5,8 +5,8 @@ titleTemplate: false
 
 hero:
   name: Homelab Atlas
-  text: Your homelab, clearly mapped.
-  tagline: Build polished diagrams in a local-first editor, keep an editable project backup, and export clean images without accounts or telemetry.
+  text: Make a diagram of your homelab.
+  tagline: Add your machines and apps, pick the logos, and export a PNG or SVG. Atlas runs in Docker and saves the project in your browser.
   image:
     src: /atlas-mark.svg
     alt: Homelab Atlas mark with three stepped teal strokes
@@ -22,25 +22,27 @@ hero:
       link: https://github.com/aiden0rchad/homelab-atlas
 
 features:
-  - title: Model the useful details
-    details: Combine devices, hardware facts, grouped services, network nodes, VLAN labels, and logical relationships.
-  - title: Work locally
-    details: Projects autosave in your browser. The app has no accounts, backend project store, telemetry, AI calls, or network scanner.
-  - title: Export with intent
-    details: Keep editable JSON backups and produce self-contained SVG or high-resolution PNG diagrams for documentation and sharing.
+  - title: Add your gear
+    details: Add servers, network devices, hardware notes, service groups, VLAN labels, and connections.
+  - title: Run it at home
+    details: Atlas runs on your own machine. There are no accounts, telemetry, AI calls, or network scans.
+  - title: Save and share
+    details: Save JSON when you want an editable backup, or export an SVG or PNG when you want an image.
 ---
 
 ## See the editor
 
 ![Homelab Atlas editor showing a fictional sample project](./editor.png)
 
-<p class="shot-caption">Edit the inventory and settings beside a responsive preview. The bundled sample is fictional and safe to explore.</p>
+<p class="shot-caption">Add devices and services on the left, edit the details on the right, and see the diagram update in the middle.</p>
+
+I posted a diagram of my homelab on Reddit and someone asked how they could make one too. I wanted an app that made diagrams like it easy to build and update without depending on an LLM. That's where Homelab Atlas started.
 
 ## See the result
 
 ![Example Homelab Atlas diagram exported from the fictional sample](./example.png)
 
-<p class="shot-caption">The same automatic layout powers the live preview, SVG export, and PNG export.</p>
+<p class="shot-caption">The preview, SVG export, and PNG export all use the same automatic layout.</p>
 
 ## Start, shape, save, share
 
@@ -52,8 +54,8 @@ features:
   <div><strong>5 · Save</strong>Back up JSON; export SVG or PNG.</div>
 </div>
 
-Projects contain only what you enter. Start with [installation and safe deployment](/getting-started), then follow the [editor guide](/editor).
+Atlas only knows what you type into it. Start with [installation and safe deployment](/getting-started), then use the [editor guide](/editor) when you want more detail on the controls.
 
 <div class="support">
-If Homelab Atlas is useful, you can <a href="https://www.buymeacoffee.com/aiden0rchad" target="_blank" rel="noopener noreferrer">buy me a coffee</a> to support its continued development.
+If Homelab Atlas is useful to you, you can <a href="https://www.buymeacoffee.com/aiden0rchad" target="_blank" rel="noopener noreferrer">buy me a coffee</a>.
 </div>

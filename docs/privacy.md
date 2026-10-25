@@ -1,6 +1,6 @@
 # Privacy and deployment
 
-Homelab Atlas is local-first by design, but safe use still depends on where you run it and what you enter.
+Atlas runs on your own machine, but you still need to think about where you expose it and what you type into it.
 
 ## Data flow
 
@@ -12,25 +12,25 @@ The editor has:
 - no network scanner, credentials, or Docker socket access
 - a local bundled logo catalog
 
-The Python process serves static files. Project state stays in the browser's `localStorage`; JSON and image files are created only when you request a download.
+The Python process only serves the app files. Your project stays in the browser's `localStorage`. Atlas creates JSON or image files only when you choose to download them.
 
 ## Documentation is separate
 
-The GitHub Pages site contains documentation only. It does not host the editor and cannot load or edit your browser project. GitHub's hosting and access logs are governed by GitHub's own policies.
+This GitHub Pages site only hosts the documentation. It does not run the editor and cannot read or edit the project in your browser. GitHub handles its own hosting and access logs under its policies.
 
 ## Deployment boundary
 
-The app server is intended for loopback or a trusted LAN. It has no login screen, user roles, TLS termination, or authorization layer. Do not publish it directly to the internet. Never mount the Docker socket into it.
+Run the app on localhost or a LAN you trust. Atlas has no login screen, user roles, built-in TLS, or authorization layer. Do not put it directly on the public internet, and never mount the Docker socket into it.
 
-If you deliberately bind Compose to `0.0.0.0`, every client that can reach port 8080 can load the editor. Project data is still per-browser, but the unauthenticated application is exposed. Prefer loopback unless trusted-LAN access is necessary.
+If you bind Compose to `0.0.0.0`, anyone who can reach port 8080 can open the editor. Each browser still has its own project storage, but the app itself has no authentication. Keep the default localhost binding unless you need access from a trusted LAN.
 
 ## Content and sharing
 
-Homelab Atlas sees only the content you type or import. It does not discover omitted data and does not redact entered data. Before sharing JSON, SVG, PNG, or screenshots, inspect them for:
+Atlas only sees what you type or import. It does not scan for missing details, and it does not redact anything you entered. Before sharing JSON, SVG, PNG, or screenshots, check for:
 
 - addresses, hostnames, and private domains
 - device roles or hardware details
 - VLAN and relationship labels
 - service names that reveal sensitive capabilities
 
-Documentation screenshots use a generic fictional sample. Follow [sharing and backup](/sharing) for format-specific guidance.
+The documentation screenshots use a fictional sample. See [sharing and backup](/sharing) for details about each file format.

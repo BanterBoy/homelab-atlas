@@ -1,16 +1,16 @@
 # Changelog
 
-All notable changes to Homelab Atlas are documented here.
+This file lists the notable changes in each Homelab Atlas release.
 
 ## [0.1.0] - 2026-10-25
 
 ### Added
 
-- Local-first visual editor for devices, hardware facts, grouped services, network nodes, VLAN chips, and logical connections.
-- Automatic responsive layouts with three diagram themes, density controls, and one to four columns.
-- Browser autosave with concurrent-tab conflict handling and validated JSON import/export.
-- Self-contained SVG and bounded high-resolution PNG export using bundled local logos.
-- Source-based Docker Compose deployment, portable Python/static release archive, and multi-architecture GHCR image packaging.
-- Public VitePress documentation covering installation, editing, backup, privacy, troubleshooting, development, and project format.
+- Editor for devices, hardware notes, grouped services, network nodes, VLAN chips, and connections.
+- Automatic layouts with three diagram themes, two spacing options, and one to four columns.
+- Browser autosave, multi-tab conflict handling, and checked JSON import/export.
+- SVG and high-resolution PNG export with included local logos.
+- Docker Compose deployment, a portable Python/static ZIP, and Linux AMD64 and ARM64 images on GHCR.
+- Documentation for setup, editing, backups, privacy, troubleshooting, development, and the project format.
 
 [0.1.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.1.0

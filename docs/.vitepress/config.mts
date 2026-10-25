@@ -4,7 +4,7 @@ export default defineConfig({
   lang: 'en-US',
   title: 'Homelab Atlas Docs',
   titleTemplate: ':title | Homelab Atlas Docs',
-  description: 'Build, save, and share clear homelab diagrams with Homelab Atlas.',
+  description: 'Make and export a diagram of your homelab.',
   base: '/homelab-atlas/',
   appearance: 'dark',
   cleanUrls: true,

@@ -1,6 +1,6 @@
 # Project format
 
-**Save project** produces schema-version-1 JSON. Import validation is strict: unknown keys, invalid types, unsafe IDs, unknown logos, and broken references are rejected before the open project is replaced.
+**Save project** downloads schema-version-1 JSON. When you import a file, Atlas rejects unknown keys, wrong value types, unsafe IDs, unknown logos, and broken references before it replaces the project you have open.
 
 ## Top-level fields
 
@@ -28,17 +28,17 @@
 | Service | `id`, `logo`, `name`, `count` |
 | Connection | `id`, `from`, `to`, `label` |
 
-Colors are six-digit hexadecimal values such as `#55d6c9`. Device `icon` and service `logo` values must exist in the bundled catalog. Service `count` is an integer from 1 through 99.
+Colors use six-digit hexadecimal values such as `#55d6c9`. A device `icon` or service `logo` must exist in the included catalog. A service `count` must be an integer from 1 through 99.
 
 ## IDs and references
 
-Every network, VLAN, device, group, service, and connection ID is globally unique within the project. IDs must match:
+Every network, VLAN, device, group, service, and connection needs a unique ID across the whole project. IDs must match:
 
 ```text
 ^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$
 ```
 
-Connection `from` and `to` values must reference different existing network or device IDs. VLAN, group, and service IDs cannot be connection endpoints.
+Connection `from` and `to` values must point to two different existing network or device IDs. VLAN, group, and service IDs cannot be used as connection endpoints.
 
 ## Limits
 
@@ -54,7 +54,7 @@ Connection `from` and `to` values must reference different existing network or d
 | Services, total | 800 |
 | Hardware facts per device | 12 |
 
-The group limit applies both to each device array and to the project total. All objects use exact key sets; the format does not preserve extension fields.
+The group limit applies to each device array and to the whole project. Each object only accepts the keys listed above. Extra fields are rejected rather than preserved.
 
 ## Minimal valid project
 
@@ -74,4 +74,4 @@ The group limit applies both to each device array and to the project total. All 
 }
 ```
 
-For a complete portable example with every record type, see [`docs/example.json` on GitHub](https://github.com/aiden0rchad/homelab-atlas/blob/main/docs/example.json). There is no separate schema file or project API endpoint.
+For a full example with every record type, see [`docs/example.json` on GitHub](https://github.com/aiden0rchad/homelab-atlas/blob/main/docs/example.json). Atlas does not have a separate schema file or a project API endpoint.
