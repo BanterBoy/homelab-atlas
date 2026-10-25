@@ -2,6 +2,17 @@
 
 This file lists the notable changes in each Homelab Atlas release.
 
+## [0.3.0] - 2026-10-25
+
+### Added
+
+- Added Arrange mode for moving and resizing device cards with pointer, keyboard, numeric, grid, and alignment-guide controls.
+- Added undoable **Auto layout** reset while preserving manual positions and sizes in saved projects and exports.
+
+### Changed
+
+- Saved projects now use schema version 2. Schema-version-1 imports upgrade automatically to automatic layout.
+
 ## [0.2.0] - 2026-10-25
 
 ### Changed
@@ -24,3 +35,4 @@ This file lists the notable changes in each Homelab Atlas release.
 
 [0.1.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.1.0
 [0.2.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.2.0
+[0.3.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.3.0

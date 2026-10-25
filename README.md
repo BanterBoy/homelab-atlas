@@ -16,7 +16,7 @@ A self-hosted app for making homelab diagrams.
 
 I posted a diagram of my homelab on Reddit and someone asked how they could make one too. That's where this project started. I wanted a way to add machines and apps, get the logos in, and update the diagram as things changed.
 
-Atlas handles the layout for you. Add your servers, services, and network gear, then export a PNG or SVG for your docs or a post. The app runs locally and doesn't need an account or an LLM.
+Atlas lays out your diagram automatically, with optional manual positioning and sizing when you want to adjust the composition. Add your servers, services, and network gear, then export a PNG or SVG for your docs or a post. The app runs locally and doesn't need an account or an LLM.
 
 ![Homelab Atlas editor with the included example project](docs/editor.png)
 
@@ -25,11 +25,11 @@ Atlas handles the layout for you. Add your servers, services, and network gear, 
 You'll need Docker with Compose v2:
 
 ```sh
-curl -fsSLO https://github.com/aiden0rchad/homelab-atlas/releases/download/v0.2.0/compose.release.yaml
+curl -fsSLO https://github.com/aiden0rchad/homelab-atlas/releases/download/v0.3.0/compose.release.yaml
 docker compose -f compose.release.yaml up -d
 ```
 
-Open `http://localhost:8080`. This uses the `0.2.0` image and only listens on the machine running Docker. Images are available for Linux AMD64 and ARM64.
+Open `http://localhost:8080`. This uses the `0.3.0` image and only listens on the machine running Docker. Images are available for Linux AMD64 and ARM64.
 
 For access from another computer, updates, or running without Docker, see the [setup guide](https://aiden0rchad.github.io/homelab-atlas/getting-started). The [release page](https://github.com/aiden0rchad/homelab-atlas/releases/latest) has the portable ZIP, Compose file, and checksums.
 
@@ -37,7 +37,7 @@ For access from another computer, updates, or running without Docker, see the [s
 
 Start with **Load example** to see how it works, or **Start empty** for your own lab. Add devices, fill in whatever hardware details you want to show, and group the services running on each one. The logo picker is searchable and works offline.
 
-You can add network connections and VLAN labels, choose a theme, and adjust the number of columns and spacing. **Export** downloads a PNG or SVG. Use **Save project** to download a JSON copy you can edit later.
+You can add network connections and VLAN labels, choose a theme, and adjust the number of columns and spacing. Atlas starts with an automatic layout; **Arrange** lets you move or resize device cards without changing the automatic network and VLAN header. **Export** downloads a PNG or SVG. Use **Save project** to download a JSON copy you can edit later.
 
 The [editor guide](https://aiden0rchad.github.io/homelab-atlas/editor) covers the controls, and the [networking guide](https://aiden0rchad.github.io/homelab-atlas/networking) explains connections and VLANs.
 
@@ -45,7 +45,7 @@ The [editor guide](https://aiden0rchad.github.io/homelab-atlas/editor) covers th
 
 - **Save a JSON backup.** Autosave lives in your browser, not the container. Clearing browser data, using private browsing, or opening Atlas at a different hostname or port can make your project appear missing. A PNG or SVG can't be imported as an editable project.
 - **You enter the inventory yourself.** Atlas doesn't scan your network, read Docker, or check whether services are online.
-- **The layout is automatic.** You can change columns and spacing, but you can't drag boxes into place. Connections show relationships between devices, not individual switch ports.
+- **Connections are logical relationships.** They don't represent individual switch ports, and network cards stay in the automatic header even when you arrange device cards.
 - **There's no login system.** Keep it on localhost or a trusted LAN. Don't expose it directly to the internet.
 - **Exports include what you typed.** Check names, addresses, and labels before posting a diagram publicly.
 

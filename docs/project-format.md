@@ -47,7 +47,7 @@ Connection `from` and `to` values must point to two different existing network o
 
 `layout.mode` is `auto` or `manual`. Automatic layout requires an empty `cards` array. Each manual card ID references one existing device, with no duplicates. A device may be omitted; Atlas places it below the saved cards until its position is saved.
 
-Coordinates are integer diagram units relative to the upper-left of the device region, not browser pixels. `x` and `y` range from 0 through 20,000. Width ranges from 240 through 20,000 and height from 100 through 20,000. Atlas clamps cards to the poster width and treats the rendered content height as the effective minimum.
+Coordinates are integer diagram units relative to the upper-left of the device region, not browser pixels. `x` and `y` range from 0 through 100,000. Width ranges from 240 through 100,000 and height from 100 through 100,000. Atlas clamps cards to the poster width and treats the rendered content height as the effective minimum.
 
 ## Limits
 

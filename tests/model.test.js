@@ -88,7 +88,7 @@ test('schema 2 layout rejects unknown keys, invalid bounds, duplicate IDs, and s
   project.layout = { mode: 'manual', cards: [{ id: 'dev-storage', x: 0, y: 0, w: 239, h: 100 }] };
   assert.throws(() => validateProject(project), /bounds/);
   project.layout.cards[0].w = 240;
-  for (const [key, value] of [['x', -1], ['x', 20_001], ['y', -1], ['y', 20_001], ['w', 20_001], ['h', 99], ['h', 20_001]]) {
+  for (const [key, value] of [['x', -1], ['x', 100_001], ['y', -1], ['y', 100_001], ['w', 100_001], ['h', 99], ['h', 100_001]]) {
     const card = project.layout.cards[0];
     const previous = card[key];
     card[key] = value;
@@ -409,6 +409,46 @@ test('manual resizing reflows content and enforces measured minimum height', () 
   assert.equal(project.layout.cards.find(item => item.id === 'dev-storage').h, card.h);
 });
 
+test('manual layout keeps tall content and places new devices below it', () => {
+  const project = sampleProject();
+  const tall = structuredClone(project.devices.at(-1));
+  tall.groups = [{
+    id: 'group-tall',
+    name: 'Services',
+    services: Array.from({ length: 800 }, (_, index) => ({ id: `service-${index}`, logo: 'generic', name: 'Service', count: 1 })),
+  }];
+  project.devices = [tall];
+  project.connections = [];
+  setManualCard(project, tall.id, { w: 240, h: 100 });
+  let layout = layoutProject(project);
+  const tallCard = layout.cards[0];
+  assert.equal(tallCard.contentHeight, 23147);
+  assert.ok(tallCard.h > 20_000);
+
+  const added = structuredClone(tall);
+  added.id = 'device-added';
+  added.groups = [];
+  project.devices.push(added);
+  layout = layoutProject(project);
+  const laidOutTall = layout.cards.find(card => card.id === tall.id);
+  const addedCard = layout.cards.find(card => card.id === added.id);
+  assert.ok(addedCard.y >= laidOutTall.y + laidOutTall.h + layout.gap);
+  assert.equal(validateProject(project), true);
+});
+
+test('manual layout preserves automatic secondary-card classification', () => {
+  const project = sampleProject();
+  const small = structuredClone(project.devices.at(-1));
+  const peer = structuredClone(small);
+  small.id = 'small-first';
+  peer.id = 'small-second';
+  project.devices = [small, peer];
+  project.connections = [];
+  const automatic = layoutProject(project).cards.map(card => card.secondary);
+  setManualCard(project, peer.id, { x: 24, y: 24 });
+  assert.deepEqual(layoutProject(project).cards.map(card => card.secondary), automatic);
+});
+
 test('content growth and column changes clamp only the effective rectangle', () => {
   const project = sampleProject();
   project.layout = snapshotManualLayout(project);
@@ -469,7 +509,7 @@ test('auto reset is atomic through project history and renderer stays editor-fre
   assert.deepEqual(reset.layout, { mode: 'auto', cards: [] });
   assert.equal(reset.revision, project.revision + 1);
   assert.equal(project.layout.mode, 'manual');
-  assert.doesNotMatch(renderProject(project), /resize-handle|alignment-guide|editor-selected/);
+  assert.doesNotMatch(renderProject(project), /resize-hit|resize-grip|alignment-guide|editor-selected/);
 });
 
 test('inventory filtering is case-insensitive and does not mutate selection or input', () => {

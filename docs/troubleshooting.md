@@ -7,12 +7,12 @@ Find the symptom that matches what you're seeing. Browser developer tools and `d
 | Project is empty at another URL | Use the same browser profile, hostname, port, and protocol. If you changed the address, import a saved JSON backup. |
 | “Not saved — storage unavailable” | Allow site storage, leave private mode, and check the browser's storage quota or policy. If the project is still open, download JSON right away. |
 | Another-tab conflict banner | Download the project in the current tab first. Then choose **Keep my edits** or **Load saved version** based on which copy you want. |
-| Import rejected | Make sure it is valid Homelab Atlas schema-version-1 JSON under 1 MB. Unknown keys, duplicate or unsafe IDs, unknown logo IDs, and bad connection endpoints are rejected. |
+| Import rejected | Make sure it is valid Homelab Atlas schema-version-1 or schema-version-2 JSON under 1 MB. Schema version 2 requires Atlas 0.3 or newer. Unknown keys, duplicate or unsafe IDs, unknown logo IDs, and bad connection endpoints are rejected. |
 | Port 8080 already in use | Stop the conflicting service or use a different local port as shown below. |
 | Released container does not start | Run `docker compose -f compose.release.yaml config`, then use the same `-f compose.release.yaml` argument with `pull`, `ps`, and `logs atlas`. Also confirm the GHCR package is public. |
 | Source-built container does not start | Run `docker compose config`, rebuild it, check `docker compose ps`, and read `docker compose logs atlas`. |
 | Health check fails | Try `curl http://localhost:8080/healthz`. Make sure the container is running and listening on the interface you expected. |
-| Labels collide or cards are too tall | Shorten labels, use Compact density, adjust 1–4 columns, reorder devices, or use **Fit page**/**Fit width**. |
+| Labels collide or cards are too tall | Shorten labels, use Compact density, adjust 1–4 columns, reorder devices, arrange device cards, or use **Fit page**/**Fit width**. Device cards cannot be resized below their content. |
 | PNG export fails or is reduced | Simplify the diagram, try another current browser, or export SVG. PNG is capped at 36 MP and 16,384 px per side. |
 
 ## Use another port

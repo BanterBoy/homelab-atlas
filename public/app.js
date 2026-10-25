@@ -178,7 +178,6 @@ function render() {
   $('#preview').innerHTML = renderProject(project);
   const selectedNode = selected && $(`#preview [data-device="${CSS.escape(selected)}"], #preview [data-network="${CSS.escape(selected)}"]`);
   selectedNode?.classList.add('editor-selected');
-  decorateArrange();
   renderInventory();
   renderInspector();
   $('.inspector').classList.toggle('open', inspectorOpen);
@@ -196,7 +195,7 @@ function render() {
   requestAnimationFrame(() => fitMode === 'manual' ? applyZoom() : fitPreview(fitMode));
 }
 
-function applyZoom() {
+function applyZoom(source = project, layout = layoutProject(source), guides = []) {
   const svg = $('#preview svg');
   if (!svg) return;
   const width = svg.viewBox.baseVal.width * zoom;
@@ -204,6 +203,7 @@ function applyZoom() {
   svg.setAttribute('width', width);
   svg.setAttribute('height', height);
   $('#zoom-label').value = `${Math.round(zoom * 100)}%`;
+  decorateArrange(source, layout, guides);
 }
 
 function fitPreview(mode = fitMode) {
@@ -217,34 +217,37 @@ function fitPreview(mode = fitMode) {
   applyZoom();
 }
 
-function decorateArrange(guides = []) {
+function decorateArrange(source, layout, guides = []) {
   const preview = $('#preview');
   preview.classList.toggle('arranging', arrangeMode);
+  preview.querySelectorAll('.resize-hit, .resize-grip, .alignment-guide').forEach(node => node.remove());
   if (!arrangeMode || !selected) return;
   const group = preview.querySelector(`[data-device="${CSS.escape(selected)}"]`);
-  const box = layoutProject(project).cards.find(card => card.id === selected);
+  const box = layout.cards.find(card => card.id === selected);
   if (!group || !box) return;
   group.classList.add('editor-selected');
-  const size = Math.max(14, 20 / zoom);
-  group.insertAdjacentHTML('beforeend', `<rect class="resize-handle" x="${box.x + box.w - size}" y="${box.y + box.h - size}" width="${size}" height="${size}" rx="${size / 5}" role="button" aria-label="Resize ${escapeHtml(project.devices.find(device => device.id === selected).name)}"/>`);
+  const hit = 20 / zoom;
+  const grip = 8 / zoom;
+  group.insertAdjacentHTML('beforeend', `<rect class="resize-hit" x="${box.x + box.w - hit}" y="${box.y + box.h - hit}" width="${hit}" height="${hit}" role="button" aria-label="Resize ${escapeHtml(source.devices.find(device => device.id === selected).name)}"/><path class="resize-grip" d="M ${box.x + box.w - grip} ${box.y + box.h} L ${box.x + box.w} ${box.y + box.h - grip} L ${box.x + box.w} ${box.y + box.h} Z"/>`);
   const svg = preview.querySelector('svg');
   for (const guide of guides) svg.insertAdjacentHTML('beforeend', guide.axis === 'x'
-    ? `<line class="alignment-guide" x1="${box.x - box.x + guide.value + layoutProject(project).margin}" y1="${layoutProject(project).cardsY}" x2="${guide.value + layoutProject(project).margin}" y2="${svg.viewBox.baseVal.height}"/>`
-    : `<line class="alignment-guide" x1="${layoutProject(project).margin}" y1="${guide.value + layoutProject(project).cardsY}" x2="${svg.viewBox.baseVal.width - layoutProject(project).margin}" y2="${guide.value + layoutProject(project).cardsY}"/>`);
+    ? `<line class="alignment-guide" x1="${guide.value + layout.margin}" y1="${layout.cardsY}" x2="${guide.value + layout.margin}" y2="${svg.viewBox.baseVal.height}"/>`
+    : `<line class="alignment-guide" x1="${layout.margin}" y1="${guide.value + layout.cardsY}" x2="${svg.viewBox.baseVal.width - layout.margin}" y2="${guide.value + layout.cardsY}"/>`);
 }
 
 function renderPreview(source = project, guides = []) {
   $('#preview').innerHTML = renderProject(source);
   const node = selected && $(`#preview [data-device="${CSS.escape(selected)}"], #preview [data-network="${CSS.escape(selected)}"]`);
   node?.classList.add('editor-selected');
-  if (source === project) decorateArrange(guides);
-  else {
-    const current = project;
-    project = source;
-    decorateArrange(guides);
-    project = current;
-  }
-  applyZoom();
+  const layout = layoutProject(source);
+  applyZoom(source, layout, guides);
+}
+
+function focusSelectedCard(id = selected) {
+  requestAnimationFrame(() => {
+    if (!id || selected !== id || !arrangeMode || document.querySelector('dialog[open]') || document.activeElement?.matches('input, textarea, select, [contenteditable="true"]')) return;
+    $(`#preview [data-device="${CSS.escape(id)}"]`)?.focus({ preventScroll: true });
+  });
 }
 
 function renderInventory() {
@@ -326,7 +329,7 @@ function renderInspector() {
   const diagram = layoutProject(project);
   const card = diagram.cards.find(item => item.id === device.id);
   const position = { x: Math.round(card.x - diagram.margin), y: Math.round(card.y - diagram.cardsY), w: Math.round(card.w), h: Math.round(card.h) };
-  root.innerHTML = `<div class="inspector-head"><div><span class="eyebrow">Device</span><h2>${escapeHtml(device.name)}</h2></div><div><button data-duplicate title="Duplicate" aria-label="Duplicate device">Copy</button><button data-delete class="danger">Delete</button></div></div><section class="inspector-section"><h3>Identity</h3><label>Name<input data-device="name" maxlength="120"></label><label>Role<input data-device="role" maxlength="120"></label><div class="form-grid"><label>Network / VLAN<input data-device="network" maxlength="120"></label><label>Accent<input data-device="accent" type="color"></label></div><label>Device icon<input data-device="icon" list="icon-options" maxlength="64"><datalist id="icon-options">${iconOptions}</datalist></label></section><section class="inspector-section"><h3>Position</h3><div class="position-grid"><label>X<input data-position="x" type="number" min="0" max="20000" step="1" value="${position.x}"></label><label>Y<input data-position="y" type="number" min="0" max="20000" step="1" value="${position.y}"></label><label>Width<input data-position="w" type="number" min="240" max="20000" step="1" value="${position.w}"></label><label>Height<input data-position="h" type="number" min="100" max="20000" step="1" value="${position.h}"></label></div><p class="help">Positions use diagram units. Content sets the minimum height.</p></section><section class="inspector-section"><h3>Hardware</h3><label>Facts <span class="muted">One per line. Optional Label: value.</span><textarea data-hardware maxlength="1451"></textarea></label></section><section class="inspector-section"><div class="section-head"><h3>Service groups</h3><button data-add-group>${icon('add')}Group</button></div><div id="groups"></div></section>`;
+  root.innerHTML = `<div class="inspector-head"><div><span class="eyebrow">Device</span><h2>${escapeHtml(device.name)}</h2></div><div><button data-duplicate title="Duplicate" aria-label="Duplicate device">Copy</button><button data-delete class="danger">Delete</button></div></div><section class="inspector-section"><h3>Identity</h3><label>Name<input data-device="name" maxlength="120"></label><label>Role<input data-device="role" maxlength="120"></label><div class="form-grid"><label>Network / VLAN<input data-device="network" maxlength="120"></label><label>Accent<input data-device="accent" type="color"></label></div><label>Device icon<input data-device="icon" list="icon-options" maxlength="64"><datalist id="icon-options">${iconOptions}</datalist></label></section><section class="inspector-section"><h3>Position</h3><div class="position-grid"><label>X<input data-position="x" type="number" min="0" max="100000" step="1" value="${position.x}"></label><label>Y<input data-position="y" type="number" min="0" max="100000" step="1" value="${position.y}"></label><label>Width<input data-position="w" type="number" min="240" max="100000" step="1" value="${position.w}"></label><label>Height<input data-position="h" type="number" min="100" max="100000" step="1" value="${position.h}"></label></div><p class="help">Positions use diagram units. Content sets the minimum height.</p></section><section class="inspector-section"><h3>Hardware</h3><label>Facts <span class="muted">One per line. Optional Label: value.</span><textarea data-hardware maxlength="1451"></textarea></label></section><section class="inspector-section"><div class="section-head"><h3>Service groups</h3><button data-add-group>${icon('add')}Group</button></div><div id="groups"></div></section>`;
   for (const key of ['name', 'role', 'network', 'accent', 'icon']) root.querySelector(`[data-device=${key}]`).value = device[key];
   root.querySelector('[data-hardware]').value = device.hardware.join('\n');
   root.querySelector('#groups').replaceChildren(...device.groups.map(groupElement));
@@ -762,15 +765,17 @@ function diagramPoint(event) {
   return { x: (event.clientX - rect.left) * svg.viewBox.baseVal.width / rect.width, y: (event.clientY - rect.top) * svg.viewBox.baseVal.height / rect.height };
 }
 
-function snap(value, candidates, guides, axis, gridOffset = 0) {
-  const grid = Math.round(value / 8) * 8;
-  let best = { value: grid, distance: Math.abs(grid - value), guide: grid + gridOffset };
+function snap(value, candidates, guides, axis) {
+  let best = null;
   for (const candidate of candidates) {
     const distance = Math.abs(candidate.value - value);
-    if (distance <= 8 && distance < best.distance) best = { value: candidate.value, distance, guide: candidate.guide };
+    if (distance <= 8 && (!best || distance < best.distance)) best = { value: candidate.value, distance, guide: candidate.guide };
   }
-  if (best.distance <= 8) guides.push({ axis, value: best.guide });
-  return best.value;
+  if (best) {
+    guides.push({ axis, value: best.guide });
+    return best.value;
+  }
+  return Math.round(value / 8) * 8;
 }
 
 function gestureRect(event) {
@@ -790,8 +795,8 @@ function gestureRect(event) {
     const layout = layoutProject(gesture.base);
     const peers = layout.cards.filter(card => card.id !== gesture.id).map(card => ({ x: card.x - layout.margin, y: card.y - layout.cardsY, w: card.w, h: card.h }));
     if (gesture.resize) {
-      next.w = snap(next.w, peers.flatMap(peer => [{ value: peer.x - next.x, guide: peer.x }, { value: peer.x + peer.w - next.x, guide: peer.x + peer.w }]), guides, 'x', next.x);
-      next.h = snap(next.h, peers.flatMap(peer => [{ value: peer.y - next.y, guide: peer.y }, { value: peer.y + peer.h - next.y, guide: peer.y + peer.h }]), guides, 'y', next.y);
+      next.w = snap(next.w, peers.flatMap(peer => [{ value: peer.x - next.x, guide: peer.x }, { value: peer.x + peer.w - next.x, guide: peer.x + peer.w }]), guides, 'x');
+      next.h = snap(next.h, peers.flatMap(peer => [{ value: peer.y - next.y, guide: peer.y }, { value: peer.y + peer.h - next.y, guide: peer.y + peer.h }]), guides, 'y');
     } else {
       next.x = snap(next.x, peers.flatMap(peer => [{ value: peer.x, guide: peer.x }, { value: peer.x + peer.w - next.w, guide: peer.x + peer.w }, { value: peer.x + peer.w / 2 - next.w / 2, guide: peer.x + peer.w / 2 }]), guides, 'x');
       next.y = snap(next.y, peers.flatMap(peer => [{ value: peer.y, guide: peer.y }, { value: peer.y + peer.h - next.h, guide: peer.y + peer.h }, { value: peer.y + peer.h + 24, guide: peer.y + peer.h + 24 }, { value: peer.y - next.h - 24, guide: peer.y - 24 }, { value: peer.y + peer.h / 2 - next.h / 2, guide: peer.y + peer.h / 2 }]), guides, 'y');
@@ -800,7 +805,13 @@ function gestureRect(event) {
   const candidate = structuredClone(gesture.base);
   setManualCard(candidate, gesture.id, next);
   gesture.current = candidate.layout.cards.find(card => card.id === gesture.id);
-  renderPreview(candidate, guides);
+  const layout = layoutProject(candidate);
+  const card = layout.cards.find(item => item.id === gesture.id);
+  const actual = { x: card.x - layout.margin, y: card.y - layout.cardsY, w: card.w, h: card.h };
+  const visibleGuides = guides.filter(guide => (guide.axis === 'x'
+    ? [actual.x, actual.x + actual.w, actual.x + actual.w / 2]
+    : [actual.y, actual.y + actual.h, actual.y + actual.h / 2]).some(value => Math.abs(value - guide.value) < 0.5));
+  renderPreview(candidate, visibleGuides);
 }
 
 $('#preview').addEventListener('pointerdown', event => {
@@ -809,7 +820,7 @@ $('#preview').addEventListener('pointerdown', event => {
   if (!item) return;
   event.preventDefault();
   const id = item.dataset.device;
-  const resize = event.target.classList.contains('resize-handle');
+  const resize = event.target.classList.contains('resize-hit');
   selected = id;
   fitMode = 'manual';
   const layout = layoutProject(project);
@@ -820,6 +831,7 @@ $('#preview').addEventListener('pointerdown', event => {
   };
   $('#preview').setPointerCapture(event.pointerId);
   renderPreview();
+  focusSelectedCard(id);
   renderInventory();
   if (inspectorOpen) renderInspector();
 });
@@ -835,10 +847,12 @@ function finishGesture(commit) {
   if (!gesture) return;
   const finished = gesture;
   gesture = null;
-  if (commit && finished.moved && finished.current) {
-    suppressDiagramClick = true;
+  if (finished.moved) suppressDiagramClick = true;
+  const changed = finished.current && ['x', 'y', 'w', 'h'].some(key => finished.current[key] !== finished.startRect[key]);
+  if (commit && finished.moved && changed) {
     change(candidate => setManualCard(candidate, finished.id, finished.current));
   } else renderPreview();
+  focusSelectedCard(finished.id);
 }
 
 $('#preview').addEventListener('pointerup', event => { if (gesture?.pointerId === event.pointerId) finishGesture(true); });
@@ -861,7 +875,7 @@ $('#preview').addEventListener('keydown', event => {
     const rect = { x: card.x - layout.margin, y: card.y - layout.cardsY, w: card.w, h: card.h };
     if (event.altKey) { rect.w += delta[0]; rect.h += delta[1]; } else { rect.x += delta[0]; rect.y += delta[1]; }
     change(candidate => setManualCard(candidate, selected, rect));
-    requestAnimationFrame(() => $(`#preview [data-device="${CSS.escape(selected)}"]`)?.focus());
+    focusSelectedCard();
     return;
   }
   if (event.key === 'Enter' || event.key === ' ') {

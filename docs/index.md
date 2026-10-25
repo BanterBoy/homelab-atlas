@@ -42,7 +42,7 @@ I posted a diagram of my homelab on Reddit and someone asked how they could make
 
 ![Example Homelab Atlas diagram exported from the fictional sample](./example.png)
 
-<p class="shot-caption">The preview, SVG export, and PNG export all use the same automatic layout.</p>
+<p class="shot-caption">Start with the automatic layout, then arrange device cards if the composition needs a small adjustment. The preview and exports stay in sync.</p>
 
 ## Making your first diagram {#start-shape-save-share}
 
@@ -50,7 +50,7 @@ I posted a diagram of my homelab on Reddit and someone asked how they could make
   <div><strong>1 · Start</strong>Load the example or begin empty.</div>
   <div><strong>2 · Inventory</strong>Add devices, hardware, and services.</div>
   <div><strong>3 · Connect</strong>Add networks, VLANs, and relationships.</div>
-  <div><strong>4 · Refine</strong>Choose theme, columns, and density.</div>
+  <div><strong>4 · Refine</strong>Choose the style or arrange device cards.</div>
   <div><strong>5 · Save</strong>Back up JSON; export SVG or PNG.</div>
 </div>
 
