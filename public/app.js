@@ -28,7 +28,7 @@ let inspectorOpen = false;
 let history = [];
 let future = [];
 let zoom = 1;
-let fitMode = true;
+let fitMode = 'width';
 let saveTimer;
 let lastStored = '';
 let conflictRaw = '';
@@ -42,7 +42,8 @@ function escapeHtml(value) {
 }
 
 function logoPlateClass(id) {
-  return logoPlate(id) === '#ffffff' ? '' : 'logo-plate-dark';
+  const plate = logoPlate(id, 'navy');
+  return plate === '#f8fafc' ? 'logo-plate-light' : plate ? 'logo-plate-dark' : '';
 }
 
 function toast(message, persistent = false) {
@@ -162,9 +163,10 @@ function render() {
   renderInventory();
   renderInspector();
   $('.inspector').classList.toggle('open', inspectorOpen);
+  $('.workspace').classList.toggle('inspector-open', inspectorOpen);
   $('#undo').disabled = !history.length;
   $('#redo').disabled = !future.length;
-  requestAnimationFrame(() => fitMode ? fitPreview() : applyZoom());
+  requestAnimationFrame(() => fitMode === 'manual' ? applyZoom() : fitPreview(fitMode));
 }
 
 function applyZoom() {
@@ -177,13 +179,13 @@ function applyZoom() {
   $('#zoom-label').value = `${Math.round(zoom * 100)}%`;
 }
 
-function fitPreview() {
+function fitPreview(mode = fitMode) {
   const svg = $('#preview svg');
   const canvas = $('#canvas');
   if (!svg || !canvas.clientWidth || !canvas.clientHeight) return;
   const availableWidth = Math.max(100, canvas.clientWidth - 72);
   const availableHeight = Math.max(100, canvas.clientHeight - 112);
-  zoom = Math.min(1, availableWidth / svg.viewBox.baseVal.width, availableHeight / svg.viewBox.baseVal.height);
+  zoom = Math.min(1, availableWidth / svg.viewBox.baseVal.width, mode === 'page' ? availableHeight / svg.viewBox.baseVal.height : 1);
   applyZoom();
 }
 
@@ -568,7 +570,12 @@ function redo() {
 $('#undo').addEventListener('click', undo);
 $('#redo').addEventListener('click', redo);
 addEventListener('keydown', event => {
-  const editing = event.target.matches('input, textarea, [contenteditable=true]');
+  const editing = event.target.matches('input, select, textarea, [contenteditable=true]');
+  if (event.key === 'Escape' && !editing && !document.querySelector('dialog[open]') && inspectorOpen) {
+    inspectorOpen = false;
+    render();
+    return;
+  }
   if (!editing && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
     event.preventDefault();
     if (event.shiftKey) redo(); else undo();
@@ -636,15 +643,16 @@ $('#export-png').addEventListener('click', () => {
 });
 
 function setZoom(next) {
-  fitMode = false;
+  fitMode = 'manual';
   zoom = Math.min(1.8, Math.max(0.15, next));
   applyZoom();
 }
 
 $('#zoom-in').addEventListener('click', () => setZoom(zoom + 0.1));
 $('#zoom-out').addEventListener('click', () => setZoom(zoom - 0.1));
-$('#zoom-fit').addEventListener('click', () => { fitMode = true; fitPreview(); });
-new ResizeObserver(() => { if (fitMode) fitPreview(); }).observe($('#canvas'));
+$('#zoom-fit-page').addEventListener('click', () => { fitMode = 'page'; fitPreview(); });
+$('#zoom-fit-width').addEventListener('click', () => { fitMode = 'width'; fitPreview(); });
+new ResizeObserver(() => { if (fitMode !== 'manual') fitPreview(); }).observe($('#canvas'));
 
 function selectDiagramTarget(target) {
   const item = target.closest('[data-device], [data-network]');

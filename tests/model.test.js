@@ -12,9 +12,9 @@ test('sample validates and renders deterministically in dark and light themes', 
   const project = sampleProject();
   assert.equal(validateProject(project), true);
   assert.equal(renderProject(project), renderProject(project));
-  assert.match(renderProject(project), /fill="#07131f"/);
+  assert.match(renderProject(project), /fill="#0b1117"/);
   project.theme = 'light';
-  assert.match(renderProject(project), /fill="#edf4f6"/);
+  assert.match(renderProject(project), /fill="#edf1f4"/);
 });
 
 test('renderer is CSP-safe and escapes malicious text', () => {
@@ -48,16 +48,18 @@ test('IDs work without crypto.randomUUID', () => {
   }
 });
 
-test('light brand marks use dark plates in both themes', () => {
-  for (const id of ['amd', 'docmost', 'miniflux', 'tailscale']) assert.equal(logoPlate(id), '#111827');
-  assert.equal(logoPlate('jellyfin'), '#ffffff');
+test('logo plates are limited to monochrome marks that need contrast', () => {
+  for (const id of ['intel', 'ollama', 'open-webui', 'portainer', 'vaultwarden']) assert.equal(logoPlate(id, 'navy'), '#f8fafc');
+  for (const id of ['amd', 'docmost', 'miniflux', 'tailscale']) assert.equal(logoPlate(id, 'light'), '#111827');
+  assert.equal(logoPlate('jellyfin', 'navy'), null);
+  assert.equal(logoPlate('amd', 'navy'), null);
   const project = sampleProject();
   project.devices[0].icon = 'amd';
   project.devices[0].groups[0].services[0].logo = 'docmost';
-  for (const theme of ['navy', 'light']) {
-    project.theme = theme;
-    assert.match(renderProject(project), /fill="#111827" fill-opacity="0.96"/);
-  }
+  assert.doesNotMatch(renderProject(project), /fill="#111827"/);
+  project.theme = 'light';
+  assert.match(renderProject(project), /fill="#111827"/);
+  assert.doesNotMatch(renderProject(project), /logo-shadow|feDropShadow/);
 });
 
 test('bad and oversized imports are rejected', () => {
@@ -122,29 +124,70 @@ test('network and VLAN rows wrap without expanding beyond selected columns', () 
   project.vlans = Array.from({ length: 20 }, (_, index) => ({ id: `vlan-${index}`, name: 'Very long VLAN name '.repeat(4), color: '#654321' }));
   project.connections = [];
   const layout = layoutProject(project);
-  assert.equal(layout.width, 820);
+  assert.equal(layout.width, 600);
   assert.ok(new Set(layout.networks.map(item => item.y)).size > 1);
   assert.ok(new Set(layout.vlans.map(item => item.y)).size > 1);
+  for (const item of [...layout.networks, ...layout.vlans]) {
+    assert.ok(item.x >= layout.margin);
+    assert.ok(item.x + item.w <= layout.width - layout.margin);
+  }
 });
 
-test('connection routes reserve clear label and VLAN lanes', () => {
+test('connections use straight network arrows, a VLAN-gap bus, and lower-card fallbacks', () => {
   const project = sampleProject();
   const layout = layoutProject(project);
   const vlanBottom = Math.max(...layout.vlans.map(vlan => vlan.y + vlan.h));
   const lastNetworkBottom = Math.max(...layout.networks.map(network => network.y + network.h));
-  assert.ok(layout.networkRouteY < layout.networks[0].y);
   assert.ok(layout.routingLaneY > vlanBottom);
   assert.ok(layout.cardsY > layout.routingLaneY);
-  assert.ok(layout.routeX > Math.max(...layout.vlans.map(vlan => vlan.x + vlan.w)));
   assert.ok(lastNetworkBottom + 12 < Math.min(...layout.vlans.map(vlan => vlan.y)));
+  assert.ok(layout.vlanGaps.length > 0);
   const svg = renderProject(project);
-  assert.match(svg, new RegExp(`V ${layout.networkRouteY}`));
+  assert.match(svg, /marker-end="url\(#arrow\)"/);
   assert.match(svg, new RegExp(`V ${layout.routingLaneY}`));
+  assert.equal(layout.drawable(project.connections.find(item => item.id === 'conn-edge')), false);
+  assert.ok(layout.relationships.some(connection => connection.id === 'conn-edge'));
 
   project.columns = 1;
   project.networks.push({ id: 'net-remote', name: 'Remote', kind: 'Router', accent: '#123456' });
   project.connections.push({ id: 'conn-complex', from: 'net-internet', to: 'net-remote', label: 'Tunnel' });
   assert.ok(layoutProject(project).relationships.some(connection => connection.id === 'conn-complex'));
+});
+
+test('masonry cards preserve order, stay in bounds, and never overlap', () => {
+  const project = sampleProject();
+  const layout = layoutProject(project);
+  assert.deepEqual(layout.widths, [480, 480, 320]);
+  assert.deepEqual(layout.cards.slice(0, 3).map(card => card.column), [0, 1, 2]);
+  assert.ok(layout.cards.slice(3).every(card => card.column === 2));
+  for (const card of layout.cards) {
+    assert.ok(card.x >= layout.margin);
+    assert.ok(card.x + card.w <= layout.width - layout.margin);
+    assert.ok(card.y >= layout.cardsY);
+    assert.ok(card.y + card.h < layout.relationshipsY);
+  }
+  for (let i = 0; i < layout.cards.length; i += 1) {
+    for (let j = i + 1; j < layout.cards.length; j += 1) {
+      const a = layout.cards[i];
+      const b = layout.cards[j];
+      assert.ok(a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y);
+    }
+  }
+  assert.equal(layout.cards.find(card => card.id === 'dev-ai').tileColumns, 3);
+});
+
+test('card labels and hardware remain bounded across one to four columns', () => {
+  for (const columns of [1, 2, 3, 4]) {
+    const project = sampleProject();
+    project.columns = columns;
+    project.devices[0].name = 'An unusually long storage host name for wrapping';
+    project.devices[0].hardware = ['A hardware description that is long enough to wrap without leaving its card boundary'];
+    const layout = layoutProject(project);
+    const svg = renderProject(project);
+    assert.match(svg, /…/);
+    assert.ok(layout.cards.every(card => card.x + card.w <= layout.width - layout.margin));
+    assert.ok(layout.footerY < layout.height);
+  }
 });
 
 test('invalid changes are atomic', () => {
