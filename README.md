@@ -3,9 +3,7 @@
 
 # Homelab Atlas
 
-**Your homelab, clearly mapped.**
-
-A local-first visual editor for polished, portable homelab diagrams.
+A self-hosted app for making homelab diagrams.
 
 [![CI](https://github.com/aiden0rchad/homelab-atlas/actions/workflows/ci.yml/badge.svg)](https://github.com/aiden0rchad/homelab-atlas/actions/workflows/ci.yml)
 [![Docs](https://github.com/aiden0rchad/homelab-atlas/actions/workflows/docs.yml/badge.svg)](https://aiden0rchad.github.io/homelab-atlas/)
@@ -13,64 +11,54 @@ A local-first visual editor for polished, portable homelab diagrams.
 [![Package](https://img.shields.io/badge/GHCR-homelab--atlas-55d6c9?logo=github)](https://github.com/users/aiden0rchad/packages/container/package/homelab-atlas)
 [![License: MIT](https://img.shields.io/badge/license-MIT-55d6c9.svg)](LICENSE)
 
-[Documentation](https://aiden0rchad.github.io/homelab-atlas/) · [Install](https://aiden0rchad.github.io/homelab-atlas/getting-started) · [Releases](https://github.com/aiden0rchad/homelab-atlas/releases) · [Package](https://github.com/users/aiden0rchad/packages/container/package/homelab-atlas) · [GitHub](https://github.com/aiden0rchad/homelab-atlas)
+[Documentation](https://aiden0rchad.github.io/homelab-atlas/) · [Releases](https://github.com/aiden0rchad/homelab-atlas/releases) · [Docker images](https://github.com/users/aiden0rchad/packages/container/package/homelab-atlas)
 </div>
 
-![Homelab Atlas editor showing a fictional sample project](docs/editor.png)
+I posted a diagram of my homelab on Reddit and someone asked how they could make one too. That's where this project started. I wanted a way to add machines and apps, get the logos in, and update the diagram as things changed.
 
-## What it does
+Atlas handles the layout for you. Add your servers, services, and network gear, then export a PNG or SVG for your docs or a post. The app runs locally and doesn't need an account or an LLM.
 
-- Builds automatic diagrams from devices, hardware facts, service groups, network nodes, VLAN chips, and logical connections.
-- Bundles a searchable offline logo catalog with multi-select and custom service names.
-- Offers navy, light, and midnight themes; 1–4 columns; comfortable or compact density.
-- Autosaves in the current browser and exports portable JSON, SVG, or PNG.
-- Runs without accounts, telemetry, AI calls, network scanning, a database, or Docker socket access.
+![Homelab Atlas editor with the included example project](docs/editor.png)
 
-## Quick start
+## Run it
 
-Install Docker Engine or Docker Desktop with Compose v2, then download the release Compose file and start the published image:
+You'll need Docker with Compose v2:
 
 ```sh
 curl -fsSLO https://github.com/aiden0rchad/homelab-atlas/releases/download/v0.1.0/compose.release.yaml
 docker compose -f compose.release.yaml up -d
 ```
 
-Open `http://localhost:8080`. The container binds to loopback by default. See [installation options and version pinning](https://aiden0rchad.github.io/homelab-atlas/getting-started).
+Open `http://localhost:8080`. This uses the `0.1.0` image and only listens on the machine running Docker. Images are available for Linux AMD64 and ARM64.
 
-## From inventory to export
+For access from another computer, updates, or running without Docker, see the [setup guide](https://aiden0rchad.github.io/homelab-atlas/getting-started). The [release page](https://github.com/aiden0rchad/homelab-atlas/releases/latest) has the portable ZIP, Compose file, and checksums.
 
-1. Choose **Load example** or **Start empty**.
-2. Add device templates, then edit names, hardware, icons, groups, and services.
-3. Add network nodes, VLAN chips, and named logical relationships.
-4. Tune the title, subtitle, theme, columns, density, and preview fit.
-5. Use **Save project** for an editable JSON backup, or export SVG/PNG to share.
+## Making a diagram
 
-## Documentation
+Start with **Load example** to see how it works, or **Start empty** for your own lab. Add devices, fill in whatever hardware details you want to show, and group the services running on each one. The logo picker is searchable and works offline.
 
-| Guide | Covers |
-|---|---|
-| [Getting started](https://aiden0rchad.github.io/homelab-atlas/getting-started) | Install, run, update, and trusted-LAN access |
-| [Editor guide](https://aiden0rchad.github.io/homelab-atlas/editor) | Devices, services, appearance, layout, and shortcuts |
-| [Networking](https://aiden0rchad.github.io/homelab-atlas/networking) | Network nodes, VLAN labels, and logical connections |
-| [Sharing and backup](https://aiden0rchad.github.io/homelab-atlas/sharing) | Browser storage, conflicts, JSON, SVG, and PNG |
-| [Privacy](https://aiden0rchad.github.io/homelab-atlas/privacy) | Data boundaries and safe deployment |
-| [Troubleshooting](https://aiden0rchad.github.io/homelab-atlas/troubleshooting) | Storage, imports, startup, layout, and export issues |
-| [Project format](https://aiden0rchad.github.io/homelab-atlas/project-format) | Schema version 1 and validation limits |
-| [Releases](https://aiden0rchad.github.io/homelab-atlas/releases/) | Images, downloads, checksums, and version tags |
-| [Development](https://aiden0rchad.github.io/homelab-atlas/development) | Source layout, checks, docs, and logo maintenance |
+You can add network connections and VLAN labels, choose a theme, and adjust the number of columns and spacing. When you're done, export a PNG or SVG. Use **Save project** to download a JSON copy you can edit later.
 
-## Storage, privacy, and limits
+The [editor guide](https://aiden0rchad.github.io/homelab-atlas/editor) covers the controls, and the [networking guide](https://aiden0rchad.github.io/homelab-atlas/networking) explains connections and VLANs.
 
-Projects stay in browser storage for the current browser profile and origin. Clearing storage, using private browsing, or changing the hostname or port can make a project appear missing. Save JSON before updates or origin changes.
+## A few things to know
 
-Homelab Atlas has no authentication. Keep it on loopback or a trusted LAN; do not expose it directly to the public internet. Diagrams use automatic layout rather than drag-to-position. Connections describe logical relationships, not exact physical switch ports. There is no discovery or live monitoring.
+- **Save a JSON backup.** Autosave lives in your browser, not the container. Clearing browser data, using private browsing, or opening Atlas at a different hostname or port can make your project appear missing. A PNG or SVG can't be imported as an editable project.
+- **You enter the inventory yourself.** Atlas doesn't scan your network, read Docker, or check whether services are online.
+- **The layout is automatic.** You can change columns and spacing, but you can't drag boxes into place. Connections show relationships between devices, not individual switch ports.
+- **There's no login system.** Keep it on localhost or a trusted LAN. Don't expose it directly to the internet.
+- **Exports include what you typed.** Check names, addresses, and labels before posting a diagram publicly.
 
-Image exports contain exactly what you entered—there is no automatic redaction. Review names, labels, addresses, and screenshots before sharing. JSON is the editable backup format; image exports are not.
+More detail is in the [backup guide](https://aiden0rchad.github.io/homelab-atlas/sharing), [privacy page](https://aiden0rchad.github.io/homelab-atlas/privacy), and [troubleshooting guide](https://aiden0rchad.github.io/homelab-atlas/troubleshooting).
 
-## Contributing and support
+## Bugs and contributions
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for focused checks and [SECURITY.md](SECURITY.md) for private vulnerability reporting. If the project is useful, you can [buy me a coffee](https://www.buymeacoffee.com/aiden0rchad).
+This is still an early version. If something breaks or a layout looks wrong, [open an issue](https://github.com/aiden0rchad/homelab-atlas/issues) with a screenshot and steps to reproduce it. Remove private details from anything you attach.
+
+PRs are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) has the checks to run, and the [development docs](https://aiden0rchad.github.io/homelab-atlas/development) explain the code and logo catalog. Please report security problems privately using [SECURITY.md](SECURITY.md).
+
+If you'd like to support the project, you can [buy me a coffee](https://www.buymeacoffee.com/aiden0rchad).
 
 ## License
 
-Original code is [MIT licensed](LICENSE). Bundled logos retain their upstream licenses; product names and trademarks belong to their owners. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+The code is [MIT licensed](LICENSE). App and hardware logos belong to their respective owners and keep their original licenses. Attribution is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
