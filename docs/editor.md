@@ -12,6 +12,8 @@ Choose **Add device** in the inventory on the left, then pick a template such as
 
 Use **Search inventory** to filter devices by name or role and network nodes by name or kind. It only changes the visible list. Your selection and project stay intact. On a narrow screen, open or close the inventory with the **Inventory** button below the canvas.
 
+Select a network node to edit its name, kind, accent, and logos. **Logo** starts on Auto, which follows the node kind. **Secondary logo** can show an optional backup provider in the same node. Both selectors search the bundled local catalog; choosing Auto or None clears the corresponding explicit choice.
+
 Select a device to edit:
 
 - name, role, and accent color
@@ -24,7 +26,7 @@ The duplicate button copies a device and gives the copy new internal IDs. Use th
 
 ## Add service tiles
 
-Create a service group, then choose **Apps**. You can search the built-in logo catalog and select more than one service. Your selections stay checked when you run another search, so you can build a group without reopening the picker.
+Create a service group, then choose **Apps**. You can search the built-in logo catalog and select more than one service. Search ignores punctuation and accents. Your selections stay checked when you run another search, so you can build a group without reopening the picker.
 
 You can change a service name and set its instance count from 1 through 99. **Add custom service** adds a named tile with the included generic icon. It does not upload or accept custom SVG files.
 

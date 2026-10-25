@@ -1,4 +1,4 @@
-import { LOGOS, logoById, logoDataUri, logoPlate } from './catalog.js';
+import { LOGOS, logoById, logoDataUri, logoPlate, networkLogoId, searchLogos } from './catalog.js';
 import {
   LIMITS, emptyProject, layoutProject, parseProject, removeDevice, removeNetwork, resetAutoLayout,
   renderProject, sampleProject, setManualCard, uid, validateProject,
@@ -38,7 +38,7 @@ let suppressDiagramClick = false;
 let saveTimer;
 let lastStored = '';
 let conflictRaw = '';
-let targetGroup = null;
+let logoDialogState = null;
 let logoSelection = new Set();
 
 function escapeHtml(value) {
@@ -276,22 +276,13 @@ function renderInventory() {
     const row = document.createElement('div');
     row.className = `inventory-item ${selected === network.id ? 'selected' : ''}`;
     row.dataset.id = network.id;
-    const icon = networkIcon(network.kind);
+    const icon = networkLogoId(network);
     row.innerHTML = `<button class="inventory-select" aria-label="Edit ${escapeHtml(network.name)}"><img class="${logoPlateClass(icon)}" alt="" src="${logoDataUri(icon)}"><span><strong></strong><small></small></span></button>`;
     row.querySelector('strong').textContent = network.name;
     row.querySelector('small').textContent = network.kind;
     return row;
   }));
   if (!networks.length) networkList.innerHTML = '<p class="inventory-empty">No matching network nodes.</p>';
-}
-
-function networkIcon(kind) {
-  const value = kind.toLowerCase();
-  if (value.includes('internet')) return 'internet';
-  if (value.includes('router')) return 'router';
-  if (value.includes('switch')) return 'switch';
-  if (value.includes('wi-fi') || value.includes('wifi')) return 'wifi';
-  return 'generic';
 }
 
 function projectForm() {
@@ -321,7 +312,14 @@ function renderInspector() {
     return;
   }
   if (network) {
-    root.innerHTML = `<div class="inspector-head"><div><span class="eyebrow">Network node</span><h2>${escapeHtml(network.name)}</h2></div><button data-delete-network class="danger">Delete</button></div><section class="inspector-section"><h3>Identity</h3><label>Name<input data-network="name" maxlength="120"></label><div class="form-grid"><label>Kind<input data-network="kind" maxlength="120"></label><label>Accent<input data-network="accent" type="color"></label></div></section>`;
+    const logoChoice = (field, label) => {
+      const id = field === 'icon' ? networkLogoId(network) : network.secondaryIcon;
+      const value = network[field];
+      const text = value ? logoById(value).label : field === 'icon' ? `Auto · ${logoById(id).label}` : 'None';
+      const thumbnail = id ? `<img class="${logoPlateClass(id)}" alt="" src="${logoDataUri(id)}">` : '<span class="logo-none" aria-hidden="true">—</span>';
+      return `<div class="network-logo-field"><span>${label}</span><button type="button" data-network-logo="${field}" aria-haspopup="dialog" aria-label="Choose ${label.toLowerCase()}: ${escapeHtml(text)}">${thumbnail}<span>${escapeHtml(text)}</span></button></div>`;
+    };
+    root.innerHTML = `<div class="inspector-head"><div><span class="eyebrow">Network node</span><h2>${escapeHtml(network.name)}</h2></div><button data-delete-network class="danger">Delete</button></div><section class="inspector-section"><h3>Identity</h3><label>Name<input data-network="name" maxlength="120"></label><div class="form-grid"><label>Kind<input data-network="kind" maxlength="120"></label><label>Accent<input data-network="accent" type="color"></label></div>${logoChoice('icon', 'Logo')}${logoChoice('secondaryIcon', 'Secondary logo')}<p class="help">Add a secondary logo for an optional backup provider in the same node.</p></section>`;
     for (const key of ['name', 'kind', 'accent']) root.querySelector(`[data-network=${key}]`).value = network[key];
     return;
   }
@@ -441,6 +439,8 @@ $('#inspector-content').addEventListener('click', event => {
   } else if (button.matches('[data-delete-network]') && networkId) {
     const name = project.networks.find(network => network.id === networkId).name;
     if (confirm(`Delete ${name} and its connections?`)) change(candidate => removeNetwork(candidate, networkId), { select: null });
+  } else if (button.matches('[data-network-logo]') && networkId) {
+    openNetworkLogoDialog(networkId, button.dataset.networkLogo, button);
   } else if (button.matches('[data-duplicate]') && deviceId) {
     const source = project.devices.find(device => device.id === deviceId);
     const sourceServices = source.groups.reduce((sum, group) => sum + group.services.length, 0);
@@ -476,7 +476,7 @@ $('#inspector-content').addEventListener('click', event => {
     if (button.matches('[data-remove-group]')) {
       change(candidate => { const device = candidate.devices.find(item => item.id === deviceId); device.groups = device.groups.filter(group => group.id !== groupId); });
     } else if (button.matches('[data-add-services]')) {
-      openLogoDialog(groupId);
+      openLogoDialog(deviceId, groupId, button);
     } else {
       const row = event.target.closest('[data-service]');
       if (!row) return;
@@ -513,7 +513,7 @@ $('#template-grid').addEventListener('click', event => {
   if (template.network) {
     if (project.networks.length >= LIMITS.networks) return toast('Network node limit reached.');
     const id = uid('net');
-    if (change(candidate => { candidate.networks.push({ id, name: template.name, kind: template.name, accent: template.accent }); }, { select: id })) inspectorOpen = true;
+    if (change(candidate => { candidate.networks.push({ id, name: template.name, kind: template.name, accent: template.accent, icon: '', secondaryIcon: '' }); }, { select: id })) inspectorOpen = true;
   } else {
     if (project.devices.length >= LIMITS.devices || countGroups() >= LIMITS.groups) return toast('Device or group limit reached.');
     if (countServices() + template.services.length > LIMITS.services) return toast('Service limit reached.');
@@ -530,20 +530,43 @@ $('#template-grid').addEventListener('click', event => {
   render();
 });
 
-function openLogoDialog(groupId) {
-  targetGroup = groupId;
+function openLogoDialog(deviceId, groupId, opener) {
+  logoDialogState = { mode: 'service', deviceId, groupId, opener };
   logoSelection = new Set();
   $('#logo-search').value = '';
+  $('#logo-dialog-eyebrow').textContent = 'Service catalog';
+  $('#logo-dialog-title').textContent = 'Add services';
+  for (const id of ['selection-count', 'add-custom', 'add-selected']) $(`#${id}`).hidden = false;
+  renderLogos();
+  $('#logo-dialog').showModal();
+  $('#logo-search').focus();
+}
+
+function openNetworkLogoDialog(networkId, field, opener) {
+  logoDialogState = { mode: 'network', networkId, field, opener };
+  logoSelection = new Set();
+  $('#logo-search').value = '';
+  $('#logo-dialog-eyebrow').textContent = 'Network node';
+  $('#logo-dialog-title').textContent = field === 'icon' ? 'Choose network logo' : 'Choose secondary logo';
+  for (const id of ['selection-count', 'add-custom', 'add-selected']) $(`#${id}`).hidden = true;
   renderLogos();
   $('#logo-dialog').showModal();
   $('#logo-search').focus();
 }
 
 function renderLogos() {
-  const query = $('#logo-search').value.trim().toLowerCase();
-  const matches = LOGOS.filter(logo => !['server', 'router', 'switch', 'wifi', 'internet'].includes(logo.id) && `${logo.label} ${logo.category}`.toLowerCase().includes(query));
+  const query = $('#logo-search').value.trim();
+  const networkMode = logoDialogState?.mode === 'network';
+  const available = networkMode ? LOGOS : LOGOS.filter(logo => !['server', 'router', 'switch', 'wifi', 'internet'].includes(logo.id));
+  const matches = searchLogos(available, query);
   const grid = $('#logo-grid');
-  if (!matches.length) {
+  if (networkMode) {
+    const network = project.networks.find(item => item.id === logoDialogState.networkId);
+    const selectedLogo = network?.[logoDialogState.field] ?? '';
+    const emptyLabel = logoDialogState.field === 'icon' ? 'Auto' : 'None';
+    const emptyDetail = logoDialogState.field === 'icon' ? 'Use the kind-based logo' : 'No secondary logo';
+    grid.innerHTML = `<button type="button" class="logo-option logo-choice ${selectedLogo === '' ? 'selected' : ''}" data-logo-choice="" aria-pressed="${selectedLogo === ''}"><span class="logo-none" aria-hidden="true">—</span><span>${emptyLabel}<small class="muted">${emptyDetail}</small></span></button>${matches.map(logo => `<button type="button" class="logo-option logo-choice ${selectedLogo === logo.id ? 'selected' : ''}" data-logo-choice="${logo.id}" aria-pressed="${selectedLogo === logo.id}"><img class="${logoPlateClass(logo.id)}" alt="" src="${logoDataUri(logo.id)}"><span>${escapeHtml(logo.label)}<small class="muted">${escapeHtml(logo.category)}</small></span></button>`).join('')}${matches.length ? '' : '<p class="no-results">No matching local logos.</p>'}`;
+  } else if (!matches.length) {
     grid.innerHTML = '<p class="no-results">No matching local logos. Add a custom service instead.</p>';
   } else {
     grid.innerHTML = matches.map(logo => `<label class="logo-option"><input type="checkbox" value="${logo.id}" ${logoSelection.has(logo.id) ? 'checked' : ''}><img class="${logoPlateClass(logo.id)}" alt="" src="${logoDataUri(logo.id)}"><span>${escapeHtml(logo.label)}<small class="muted">${escapeHtml(logo.category)}</small></span></label>`).join('');
@@ -552,31 +575,47 @@ function renderLogos() {
 }
 
 $('#logo-search').addEventListener('input', renderLogos);
+$('#logo-dialog form').addEventListener('submit', event => { if (logoDialogState?.mode === 'network' && event.submitter?.value !== 'cancel') event.preventDefault(); });
 $('#logo-grid').addEventListener('change', event => {
-  if (!event.target.matches('input[type=checkbox]')) return;
+  if (logoDialogState?.mode !== 'service' || !event.target.matches('input[type=checkbox]')) return;
   logoSelection = updateSelection(logoSelection, event.target.value, event.target.checked);
   $('#selection-count').textContent = `${logoSelection.size} selected`;
 });
+$('#logo-grid').addEventListener('click', event => {
+  const choice = event.target.closest('[data-logo-choice]');
+  if (!choice || logoDialogState?.mode !== 'network') return;
+  const { networkId, field } = logoDialogState;
+  if (change(candidate => { candidate.networks.find(network => network.id === networkId)[field] = choice.dataset.logoChoice; })) $('#logo-dialog').close();
+});
 $('#add-selected').addEventListener('click', event => {
   event.preventDefault();
-  const deviceId = selected;
+  if (logoDialogState?.mode !== 'service') return;
+  const { deviceId, groupId } = logoDialogState;
   const ids = [...logoSelection];
   if (!ids.length) return toast('Select at least one service.');
   if (countServices() + ids.length > LIMITS.services) return toast('Service limit reached.');
   if (change(candidate => {
-    const group = candidate.devices.find(device => device.id === deviceId).groups.find(item => item.id === targetGroup);
+    const group = candidate.devices.find(device => device.id === deviceId).groups.find(item => item.id === groupId);
     group.services.push(...ids.map(id => ({ id: uid('svc'), logo: id, name: logoById(id).label, count: 1 })));
   })) $('#logo-dialog').close();
 });
 $('#add-custom').addEventListener('click', () => {
+  if (logoDialogState?.mode !== 'service') return;
   const name = prompt('Custom service name:')?.trim();
   if (!name) return;
   if (name.length > LIMITS.text) return toast(`Service names must be ${LIMITS.text} characters or fewer.`);
   if (countServices() >= LIMITS.services) return toast('Service limit reached.');
-  const deviceId = selected;
+  const { deviceId, groupId } = logoDialogState;
   if (change(candidate => {
-    candidate.devices.find(device => device.id === deviceId).groups.find(group => group.id === targetGroup).services.push({ id: uid('svc'), logo: 'generic', name, count: 1 });
+    candidate.devices.find(device => device.id === deviceId).groups.find(group => group.id === groupId).services.push({ id: uid('svc'), logo: 'generic', name, count: 1 });
   })) $('#logo-dialog').close();
+});
+$('#logo-dialog').addEventListener('close', () => {
+  const opener = logoDialogState?.opener;
+  logoDialogState = null;
+  logoSelection = new Set();
+  $('#logo-search').value = '';
+  if (opener?.isConnected) opener.focus();
 });
 
 $('#add-network').addEventListener('click', () => {
@@ -590,7 +629,7 @@ $('#network-form').addEventListener('submit', event => {
   event.preventDefault();
   const form = new FormData(event.target);
   const id = uid('net');
-  if (change(candidate => { candidate.networks.push({ id, name: form.get('name'), kind: form.get('kind'), accent: form.get('accent') }); }, { select: id })) {
+  if (change(candidate => { candidate.networks.push({ id, name: form.get('name'), kind: form.get('kind'), accent: form.get('accent'), icon: '', secondaryIcon: '' }); }, { select: id })) {
     inspectorOpen = true;
     $('#network-dialog').close();
   }

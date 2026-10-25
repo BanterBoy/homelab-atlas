@@ -4,7 +4,9 @@ Networking in Atlas is for showing how things relate to each other. Atlas does n
 
 ## Network nodes
 
-Use **Add network node**, or pick Router, Switch, Wi-Fi, or Internet from **Add device**. Each network node has a name, kind, and accent color. Atlas uses the kind to choose an included icon when it can.
+Use **Add network node**, or pick Router, Switch, Wi-Fi, or Internet from **Add device**. Each network node has a name, kind, accent color, and optional logo choices. The primary logo defaults to **Auto**, which follows the kind. You can choose any bundled local mark instead, independent of the node name or kind.
+
+An optional **Secondary logo** can represent a backup provider in the same node. Atlas stacks the two marks in the network card and keeps both in SVG and PNG exports. Choose **None** to remove the secondary mark. These choices label the diagram only; Atlas does not contact or inspect either provider.
 
 ## VLAN chips and device labels
 

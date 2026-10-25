@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "revision": 1,
   "title": "Home Lab",
   "subtitle": "Private infrastructure · Local services · Built to last",
@@ -15,19 +15,25 @@
       "id": "net-internet",
       "name": "Internet",
       "kind": "Internet",
-      "accent": "#48bfe3"
+      "accent": "#48bfe3",
+      "icon": "",
+      "secondaryIcon": ""
     },
     {
       "id": "net-router",
       "name": "Core Router",
       "kind": "Router",
-      "accent": "#55d6c9"
+      "accent": "#55d6c9",
+      "icon": "",
+      "secondaryIcon": ""
     },
     {
       "id": "net-switch",
       "name": "UniFi Switch",
       "kind": "Ubiquiti Switch",
-      "accent": "#7dd3fc"
+      "accent": "#7dd3fc",
+      "icon": "",
+      "secondaryIcon": ""
     }
   ],
   "vlans": [

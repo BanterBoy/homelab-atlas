@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { LOGOS, logoDataUri, logoPlate } from '../public/catalog.js';
+import { LOGOS, logoDataUri, logoPlate, networkLogoId, searchLogos } from '../public/catalog.js';
 import { ICON_DATA } from '../public/icon-data.js';
 import {
   LIMITS, layoutProject, parseProject, removeDevice, removeNetwork,
@@ -69,7 +69,7 @@ test('bad and oversized imports are rejected', () => {
   const project = sampleProject();
   project.schemaVersion = 9;
   assert.throws(() => parseProject(JSON.stringify(project)), /schema/);
-  project.schemaVersion = 2;
+  project.schemaVersion = 3;
   project.devices[0].icon = 'data:image/svg+xml,<script>';
   assert.throws(() => validateProject(project), /Unknown logo/);
   const extra = sampleProject();
@@ -77,7 +77,7 @@ test('bad and oversized imports are rejected', () => {
   assert.throws(() => validateProject(extra), /structure/);
 });
 
-test('schema 2 layout rejects unknown keys, invalid bounds, duplicate IDs, and stale references', () => {
+test('schema 3 layout rejects unknown keys, invalid bounds, duplicate IDs, and stale references', () => {
   const project = sampleProject();
   project.extra = true;
   assert.throws(() => validateProject(project), /structure/);
@@ -107,20 +107,85 @@ test('schema 2 layout rejects unknown keys, invalid bounds, duplicate IDs, and s
   assert.throws(() => validateProject(project), /stale or duplicate/);
 });
 
-test('schema 1 imports migrate without mutation or accepting extra keys', () => {
-  const legacy = sampleProject();
-  legacy.schemaVersion = 1;
-  delete legacy.layout;
-  const before = structuredClone(legacy);
-  const migrated = parseProject(JSON.stringify(legacy));
-  assert.deepEqual(legacy, before);
-  assert.equal(migrated.schemaVersion, 2);
-  assert.deepEqual(migrated.layout, { mode: 'auto', cards: [] });
-  legacy.unexpected = true;
-  assert.throws(() => parseProject(JSON.stringify(legacy)), /structure/);
-  delete legacy.unexpected;
-  legacy.devices[0].unexpected = true;
-  assert.throws(() => parseProject(JSON.stringify(legacy)), /structure/);
+test('schema 1 and 2 imports migrate strictly while preserving revision and manual layout', () => {
+  const version2 = sampleProject();
+  setManualCard(version2, 'dev-storage', { x: 64, y: 32, w: 300, h: 400 });
+  version2.schemaVersion = 2;
+  for (const network of version2.networks) { delete network.icon; delete network.secondaryIcon; }
+  const version2Before = structuredClone(version2);
+  const migrated2 = parseProject(JSON.stringify(version2));
+  assert.deepEqual(version2, version2Before);
+  assert.equal(migrated2.schemaVersion, 3);
+  assert.equal(migrated2.revision, version2.revision);
+  assert.deepEqual(migrated2.layout, version2.layout);
+  assert.ok(migrated2.networks.every(network => network.icon === '' && network.secondaryIcon === ''));
+
+  const version1 = structuredClone(version2);
+  version1.schemaVersion = 1;
+  delete version1.layout;
+  const migrated1 = parseProject(JSON.stringify(version1));
+  assert.equal(migrated1.schemaVersion, 3);
+  assert.equal(migrated1.revision, version1.revision);
+  assert.deepEqual(migrated1.layout, { mode: 'auto', cards: [] });
+  assert.ok(migrated1.networks.every(network => network.icon === '' && network.secondaryIcon === ''));
+
+  version1.unexpected = true;
+  assert.throws(() => parseProject(JSON.stringify(version1)), /structure/);
+  delete version1.unexpected;
+  version2.networks[0].icon = '';
+  assert.throws(() => parseProject(JSON.stringify(version2)), /structure/);
+});
+
+test('network logo fields validate strictly and survive a saved roundtrip', () => {
+  const project = sampleProject();
+  const network = project.networks[0];
+  network.icon = 'cloudflare';
+  network.secondaryIcon = 'tailscale';
+  assert.equal(validateProject(project), true);
+  assert.deepEqual(parseProject(JSON.stringify(project)), project);
+  network.icon = 'missing-logo';
+  assert.throws(() => validateProject(project), /Unknown logo/);
+  network.icon = '';
+  network.secondaryIcon = 'missing-logo';
+  assert.throws(() => validateProject(project), /Unknown logo/);
+  network.secondaryIcon = '';
+  network.extra = true;
+  assert.throws(() => validateProject(project), /structure/);
+});
+
+test('network logo fallback and normalized alias search are deterministic', () => {
+  for (const [kind, expected] of [['Internet', 'internet'], ['Router', 'router'], ['Switch', 'switch'], ['Wi-Fi', 'wifi'], ['UniFi Switch', 'ubiquiti'], ['Other', 'generic']]) {
+    assert.equal(networkLogoId({ kind, icon: '' }), expected);
+  }
+  assert.equal(networkLogoId({ kind: 'Router', icon: 'cloudflare' }), 'cloudflare');
+  assert.deepEqual(searchLogos(LOGOS, 'qbittorrent').map(logo => logo.id), ['qbittorrent']);
+  const providers = [
+    { id: 'att', label: 'AT&T', category: 'ISP · US', aliases: [] },
+    { id: 'tmobile', label: 'T-Mobile', category: 'ISP · US', aliases: ['Télécom Mobile'] },
+  ];
+  assert.deepEqual(searchLogos(providers, 'att').map(logo => logo.id), ['att']);
+  assert.deepEqual(searchLogos(providers, 'tmobile').map(logo => logo.id), ['tmobile']);
+  assert.deepEqual(searchLogos(providers, 'telecom').map(logo => logo.id), ['tmobile']);
+});
+
+test('network SVG embeds selected primary and secondary marks without touching text', () => {
+  const project = sampleProject();
+  project.networks[0].icon = 'tailscale';
+  project.networks[0].secondaryIcon = 'cloudflare';
+  for (const theme of ['navy', 'light', 'midnight']) {
+    project.theme = theme;
+    const box = layoutProject(project).networks[0];
+    const svg = renderProject(project);
+    assert.ok(svg.includes(`<image href="${logoDataUri('tailscale')}" x="${box.x + 24}" y="${box.y + 18}" width="26" height="26"`));
+    assert.ok(svg.includes(`<image href="${logoDataUri('cloudflare')}" x="${box.x + 24}" y="${box.y + 52}" width="26" height="26"`));
+    assert.ok(svg.includes(`<text x="${box.x + 72}" y="${box.y + 37}"`));
+    assert.ok(box.x + 24 + 26 < box.x + 72);
+    assert.ok(box.y + 52 + 26 < box.y + box.h);
+  }
+  project.networks[0].icon = '';
+  project.networks[0].secondaryIcon = '';
+  assert.equal(networkLogoId(project.networks[0]), 'internet');
+  assert.equal(validateProject(project), true);
 });
 
 test('IDs, counts, and connection references are enforced', () => {
@@ -222,7 +287,7 @@ test('single-service groups use bounded full-width row geometry', () => {
 test('network and VLAN rows wrap without expanding beyond selected columns', () => {
   const project = sampleProject();
   project.columns = 1;
-  project.networks = Array.from({ length: 20 }, (_, index) => ({ id: `network-${index}`, name: 'Very long network name '.repeat(4), kind: 'Switch', accent: '#123456' }));
+  project.networks = Array.from({ length: 20 }, (_, index) => ({ id: `network-${index}`, name: 'Very long network name '.repeat(4), kind: 'Switch', accent: '#123456', icon: '', secondaryIcon: '' }));
   project.vlans = Array.from({ length: 20 }, (_, index) => ({ id: `vlan-${index}`, name: 'Very long VLAN name '.repeat(4), color: '#654321' }));
   project.connections = [];
   const layout = layoutProject(project);
@@ -254,7 +319,7 @@ test('connections use straight network arrows, a VLAN-gap bus, and lower-card fa
   assert.ok(layout.relationships.some(connection => connection.id === 'conn-edge'));
 
   project.columns = 1;
-  project.networks.push({ id: 'net-remote', name: 'Remote', kind: 'Router', accent: '#123456' });
+  project.networks.push({ id: 'net-remote', name: 'Remote', kind: 'Router', accent: '#123456', icon: '', secondaryIcon: '' });
   project.connections.push({ id: 'conn-complex', from: 'net-internet', to: 'net-remote', label: 'Tunnel' });
   assert.ok(layoutProject(project).relationships.some(connection => connection.id === 'conn-complex'));
 });
@@ -262,7 +327,7 @@ test('connections use straight network arrows, a VLAN-gap bus, and lower-card fa
 test('routing uses bottom network rows, single-VLAN margins, and directed arrows', () => {
   const project = sampleProject();
   project.columns = 1;
-  project.networks = Array.from({ length: 5 }, (_, index) => ({ id: `net-${index}`, name: `Network ${index}`, kind: 'Switch', accent: '#123456' }));
+  project.networks = Array.from({ length: 5 }, (_, index) => ({ id: `net-${index}`, name: `Network ${index}`, kind: 'Switch', accent: '#123456', icon: '', secondaryIcon: '' }));
   project.vlans = [{ id: 'vlan-only', name: 'Main', color: '#654321' }];
   project.connections = [
     { id: 'top-device', from: 'net-0', to: 'dev-storage', label: '' },

@@ -1,12 +1,12 @@
 # Project format
 
-**Save project** downloads schema-version-2 JSON. Atlas 0.3 and newer can open it. Schema-version-1 files still import and migrate to automatic layout without changing their content. When you import a file, Atlas rejects unknown keys, wrong value types, unsafe IDs, unknown logos, broken references, and invalid card geometry before it replaces the project you have open.
+**Save project** downloads schema-version-3 JSON. Atlas 0.4 and newer can open it. Schema-version-1 and schema-version-2 files still import: v1 gains automatic layout, while v2 keeps its automatic or manual layout. Both gain the default network-logo fields without changing their inventory or revision. When you import a file, Atlas rejects unknown keys, wrong value types, unsafe IDs, unknown logos, broken references, and invalid card geometry before it replaces the project you have open.
 
 ## Top-level fields
 
 | Field | Type | Meaning |
 |---|---|---|
-| `schemaVersion` | integer | Must be `2` |
+| `schemaVersion` | integer | Must be `3` |
 | `revision` | integer | Browser conflict/change revision, from 0 through 1,000,000,000 |
 | `title`, `subtitle` | string | Diagram heading text, at most 120 characters each |
 | `theme` | string | `navy`, `light`, or `midnight` |
@@ -22,7 +22,7 @@
 
 | Record | Exact fields |
 |---|---|
-| Network | `id`, `name`, `kind`, `accent` |
+| Network | `id`, `name`, `kind`, `accent`, `icon`, `secondaryIcon` |
 | VLAN | `id`, `name`, `color` |
 | Device | `id`, `name`, `role`, `icon`, `accent`, `network`, `hardware`, `groups` |
 | Group | `id`, `name`, `services` |
@@ -31,7 +31,7 @@
 | Layout | `mode`, `cards` |
 | Layout card | `id`, `x`, `y`, `w`, `h` |
 
-Colors use six-digit hexadecimal values such as `#55d6c9`. A device `icon` or service `logo` must exist in the included catalog. A service `count` must be an integer from 1 through 99.
+Colors use six-digit hexadecimal values such as `#55d6c9`. A device `icon`, service `logo`, or nonempty network logo field must exist in the included catalog. An empty network `icon` selects the automatic kind-based mark; an empty `secondaryIcon` means no secondary mark. A service `count` must be an integer from 1 through 99.
 
 ## IDs and references
 
@@ -70,7 +70,7 @@ The group limit applies to each device array and to the whole project. Each obje
 
 ```json
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "revision": 1,
   "title": "Small Lab",
   "subtitle": "Fictional example",

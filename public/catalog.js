@@ -20,7 +20,7 @@ const entries = [
   ['utility-clock','Clock','Other','#8294a8'],['utility-code','Code','Other','#8294a8'],['utility-shield','Shield','Other','#8294a8'],['utility-wave','Audio waveform','Other','#8294a8'],['utility-speaker','Speaker','Other','#8294a8'],['utility-mic','Microphone','Other','#8294a8'],['utility-sun','Sun','Other','#8294a8'],['utility-api','API','Other','#8294a8'],['utility-book','Book','Other','#8294a8']
 ];
 
-export const LOGOS = entries.map(([id,label,category,color]) => ({id,label,category,color}));
+export const LOGOS = entries.map(([id,label,category,color,aliases = []]) => ({id,label,category,color,aliases}));
 export const LOGO_IDS = new Set(LOGOS.map(x => x.id));
 export const logoById = id => LOGOS.find(x => x.id === id) || LOGOS.find(x => x.id === 'generic');
 const LIGHT_PLATES = new Set(['hermes-agent', 'intel', 'ollama', 'open-webui', 'portainer', 'valkey', 'vaultwarden']);
@@ -33,4 +33,22 @@ export function logoDataUri(id) {
 export function logoPlate(id, theme = 'navy') {
   if (theme === 'light') return DARK_PLATES.has(id) ? '#111827' : null;
   return LIGHT_PLATES.has(id) ? '#f8fafc' : null;
+}
+
+const normalizeLogoSearch = value => String(value).normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+
+export function searchLogos(logos, query) {
+  const needle = normalizeLogoSearch(query);
+  return logos.filter(logo => normalizeLogoSearch([logo.id, logo.label, logo.category, ...(logo.aliases || [])].join(' ')).includes(needle));
+}
+
+export function networkLogoId(network) {
+  if (network.icon) return network.icon;
+  const kind = network.kind.toLowerCase();
+  if (kind.includes('ubiquiti') || kind.includes('unifi')) return 'ubiquiti';
+  if (kind.includes('internet')) return 'internet';
+  if (kind.includes('router')) return 'router';
+  if (kind.includes('switch')) return 'switch';
+  if (kind.includes('wi-fi') || kind.includes('wifi')) return 'wifi';
+  return 'generic';
 }

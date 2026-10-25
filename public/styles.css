@@ -306,6 +306,14 @@ dialog header button { width: 32px; padding: 0; }
 .logo-option { display: flex; align-items: center; gap: 9px; padding: 8px; border: 1px solid var(--line); border-radius: 7px; }
 .logo-option input { width: auto; }
 .logo-option small { display: block; }
+.logo-choice { justify-content: flex-start; min-height: 48px; text-align: left; }
+.logo-choice.selected { border-color: var(--accent); background: #253332; box-shadow: inset 0 0 0 1px var(--accent); }
+.logo-none { display: grid; place-items: center; width: 28px; height: 28px; flex: none; border: 1px dashed #596362; border-radius: 4px; color: var(--muted); }
+.network-logo-field { display: grid; gap: 5px; margin-top: 10px; }
+.network-logo-field > span { font-size: 12px; font-weight: 600; }
+.network-logo-field button { justify-content: flex-start; width: 100%; height: 46px; text-align: left; }
+.network-logo-field img { width: 28px; height: 28px; object-fit: contain; border-radius: 4px; }
+#logo-dialog footer [hidden] { display: none; }
 .search { margin-bottom: 12px; }
 .export-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .export-options button { display: grid; height: 80px; text-align: left; }

@@ -1,6 +1,6 @@
-import { LOGO_IDS, logoDataUri, logoPlate } from './catalog.js';
+import { LOGO_IDS, logoDataUri, logoPlate, networkLogoId } from './catalog.js';
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 export const THEMES = ['navy', 'light', 'midnight'];
 export const DENSITIES = ['comfortable', 'compact'];
 export const LIMITS = {
@@ -37,7 +37,7 @@ function services(prefix, items) {
 
 export function sampleProject() {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     revision: 1,
     title: 'Home Lab',
     subtitle: 'Private infrastructure · Local services · Built to last',
@@ -46,9 +46,9 @@ export function sampleProject() {
     density: 'comfortable',
     layout: { mode: 'auto', cards: [] },
     networks: [
-      { id: 'net-internet', name: 'Internet', kind: 'Internet', accent: '#48bfe3' },
-      { id: 'net-router', name: 'Core Router', kind: 'Router', accent: '#55d6c9' },
-      { id: 'net-switch', name: 'UniFi Switch', kind: 'Ubiquiti Switch', accent: '#7dd3fc' },
+      { id: 'net-internet', name: 'Internet', kind: 'Internet', accent: '#48bfe3', icon: '', secondaryIcon: '' },
+      { id: 'net-router', name: 'Core Router', kind: 'Router', accent: '#55d6c9', icon: '', secondaryIcon: '' },
+      { id: 'net-switch', name: 'UniFi Switch', kind: 'Ubiquiti Switch', accent: '#7dd3fc', icon: '', secondaryIcon: '' },
     ],
     vlans: [
       { id: 'vlan-management', name: '01 Management', color: '#55d6c9' },
@@ -111,9 +111,13 @@ export function parseProject(text) {
   if (new TextEncoder().encode(text).length > LIMITS.bytes) throw new Error('File is larger than 1 MB.');
   let data;
   try { data = JSON.parse(text); } catch { throw new Error('This file is not valid JSON.'); }
-  if (data?.schemaVersion === 1) {
-    validateProjectVersion(data, 1);
-    const migrated = { ...structuredClone(data), schemaVersion: 2, layout: { mode: 'auto', cards: [] } };
+  if (data?.schemaVersion === 1 || data?.schemaVersion === 2) {
+    const version = data.schemaVersion;
+    validateProjectVersion(data, version);
+    const migrated = structuredClone(data);
+    migrated.schemaVersion = 3;
+    if (version === 1) migrated.layout = { mode: 'auto', cards: [] };
+    migrated.networks = migrated.networks.map(network => ({ ...network, icon: '', secondaryIcon: '' }));
     validateProject(migrated);
     return migrated;
   }
@@ -134,7 +138,7 @@ function validateProjectVersion(project, version) {
     if (!object || typeof object !== 'object' || Array.isArray(object) || Object.keys(object).some(key => !allowed.includes(key))) fail(`${label} has an invalid structure.`);
   };
   if (!project || typeof project !== 'object' || Array.isArray(project)) fail('Project must be an object.');
-  const keys = ['schemaVersion', 'revision', 'title', 'subtitle', 'theme', 'columns', 'density', ...(version === 2 ? ['layout'] : []), 'networks', 'vlans', 'devices', 'connections'];
+  const keys = ['schemaVersion', 'revision', 'title', 'subtitle', 'theme', 'columns', 'density', ...(version >= 2 ? ['layout'] : []), 'networks', 'vlans', 'devices', 'connections'];
   exact(project, keys, 'Project');
   if (project.schemaVersion !== version) fail(`Unsupported schema version: ${project.schemaVersion ?? 'missing'}.`);
   string(project.title, 'Title');
@@ -155,9 +159,13 @@ function validateProjectVersion(project, version) {
   let serviceCount = 0;
   let groupCount = 0;
   for (const network of project.networks) {
-    exact(network, ['id', 'name', 'kind', 'accent'], 'Network');
+    exact(network, version >= 3 ? ['id', 'name', 'kind', 'accent', 'icon', 'secondaryIcon'] : ['id', 'name', 'kind', 'accent'], 'Network');
     addId(network.id, 'Network'); string(network.name); string(network.kind);
     if (!COLOR_RE.test(network.accent)) fail('Invalid network color.');
+    if (version >= 3) {
+      string(network.icon, 'Network logo'); string(network.secondaryIcon, 'Secondary network logo');
+      for (const logo of [network.icon, network.secondaryIcon]) if (logo && !LOGO_IDS.has(logo)) fail(`Unknown logo: ${logo}.`);
+    }
   }
   for (const vlan of project.vlans) {
     exact(vlan, ['id', 'name', 'color'], 'VLAN');
@@ -184,7 +192,7 @@ function validateProjectVersion(project, version) {
       }
     }
   }
-  if (version === 2) {
+  if (version >= 2) {
     exact(project.layout, ['mode', 'cards'], 'Layout');
     if (!['auto', 'manual'].includes(project.layout.mode) || !Array.isArray(project.layout.cards) || project.layout.cards.length > project.devices.length) fail('Invalid layout.');
     if (project.layout.mode === 'auto' && project.layout.cards.length) fail('Automatic layout cannot contain card positions.');
@@ -478,20 +486,21 @@ function textElement(text, x, y, options) {
   return `<text x="${x}" y="${y}" fill="${fill}" font-family="${FONT}" font-size="${size}" font-weight="${weight}" text-anchor="${anchor}" opacity="${opacity}">${title}${spans}</text>`;
 }
 
-function networkIcon(kind) {
-  const key = kind.toLowerCase();
-  if (key.includes('ubiquiti') || key.includes('unifi')) return 'ubiquiti';
-  if (key.includes('internet')) return 'internet';
-  if (key.includes('router')) return 'router';
-  if (key.includes('switch')) return 'switch';
-  if (key.includes('wi-fi') || key.includes('wifi')) return 'wifi';
-  return 'generic';
-}
-
-function renderNetwork(network, box, theme) {
+function renderNetwork(network, box, theme, themeName) {
   const name = textElement(network.name, box.x + 72, box.y + 37, { fill: theme.text, size: 17, weight: 700, maxChars: Math.max(10, Math.floor((box.w - 88) / 9)) });
   const kind = textElement(network.kind, box.x + 72, box.y + 61, { fill: theme.muted, size: 12, weight: 550, maxChars: Math.max(10, Math.floor((box.w - 88) / 7)), maxLines: 2, lineHeight: 15 });
-  return `<g data-network="${network.id}" role="button" tabindex="0" aria-label="Edit ${escapeXml(network.name)}"><title>${escapeXml(network.name)}</title><rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" rx="10" fill="${theme.card}" stroke="${theme.line}" stroke-opacity=".78"/><rect x="${box.x + 16}" y="${box.y + 25}" width="42" height="42" rx="8" fill="${network.accent}" fill-opacity="0.11"/><image href="${logoDataUri(networkIcon(network.kind))}" x="${box.x + 19}" y="${box.y + 28}" width="36" height="36"/>${name}${kind}</g>`;
+  const logos = [networkLogoId(network), network.secondaryIcon].filter(Boolean);
+  const iconBackground = logos.length === 1
+    ? `<rect x="${box.x + 16}" y="${box.y + 25}" width="42" height="42" rx="8" fill="${network.accent}" fill-opacity="0.11"/>`
+    : `<rect x="${box.x + 16}" y="${box.y + 11}" width="42" height="74" rx="8" fill="${network.accent}" fill-opacity="0.11"/>`;
+  const marks = logos.map((id, index) => {
+    const size = logos.length === 1 ? 36 : 26;
+    const x = box.x + (logos.length === 1 ? 19 : 24);
+    const y = box.y + (logos.length === 1 ? 28 : 18 + index * 34);
+    const plate = logoPlate(id, themeName);
+    return `${plate ? `<rect x="${x - 3}" y="${y - 3}" width="${size + 6}" height="${size + 6}" rx="7" fill="${plate}"/>` : ''}<image href="${logoDataUri(id)}" x="${x}" y="${y}" width="${size}" height="${size}" preserveAspectRatio="xMidYMid meet"/>`;
+  }).join('');
+  return `<g data-network="${network.id}" role="button" tabindex="0" aria-label="Edit ${escapeXml(network.name)}"><title>${escapeXml(network.name)}</title><rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" rx="10" fill="${theme.card}" stroke="${theme.line}" stroke-opacity=".78"/>${iconBackground}${marks}${name}${kind}</g>`;
 }
 
 function renderService(service, x, y, width, height, theme, themeName, secondary) {
@@ -604,7 +613,7 @@ export function renderProject(project) {
   const statStart = layout.oneColumnHeader ? layout.margin : layout.width - layout.margin - 360;
   const statWidth = layout.oneColumnHeader ? (layout.width - layout.margin * 2) / 3 : 120;
   const stats = [[project.devices.length, 'HOSTS'], [serviceCount, 'SERVICES'], [project.vlans.length, 'VLANS']].map(([value, label], index) => `${textElement(String(value).padStart(2, '0'), statStart + index * statWidth, statsY, { fill: index ? theme.text : theme.teal, size: 44, weight: 600, maxChars: 3 })}${textElement(label, statStart + index * statWidth, statsY + 28, { fill: theme.muted, size: 10, weight: 600, maxChars: 10 })}`).join('');
-  const networks = project.networks.map(network => renderNetwork(network, layout.networks.find(box => box.id === network.id), theme)).join('');
+  const networks = project.networks.map(network => renderNetwork(network, layout.networks.find(box => box.id === network.id), theme, project.theme)).join('');
   const vlans = project.vlans.map(vlan => {
     const box = layout.vlans.find(item => item.id === vlan.id);
     const label = textElement(vlan.name, box.x + 20, box.y + 29, { fill: theme.text, size: 13, weight: 650, maxChars: Math.max(8, Math.floor((box.w - 30) / 7)) });
