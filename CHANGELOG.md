@@ -2,7 +2,7 @@
 
 All notable changes to Homelab Atlas are documented here.
 
-## [0.1.0] - 2026-10-24
+## [0.1.0] - 2026-10-25
 
 ### Added
 

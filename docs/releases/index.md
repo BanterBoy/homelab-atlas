@@ -1,6 +1,6 @@
 # Releases and packages
 
-The latest planned stable release is **v0.1.0**. It exists publicly only after the complete release workflow succeeds; release notes are available at [v0.1.0](/releases/v0.1.0).
+**v0.1.0** is the first public release. See its [release notes](/releases/v0.1.0) and [GitHub release with downloads](https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.1.0). Releases publish only after the complete validation and packaging workflow succeeds.
 
 ## Release assets
 
@@ -40,7 +40,7 @@ Both covered files must report `OK`.
 | `0.1` | Newest stable patch in the 0.1 line |
 | `latest` | Newest stable release |
 
-Exact version tags identify a release, while `0.1` and `latest` move when later stable releases publish. For immutable deployment, obtain the actual manifest digest from the successful release workflow or registry, then replace the image's colon-prefixed tag with `@` followed by that verified `sha256:` digest. No digest is published here until the image exists and has been verified.
+Exact version tags identify a release, while `0.1` and `latest` move when later stable releases publish. For immutable deployment, obtain the verified manifest digest from the registry or successful release workflow, then replace the image's colon-prefixed tag with `@` followed by that `sha256:` digest.
 
 ## Maintainer checklist
 

@@ -34,7 +34,7 @@ Create `.env` beside `compose.release.yaml` to choose an explicit image tag:
 ATLAS_VERSION=0.1.0
 ```
 
-Then update without changing the hostname or port:
+To update an explicit pin, edit `ATLAS_VERSION` in `.env` to a published target first. Then pull and recreate without changing the hostname or port:
 
 ```sh
 docker compose -f compose.release.yaml pull
@@ -67,17 +67,31 @@ git pull --ff-only
 docker compose up --build -d
 ```
 
-Stop either deployment with its matching Compose arguments:
+Stop a released-image deployment with:
 
 ```sh
 docker compose -f compose.release.yaml down
 ```
 
-## Direct Python fallback
-
-From a source checkout or the portable release ZIP:
+Stop a source-built deployment from its checkout with:
 
 ```sh
+docker compose down
+```
+
+## Direct Python fallback
+
+From a source checkout, run:
+
+```sh
+python3 server.py
+```
+
+For the portable release, extract the ZIP and enter its top-level directory first:
+
+```sh
+unzip homelab-atlas-0.1.0.zip
+cd homelab-atlas-0.1.0
 python3 server.py
 ```
 

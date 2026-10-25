@@ -17,7 +17,7 @@ class ReleaseTests(unittest.TestCase):
             "package.json": json.dumps({"version": version}),
             "server.py": "print('atlas')\n",
             "Dockerfile": "FROM python:3.13-alpine\n",
-            "compose.release.yaml": "services: {}\n",
+            "compose.release.yaml": "services:\n  atlas:\n    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.1.0}\n",
             "README.md": "# Atlas\n",
             "LICENSE": "MIT\n",
             "THIRD_PARTY_NOTICES.md": "Notices\n",
@@ -61,6 +61,24 @@ class ReleaseTests(unittest.TestCase):
             root = Path(temporary)
             self.fixture(root, "0.2.0")
             with self.assertRaisesRegex(ValueError, "does not match"):
+                release.build(root, "v0.1.0", root / "dist")
+
+    def test_mismatched_compose_default_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.fixture(root)
+            (root / "compose.release.yaml").write_text(
+                "services:\n  atlas:\n    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.2.0}\n"
+            )
+            with self.assertRaisesRegex(ValueError, "compose.release.yaml image"):
+                release.build(root, "v0.1.0", root / "dist")
+
+    def test_symlink_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.fixture(root)
+            (root / "public/link.html").symlink_to(root / "public/index.html")
+            with self.assertRaisesRegex(ValueError, "symlink"):
                 release.build(root, "v0.1.0", root / "dist")
 
 

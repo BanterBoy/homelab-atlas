@@ -31,6 +31,11 @@ def version_for(root: Path, tag: str) -> str:
     package_version = json.loads((root / "package.json").read_text())["version"]
     if version != package_version:
         raise ValueError(f"tag {tag} does not match package.json version {package_version}")
+    expected_image = f"ghcr.io/aiden0rchad/homelab-atlas:${{ATLAS_VERSION:-{version}}}"
+    compose = (root / "compose.release.yaml").read_text()
+    images = re.findall(r"^\s*image:\s*(\S+)\s*$", compose, re.MULTILINE)
+    if images != [expected_image]:
+        raise ValueError(f"compose.release.yaml image must be {expected_image}")
     return version
 
 

@@ -6,6 +6,7 @@
 tests
 scripts
 docs
+/dist
 node_modules
 *.md
 compose.yaml

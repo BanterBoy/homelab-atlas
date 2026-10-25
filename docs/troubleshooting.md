@@ -30,9 +30,15 @@ docker compose build
 docker compose run --rm -p 127.0.0.1:8081:8080 atlas
 ```
 
-Open `http://localhost:8081`. This is a different browser origin from port 8080, so import a JSON backup rather than expecting the old autosave to appear. There is no `ATLAS_PORT` setting.
+Open `http://localhost:8081`. This is a different browser origin from port 8080, so import a JSON backup rather than expecting the old autosave to appear.
 
-For the released image, use a small Compose override that changes only the published port; do not edit the container's internal port 8080.
+For the released image, Compose `run` does not publish the service's default ports, so provide the alternate mapping explicitly:
+
+```sh
+docker compose -f compose.release.yaml run --rm -p 127.0.0.1:8081:8080 atlas
+```
+
+Keep the container's internal port at 8080. There is no `ATLAS_PORT` setting.
 
 ## Import validation details
 
