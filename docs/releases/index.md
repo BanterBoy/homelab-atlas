@@ -40,7 +40,7 @@ Both covered files must report `OK`.
 | `0.1` | Newest stable patch in the 0.1 line |
 | `latest` | Newest stable release |
 
-The exact version tags keep pointing to the same release. The `0.1` and `latest` tags move when a newer matching release is published. If you need an image reference that cannot move, get the verified manifest digest from the registry or successful release workflow. Replace the tag after the image name with `@` followed by that `sha256:` digest.
+The exact version tags keep pointing to the same release. The `0.1` and `latest` tags move when a newer matching release is published. If you need an image reference that cannot move, get the verified manifest digest from the registry or successful release workflow. Replace the colon and tag after the image name with `@` followed by that `sha256:` digest.
 
 ## Maintainer checklist
 

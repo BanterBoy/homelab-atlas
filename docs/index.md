@@ -44,7 +44,7 @@ I posted a diagram of my homelab on Reddit and someone asked how they could make
 
 <p class="shot-caption">The preview, SVG export, and PNG export all use the same automatic layout.</p>
 
-## Start, shape, save, share
+## Making your first diagram {#start-shape-save-share}
 
 <div class="flow">
   <div><strong>1 · Start</strong>Load the example or begin empty.</div>
@@ -54,7 +54,7 @@ I posted a diagram of my homelab on Reddit and someone asked how they could make
   <div><strong>5 · Save</strong>Back up JSON; export SVG or PNG.</div>
 </div>
 
-Atlas only knows what you type into it. Start with [installation and safe deployment](/getting-started), then use the [editor guide](/editor) when you want more detail on the controls.
+Atlas only knows what you add or import. Start with [installation and safe deployment](/getting-started), then use the [editor guide](/editor) when you want more detail on the controls.
 
 <div class="support">
 If Homelab Atlas is useful to you, you can <a href="https://www.buymeacoffee.com/aiden0rchad" target="_blank" rel="noopener noreferrer">buy me a coffee</a>.

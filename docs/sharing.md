@@ -41,6 +41,6 @@ Try not to edit the same project in several tabs. These choices help you recover
 
 SVG and PNG files cannot be imported to restore a project. Atlas may reduce a large PNG to stay within browser limits. Use SVG when you need to scale the image without a fixed resolution.
 
-## Share intentionally
+## Before you post it {#share-intentionally}
 
 Atlas does not hide IP addresses, hostnames, domains, roles, network labels, or service names for you. Check the diagram and JSON, remove anything private, and only share what you mean to share. The included example and documentation screenshots use fictional data.

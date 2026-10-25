@@ -22,7 +22,7 @@ Choose **Edit connections**, then set:
 
 An endpoint can be a network node or a device. Connections show relationships, not exact switch ports, cable paths, routing tables, or live link state. If the automatic layout cannot draw a relationship clearly, Atlas also lists it in the diagram so it is not lost.
 
-## Deliberate boundaries
+## What Atlas doesn't do {#deliberate-boundaries}
 
 Homelab Atlas does not:
 

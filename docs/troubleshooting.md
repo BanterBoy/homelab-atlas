@@ -5,7 +5,7 @@ Find the symptom that matches what you're seeing. Browser developer tools and `d
 | Symptom | Action |
 |---|---|
 | Project is empty at another URL | Use the same browser profile, hostname, port, and protocol. If you changed the address, import a saved JSON backup. |
-| “Not saved - storage unavailable” | Allow site storage, leave private mode, and check the browser's storage quota or policy. If the project is still open, download JSON right away. |
+| “Not saved — storage unavailable” | Allow site storage, leave private mode, and check the browser's storage quota or policy. If the project is still open, download JSON right away. |
 | Another-tab conflict banner | Download the project in the current tab first. Then choose **Keep my edits** or **Load saved version** based on which copy you want. |
 | Import rejected | Make sure it is valid Homelab Atlas schema-version-1 JSON under 1 MB. Unknown keys, duplicate or unsafe IDs, unknown logo IDs, and bad connection endpoints are rejected. |
 | Port 8080 already in use | Stop the conflicting service or use a different local port as shown below. |

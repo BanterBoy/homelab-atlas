@@ -79,7 +79,7 @@ Stop a source-built deployment from its checkout with:
 docker compose down
 ```
 
-## Direct Python fallback
+## Run without Docker {#direct-python-fallback}
 
 From a source checkout, run:
 
@@ -97,7 +97,7 @@ python3 server.py
 
 Open `http://localhost:8080`. The server only exposes `public/` and, by default, only listens on the same machine.
 
-## Trusted-LAN access
+## Open it from another computer {#trusted-lan-access}
 
 Atlas has no login system. Only make it available on a LAN you trust:
 
