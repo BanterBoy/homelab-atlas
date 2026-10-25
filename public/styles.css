@@ -303,11 +303,12 @@ dialog footer { margin-top: 16px; }
 dialog header button { width: 32px; padding: 0; }
 .template-grid, .logo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 7px; max-height: 55vh; overflow: auto; }
 .template { justify-content: flex-start; height: 54px; text-align: left; }
-.template span, .logo-option span { display: grid; }
-.logo-option { display: flex; align-items: center; gap: 9px; padding: 8px; border: 1px solid var(--line); border-radius: 7px; }
+.template span { display: grid; }
+.logo-option { display: flex; align-items: center; min-height: 54px; gap: 9px; padding: 8px; border: 1px solid var(--line); border-radius: 7px; }
 .logo-option input { width: auto; }
-.logo-option small { display: block; }
-.logo-choice { justify-content: flex-start; min-height: 48px; text-align: left; }
+.logo-option img { flex-shrink: 0; }
+.logo-option > span:not(.logo-none), .logo-option small { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.logo-choice { justify-content: flex-start; text-align: left; }
 .logo-choice.selected { border-color: var(--accent); background: #253332; box-shadow: inset 0 0 0 1px var(--accent); }
 .logo-none { display: grid; place-items: center; width: 28px; height: 28px; flex: none; border: 1px dashed #596362; border-radius: 4px; color: var(--muted); }
 .network-logo-field { display: grid; gap: 5px; margin-top: 10px; }
