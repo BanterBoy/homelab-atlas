@@ -73,12 +73,14 @@ export function validateCustomLogos(logos, usedIds = new Set()) {
   if (!Array.isArray(logos) || logos.length > CUSTOM_LOGO_LIMITS.count) fail('Project contains too many custom logos.');
   if (logos.reduce((total, logo) => total + (typeof logo?.dataUrl === 'string' ? logo.dataUrl.length : 0), 0) > CUSTOM_LOGO_LIMITS.totalDataUrlChars) fail('Custom logo data exceeds the project limit.');
   const ids = new Set(usedIds);
+  const customIds = new Set();
   for (const logo of logos) {
     if (typeof logo?.id === 'string' && ids.has(logo.id)) fail(`Custom logo ID collides with another ID: ${logo.id}.`);
     ids.add(logo.id);
+    customIds.add(logo.id);
   }
   logos.forEach(validateCustomLogo);
-  return ids;
+  return customIds;
 }
 
 export async function verifyCustomLogoDecodes(logos) {
@@ -90,7 +92,18 @@ export async function verifyCustomLogoDecodes(logos) {
   })));
 }
 
-export const svgTextHasUnsafeContent = text => /<!DOCTYPE|<!ENTITY|<script\b|\son[a-z]+\s*=|<foreignObject\b|<(?:animate|animateMotion|animateTransform|set)\b|<\?xml-stylesheet|@import|url\(\s*['"]?(?!#)/i.test(text);
+export function hasExternalSvgUrl(value) {
+  const url = /url\(\s*(?:(['"])(.*?)\1|([^'"]*?))\s*\)/gi;
+  let match;
+  let remainder = value;
+  while ((match = url.exec(value))) {
+    if (!(match[2] ?? match[3]).trim().startsWith('#')) return true;
+    remainder = remainder.replace(match[0], '');
+  }
+  return /url\s*\(/i.test(remainder);
+}
+
+export const svgTextHasUnsafeContent = text => /<!DOCTYPE|<!ENTITY|<script\b|\son[a-z]+\s*=|<foreignObject\b|<(?:animate|animateMotion|animateTransform|set)\b|<\?xml-stylesheet|@import/i.test(text) || hasExternalSvgUrl(text);
 
 function svgIsSafe(text) {
   if (svgTextHasUnsafeContent(text)) return false;
@@ -100,7 +113,7 @@ function svgIsSafe(text) {
     for (const attribute of element.attributes) {
       const name = attribute.name.toLowerCase();
       const value = attribute.value.trim();
-      if (name.startsWith('on') || ((name === 'href' || name.endsWith(':href')) && value && !value.startsWith('#')) || /url\(\s*['"]?(?!#)/i.test(value)) return false;
+      if (name.startsWith('on') || ((name === 'href' || name.endsWith(':href')) && value && !value.startsWith('#')) || hasExternalSvgUrl(value)) return false;
     }
   }
   return true;

@@ -41,7 +41,6 @@ let lastStored = '';
 let conflictRaw = '';
 let logoDialogState = null;
 let logoSelection = new Set();
-let logoDialogSession = 0;
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, character => ({
@@ -555,8 +554,7 @@ function openSingleLogoDialog(mode, target, opener) {
 }
 
 function openLogoPicker(target, opener) {
-  logoDialogSession += 1;
-  logoDialogState = { ...target, opener, session: logoDialogSession, project, drafts: new Map(), filter: 'all', upload: null };
+  logoDialogState = { ...target, opener, project, drafts: new Map(), filter: 'all', upload: null };
   logoSelection = new Set();
   $('#logo-search').value = '';
   $('#logo-search').placeholder = target.mode === 'network' ? 'Provider, country, or network…' : 'Jellyfin, device, backup…';
@@ -602,14 +600,17 @@ function renderLogos() {
   const available = logoDialogState.filter === 'uploaded' ? uploaded : [...uploaded, ...bundled];
   const matches = searchLogos(available, query);
   const grid = $('#logo-grid');
+  const emptyMessage = logoDialogState.filter === 'uploaded' && !uploaded.length
+    ? 'No uploaded logos yet. Use Upload logo to add one.'
+    : 'No matching logos. Try another search or use Upload logo.';
   if (logoDialogState.mode !== 'service-add') {
     const selectedLogo = currentPickerLogo();
     const emptyLabel = logoDialogState.field === 'icon' ? 'Auto' : 'None';
     const emptyDetail = logoDialogState.field === 'icon' ? 'Use the kind-based logo' : 'No secondary logo';
     const empty = networkMode ? `<button type="button" class="logo-option logo-choice ${selectedLogo === '' ? 'selected' : ''}" data-logo-choice="" aria-pressed="${selectedLogo === ''}"><span class="logo-none" aria-hidden="true">—</span><span>${emptyLabel}<small class="muted">${emptyDetail}</small></span></button>` : '';
-    grid.innerHTML = `${empty}${matches.map(logo => `<button type="button" class="logo-option logo-choice ${selectedLogo === logo.id ? 'selected' : ''}" data-logo-choice="${logo.id}" aria-pressed="${selectedLogo === logo.id}"><img class="${pickerPlateClass(logo)}" alt="" src="${logo.dataUrl || logoSource(logo.id)}"><span>${escapeHtml(logo.label)}<small class="muted">${escapeHtml(logo.category)}</small></span></button>`).join('')}${matches.length ? '' : `<p class="no-results">No uploaded logos yet. Use Upload logo to add one.</p>`}`;
+    grid.innerHTML = `${empty}${matches.map(logo => `<button type="button" class="logo-option logo-choice ${selectedLogo === logo.id ? 'selected' : ''}" data-logo-choice="${logo.id}" aria-pressed="${selectedLogo === logo.id}"><img class="${pickerPlateClass(logo)}" alt="" src="${logo.dataUrl || logoSource(logo.id)}"><span>${escapeHtml(logo.label)}<small class="muted">${escapeHtml(logo.category)}</small></span></button>`).join('')}${matches.length ? '' : `<p class="no-results">${emptyMessage}</p>`}`;
   } else if (!matches.length) {
-    grid.innerHTML = `<p class="no-results">${logoDialogState.filter === 'uploaded' ? 'No uploaded logos yet. Use Upload logo to add one.' : 'No matching local logos. Add a custom service instead.'}</p>`;
+    grid.innerHTML = `<p class="no-results">${emptyMessage}</p>`;
   } else {
     grid.innerHTML = matches.map(logo => `<label class="logo-option"><input type="checkbox" value="${logo.id}" ${logoSelection.has(logo.id) ? 'checked' : ''}><img class="${pickerPlateClass(logo)}" alt="" src="${logo.dataUrl || logoSource(logo.id)}"><span>${escapeHtml(logo.label)}<small class="muted">${escapeHtml(logo.category)}</small></span></label>`).join('');
   }
@@ -617,6 +618,7 @@ function renderLogos() {
 }
 
 $('#logo-search').addEventListener('input', renderLogos);
+for (const input of [$('#logo-search'), $('#upload-name')]) input.addEventListener('keydown', event => { if (event.key === 'Enter') event.preventDefault(); });
 $('#logo-dialog form').addEventListener('submit', event => { if (event.submitter?.value !== 'cancel') event.preventDefault(); });
 $('#logo-grid').addEventListener('change', event => {
   if (logoDialogState?.mode !== 'service-add' || !event.target.matches('input[type=checkbox]')) return;
@@ -651,7 +653,7 @@ $('#add-selected').addEventListener('click', event => {
   })) $('#logo-dialog').close();
 });
 $('#add-custom').addEventListener('click', () => {
-  if (logoDialogState?.mode !== 'service-add') return;
+  if (logoDialogState?.mode !== 'service-add' || !pickerTargetExists()) return;
   const name = prompt('Custom service name:')?.trim();
   if (!name) return;
   if (name.length > LIMITS.text) return toast(`Service names must be ${LIMITS.text} characters or fewer.`);
@@ -749,7 +751,6 @@ $('#logo-dialog').addEventListener('close', () => {
   const state = logoDialogState;
   const opener = state?.opener;
   logoDialogState = null;
-  logoDialogSession += 1;
   logoSelection = new Set();
   $('#logo-search').value = '';
   $('#logo-file').value = '';
@@ -762,6 +763,7 @@ $('#logo-dialog').addEventListener('close', () => {
   else if (state?.mode === 'network' && selected === state.networkId) $(`#inspector-content [data-network-logo="${state.field}"]`)?.focus();
   else if (state?.mode === 'device' && selected === state.deviceId) $('#inspector-content [data-device-logo]')?.focus();
   else if (state?.mode === 'service' && selected === state.deviceId) $(`#inspector-content [data-service="${CSS.escape(state.serviceId)}"] [data-service-logo]`)?.focus();
+  else if (state?.mode === 'service-add' && selected === state.deviceId) $(`#inspector-content [data-group="${CSS.escape(state.groupId)}"] [data-add-services]`)?.focus();
 });
 
 $('#add-network').addEventListener('click', () => {

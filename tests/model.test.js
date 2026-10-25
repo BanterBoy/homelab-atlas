@@ -163,6 +163,25 @@ test('schema 1, 2, and 3 imports migrate strictly while preserving data', () => 
   assert.deepEqual(migrated3.customLogos, []);
 });
 
+test('legacy project record IDs may match bundled logo IDs', () => {
+  for (const version of [1, 2, 3]) {
+    const project = sampleProject();
+    project.schemaVersion = version;
+    delete project.customLogos;
+    project.connections = [];
+    project.networks[0].id = 'server';
+    project.devices[0].id = 'fedora';
+    project.devices[0].groups[0].id = 'router';
+    if (version < 3) for (const network of project.networks) { delete network.icon; delete network.secondaryIcon; }
+    if (version === 1) delete project.layout;
+    else project.layout = { mode: 'auto', cards: [] };
+    const migrated = parseProject(JSON.stringify(project));
+    assert.equal(migrated.networks[0].id, 'server');
+    assert.equal(migrated.devices[0].id, 'fedora');
+    assert.equal(migrated.devices[0].groups[0].id, 'router');
+  }
+});
+
 test('network logo fields validate strictly and survive a saved roundtrip', () => {
   const project = sampleProject();
   const network = project.networks[0];

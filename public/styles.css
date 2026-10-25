@@ -324,6 +324,7 @@ dialog header button { width: 32px; padding: 0; }
 .logo-filters button[aria-pressed="true"] { border-color: var(--accent); background: #253332; }
 .upload-help { grid-column: 1 / -1; }
 #logo-dialog .logo-grid { min-height: 120px; max-height: none; flex: 1; }
+#logo-dialog .logo-grid > .no-results { grid-column: 1 / -1; }
 .logo-preview { overflow: auto; }
 .upload-preview-surface { display: grid; place-items: center; min-height: 180px; border: 1px solid var(--line); border-radius: 8px; background-color: #c7cecc; background-image: linear-gradient(45deg, #aeb7b4 25%, transparent 25%), linear-gradient(-45deg, #aeb7b4 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #aeb7b4 75%), linear-gradient(-45deg, transparent 75%, #aeb7b4 75%); background-position: 0 0, 0 8px, 8px -8px, -8px 0; background-size: 16px 16px; }
 .upload-preview-surface.preview-light { background: #f8fafc; }
