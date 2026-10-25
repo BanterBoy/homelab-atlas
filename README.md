@@ -25,19 +25,19 @@ Atlas lays out your diagram automatically, with optional manual positioning and 
 You'll need Docker with Compose v2:
 
 ```sh
-curl -fsSLO https://github.com/aiden0rchad/homelab-atlas/releases/download/v0.4.0/compose.release.yaml
+curl -fsSLO https://github.com/aiden0rchad/homelab-atlas/releases/download/v0.5.0/compose.release.yaml
 docker compose -f compose.release.yaml up -d
 ```
 
-Open `http://localhost:8080`. This uses the `0.4.0` image and only listens on the machine running Docker. Images are available for Linux AMD64 and ARM64.
+Open `http://localhost:8080`. This uses the `0.5.0` image and only listens on the machine running Docker. Images are available for Linux AMD64 and ARM64.
 
 For access from another computer, updates, or running without Docker, see the [setup guide](https://aiden0rchad.github.io/homelab-atlas/getting-started). The [release page](https://github.com/aiden0rchad/homelab-atlas/releases/latest) has the portable ZIP, Compose file, and checksums.
 
 ## Making a diagram
 
-Start with **Load example** to see how it works, or **Start empty** for your own lab. Add devices, fill in whatever hardware details you want to show, and group the services running on each one. The logo picker is searchable and works offline.
+Start with **Load example** to see how it works, or **Start empty** for your own lab. Add devices, fill in whatever hardware details you want to show, and group the services running on each one. Visual logo pickers are searchable and work offline. Click a device icon or an existing service logo to replace it.
 
-You can add network connections and VLAN labels, choose a theme, and adjust the number of columns and spacing. Select a network node to choose its **Logo** and an optional secondary logo for a backup provider. The searchable local catalog includes 27 major US and European provider marks, and both marks appear in SVG and PNG exports. Atlas starts with an automatic layout; **Arrange** lets you move or resize device cards without changing the automatic network and VLAN header. **Export** downloads a PNG or SVG. Use **Save project** to download a JSON copy you can edit later.
+You can upload PNG, JPG, WebP, or SVG logos up to 2 MB, preview their contrast background, and reuse them across devices, services, and network nodes. SVG uploads are converted to PNG, and stored images are at most 512px. They stay in project JSON and work offline and in exports. The bundled catalog still includes 27 provider marks. Atlas starts with an automatic layout; **Arrange** lets you move or resize device cards. **Export** downloads a PNG or SVG. Use **Save project** to download a JSON copy you can edit later.
 
 The [editor guide](https://aiden0rchad.github.io/homelab-atlas/editor) covers the controls, and the [networking guide](https://aiden0rchad.github.io/homelab-atlas/networking) explains connections and VLANs.
 

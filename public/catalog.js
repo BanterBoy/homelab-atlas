@@ -49,15 +49,18 @@ const entries = [
 
 export const LOGOS = entries.map(([id,label,category,color,aliases = []]) => ({id,label,category,color,aliases}));
 export const LOGO_IDS = new Set(LOGOS.map(x => x.id));
-export const logoById = id => LOGOS.find(x => x.id === id) || LOGOS.find(x => x.id === 'generic');
+export const customLogoEntries = customLogos => (customLogos || []).map(logo => ({ ...logo, category: 'Uploaded', aliases: [] }));
+export const logoById = (id, customLogos = []) => customLogoEntries(customLogos).find(x => x.id === id) || LOGOS.find(x => x.id === id) || LOGOS.find(x => x.id === 'generic');
 const LIGHT_PLATES = new Set(['hermes-agent', 'intel', 'ollama', 'open-webui', 'portainer', 'valkey', 'vaultwarden', 'kpn', 'xfinity', 'free-isp', 'bt', 'o2', 'sky', 'bouygues-telecom', 'spectrum', 'starlink', 'virgin-media', '1and1']);
 const DARK_PLATES = new Set(['amd', 'docmost', 'goaccess-light', 'litellm-light', 'matter-light', 'miniflux', 'tailscale', 'frontier', 'tim']);
 
-export function logoDataUri(id) {
-  return ICON_DATA[id] || (id === 'restic' ? ICON_DATA.backup : ICON_DATA.generic);
+export function logoDataUri(id, customLogos = []) {
+  return customLogos.find(logo => logo.id === id)?.dataUrl || ICON_DATA[id] || (id === 'restic' ? ICON_DATA.backup : ICON_DATA.generic);
 }
 
-export function logoPlate(id, theme = 'navy') {
+export function logoPlate(id, theme = 'navy', customLogos = []) {
+  const background = customLogos.find(logo => logo.id === id)?.background;
+  if (background) return background === 'light' ? '#f8fafc' : background === 'dark' ? '#111827' : null;
   if (theme === 'light') return DARK_PLATES.has(id) ? '#111827' : null;
   return LIGHT_PLATES.has(id) ? '#f8fafc' : null;
 }

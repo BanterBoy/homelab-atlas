@@ -11,6 +11,7 @@ The app itself uses browser JavaScript and Python's standard library, with no ru
 | `public/model.js` | Project schema, validation, layout, and SVG rendering |
 | `public/state.js` | State, conflict, selection, and PNG-size helpers |
 | `public/catalog.js` | Logo metadata and lookup helpers |
+| `public/custom-logos.js` | Uploaded PNG validation and browser normalization |
 | `public/logos/` | Included SVG logo files |
 | `public/licenses/` | Logo sources and upstream licenses |
 | `server.py` | Restricted static server and `/healthz` endpoint |
@@ -29,7 +30,7 @@ npm run build:icons
 npm run check:icons
 docker compose config
 docker compose -f compose.release.yaml config
-python3 scripts/release.py v0.4.0 --output dist
+python3 scripts/release.py v0.5.0 --output dist
 ```
 
 `npm test` checks the logo data, runs the Node tests, and runs the Python tests. Release files go into the ignored `dist/` directory, and the release workflow checks their checksums too.
@@ -58,6 +59,8 @@ The configured base path is `/homelab-atlas/`, even when you run the docs locall
 7. Include the generated `public/icon-data.js` change.
 
 Keep the logos in the repository. Do not load them, fonts, or other images from a CDN at runtime. Product names and trademarks still belong to their owners; see [THIRD_PARTY_NOTICES.md on GitHub](https://github.com/aiden0rchad/homelab-atlas/blob/main/THIRD_PARTY_NOTICES.md).
+
+Project uploads are different from bundled logos. They are decoded by the browser, converted to PNG, limited to 512px and 200,000 data-URL characters each, and stored only in project JSON. Imports validate PNG structure before native browser decode. Projects allow 32 uploads and 1,200,000 total custom data-URL characters. Original files are limited to 2,000,000 bytes, 4096px per side, and 16 million pixels.
 
 ## Preparing a release
 

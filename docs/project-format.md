@@ -1,18 +1,19 @@
 # Project format
 
-**Save project** downloads schema-version-3 JSON. Atlas 0.4 and newer can open it. Schema-version-1 and schema-version-2 files still import: v1 gains automatic layout, while v2 keeps its automatic or manual layout. Both gain the default network-logo fields without changing their inventory or revision. When you import a file, Atlas rejects unknown keys, wrong value types, unsafe IDs, unknown logos, broken references, and invalid card geometry before it replaces the project you have open.
+**Save project** downloads schema-version-4 JSON. Atlas 0.5 and newer can open it. Schema versions 1 through 3 still import after strict validation. Version 1 gains automatic layout, versions 1 and 2 gain empty network-logo fields, and version 3 keeps its network choices. All gain an empty `customLogos` array without changing inventory, manual rectangles, or revision. Older Atlas versions cannot open schema version 4.
 
 ## Top-level fields
 
 | Field | Type | Meaning |
 |---|---|---|
-| `schemaVersion` | integer | Must be `3` |
+| `schemaVersion` | integer | Must be `4` |
 | `revision` | integer | Browser conflict/change revision, from 0 through 1,000,000,000 |
 | `title`, `subtitle` | string | Diagram heading text, at most 120 characters each |
 | `theme` | string | `navy`, `light`, or `midnight` |
 | `columns` | integer | Device layout columns, 1–4 |
 | `density` | string | `comfortable` or `compact` |
 | `layout` | object | Device-card layout mode and saved rectangles |
+| `customLogos` | array | Uploaded PNG assets stored with the project |
 | `networks` | array | Network node records |
 | `vlans` | array | VLAN chip records |
 | `devices` | array | Device cards, hardware facts, groups, and services |
@@ -30,8 +31,11 @@
 | Connection | `id`, `from`, `to`, `label` |
 | Layout | `mode`, `cards` |
 | Layout card | `id`, `x`, `y`, `w`, `h` |
+| Custom logo | `id`, `label`, `dataUrl`, `background` |
 
-Colors use six-digit hexadecimal values such as `#55d6c9`. A device `icon`, service `logo`, or nonempty network logo field must exist in the included catalog. An empty network `icon` selects the automatic kind-based mark; an empty `secondaryIcon` means no secondary mark. A service `count` must be an integer from 1 through 99.
+Colors use six-digit hexadecimal values such as `#55d6c9`. A device `icon`, service `logo`, or nonempty network logo field must exist in the bundled catalog or `customLogos`. An empty network `icon` selects the automatic kind-based mark; an empty `secondaryIcon` means no secondary mark. A service `count` must be an integer from 1 through 99.
+
+Custom logo IDs start with `custom-` and use the same safe ASCII ID characters, with a total limit of 64 characters. Labels are trimmed, nonempty text up to 120 characters. `background` is `none`, `light`, or `dark`. `dataUrl` is a canonical `data:image/png;base64,...` value. Raw SVG, remote URLs, blob URLs, extra fields, duplicates, and IDs colliding with catalog or project records are rejected.
 
 ## IDs and references
 
@@ -53,7 +57,7 @@ Coordinates are integer diagram units relative to the upper-left of the device r
 
 | Item | Limit |
 |---|---:|
-| UTF-8 import file | 1,000,000 bytes |
+| UTF-8 import file | 2,000,000 bytes |
 | Any text field | 120 characters |
 | Devices | 80 |
 | Network nodes | 30 |
@@ -63,6 +67,10 @@ Coordinates are integer diagram units relative to the upper-left of the device r
 | Services, total | 800 |
 | Hardware facts per device | 12 |
 | Manual card rectangles | No more than the device count |
+| Custom logos | 32 |
+| Original upload | 2,000,000 bytes; 4096px per side; 16,000,000 pixels |
+| Stored custom PNG | 512px per side; 200,000 data-URL characters |
+| Custom data URLs, total | 1,200,000 characters |
 
 The group limit applies to each device array and to the whole project. Each object only accepts the keys listed above. Extra fields are rejected rather than preserved.
 
@@ -70,7 +78,7 @@ The group limit applies to each device array and to the whole project. Each obje
 
 ```json
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "revision": 1,
   "title": "Small Lab",
   "subtitle": "Fictional example",
@@ -81,6 +89,7 @@ The group limit applies to each device array and to the whole project. Each obje
     "mode": "auto",
     "cards": []
   },
+  "customLogos": [],
   "networks": [],
   "vlans": [],
   "devices": [],

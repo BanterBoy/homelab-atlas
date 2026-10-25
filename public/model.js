@@ -1,10 +1,11 @@
 import { LOGO_IDS, logoDataUri, logoPlate, networkLogoId } from './catalog.js';
+import { validateCustomLogos } from './custom-logos.js';
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 export const THEMES = ['navy', 'light', 'midnight'];
 export const DENSITIES = ['comfortable', 'compact'];
 export const LIMITS = {
-  bytes: 1_000_000,
+  bytes: 2_000_000,
   devices: 80,
   services: 800,
   groups: 160,
@@ -37,7 +38,7 @@ function services(prefix, items) {
 
 export function sampleProject() {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     revision: 1,
     title: 'Home Lab',
     subtitle: 'Private infrastructure · Local services · Built to last',
@@ -45,6 +46,7 @@ export function sampleProject() {
     columns: 3,
     density: 'comfortable',
     layout: { mode: 'auto', cards: [] },
+    customLogos: [],
     networks: [
       { id: 'net-internet', name: 'Internet', kind: 'Internet', accent: '#48bfe3', icon: '', secondaryIcon: '' },
       { id: 'net-router', name: 'Core Router', kind: 'Router', accent: '#55d6c9', icon: '', secondaryIcon: '' },
@@ -108,16 +110,17 @@ export function emptyProject() {
 }
 
 export function parseProject(text) {
-  if (new TextEncoder().encode(text).length > LIMITS.bytes) throw new Error('File is larger than 1 MB.');
+  if (new TextEncoder().encode(text).length > LIMITS.bytes) throw new Error('File is larger than 2 MB.');
   let data;
   try { data = JSON.parse(text); } catch { throw new Error('This file is not valid JSON.'); }
-  if (data?.schemaVersion === 1 || data?.schemaVersion === 2) {
+  if ([1, 2, 3].includes(data?.schemaVersion)) {
     const version = data.schemaVersion;
     validateProjectVersion(data, version);
     const migrated = structuredClone(data);
-    migrated.schemaVersion = 3;
+    migrated.schemaVersion = 4;
     if (version === 1) migrated.layout = { mode: 'auto', cards: [] };
-    migrated.networks = migrated.networks.map(network => ({ ...network, icon: '', secondaryIcon: '' }));
+    if (version < 3) migrated.networks = migrated.networks.map(network => ({ ...network, icon: '', secondaryIcon: '' }));
+    migrated.customLogos = [];
     validateProject(migrated);
     return migrated;
   }
@@ -138,7 +141,7 @@ function validateProjectVersion(project, version) {
     if (!object || typeof object !== 'object' || Array.isArray(object) || Object.keys(object).some(key => !allowed.includes(key))) fail(`${label} has an invalid structure.`);
   };
   if (!project || typeof project !== 'object' || Array.isArray(project)) fail('Project must be an object.');
-  const keys = ['schemaVersion', 'revision', 'title', 'subtitle', 'theme', 'columns', 'density', ...(version >= 2 ? ['layout'] : []), 'networks', 'vlans', 'devices', 'connections'];
+  const keys = ['schemaVersion', 'revision', 'title', 'subtitle', 'theme', 'columns', 'density', ...(version >= 2 ? ['layout'] : []), ...(version >= 4 ? ['customLogos'] : []), 'networks', 'vlans', 'devices', 'connections'];
   exact(project, keys, 'Project');
   if (project.schemaVersion !== version) fail(`Unsupported schema version: ${project.schemaVersion ?? 'missing'}.`);
   string(project.title, 'Title');
@@ -151,7 +154,8 @@ function validateProjectVersion(project, version) {
     if (!Array.isArray(project[key]) || project[key].length > maximum) fail(`Invalid or excessive ${key}.`);
   }
 
-  const ids = new Set();
+  const ids = version >= 4 ? validateCustomLogos(project.customLogos, LOGO_IDS) : new Set();
+  const validLogo = id => LOGO_IDS.has(id) || (version >= 4 && project.customLogos.some(logo => logo.id === id));
   const addId = (id, label) => {
     if (typeof id !== 'string' || !ID_RE.test(id) || ids.has(id)) fail(`${label} has an invalid or duplicate ID.`);
     ids.add(id);
@@ -164,7 +168,7 @@ function validateProjectVersion(project, version) {
     if (!COLOR_RE.test(network.accent)) fail('Invalid network color.');
     if (version >= 3) {
       string(network.icon, 'Network logo'); string(network.secondaryIcon, 'Secondary network logo');
-      for (const logo of [network.icon, network.secondaryIcon]) if (logo && !LOGO_IDS.has(logo)) fail(`Unknown logo: ${logo}.`);
+      for (const logo of [network.icon, network.secondaryIcon]) if (logo && !validLogo(logo)) fail(`Unknown logo: ${logo}.`);
     }
   }
   for (const vlan of project.vlans) {
@@ -175,7 +179,7 @@ function validateProjectVersion(project, version) {
   for (const device of project.devices) {
     exact(device, ['id', 'name', 'role', 'icon', 'accent', 'network', 'hardware', 'groups'], 'Device');
     addId(device.id, 'Device'); string(device.name); string(device.role); string(device.network);
-    if (!LOGO_IDS.has(device.icon)) fail(`Unknown logo: ${device.icon}.`);
+    if (!validLogo(device.icon)) fail(`Unknown logo: ${device.icon}.`);
     if (!COLOR_RE.test(device.accent)) fail('Invalid device color.');
     if (!Array.isArray(device.hardware) || device.hardware.length > LIMITS.hardware) fail('Invalid hardware facts.');
     device.hardware.forEach(fact => string(fact, 'Hardware fact'));
@@ -187,7 +191,7 @@ function validateProjectVersion(project, version) {
       for (const service of group.services) {
         exact(service, ['id', 'logo', 'name', 'count'], 'Service');
         addId(service.id, 'Service'); string(service.name); serviceCount += 1;
-        if (!LOGO_IDS.has(service.logo)) fail(`Unknown logo: ${service.logo}.`);
+        if (!validLogo(service.logo)) fail(`Unknown logo: ${service.logo}.`);
         if (!Number.isInteger(service.count) || service.count < 1 || service.count > 99) fail('Service count must be 1–99.');
       }
     }
@@ -486,7 +490,7 @@ function textElement(text, x, y, options) {
   return `<text x="${x}" y="${y}" fill="${fill}" font-family="${FONT}" font-size="${size}" font-weight="${weight}" text-anchor="${anchor}" opacity="${opacity}">${title}${spans}</text>`;
 }
 
-function renderNetwork(network, box, theme, themeName) {
+function renderNetwork(network, box, theme, themeName, customLogos) {
   const name = textElement(network.name, box.x + 72, box.y + 37, { fill: theme.text, size: 17, weight: 700, maxChars: Math.max(10, Math.floor((box.w - 88) / 9)) });
   const kind = textElement(network.kind, box.x + 72, box.y + 61, { fill: theme.muted, size: 12, weight: 550, maxChars: Math.max(10, Math.floor((box.w - 88) / 7)), maxLines: 2, lineHeight: 15 });
   const logos = [networkLogoId(network), network.secondaryIcon].filter(Boolean);
@@ -497,37 +501,37 @@ function renderNetwork(network, box, theme, themeName) {
     const size = logos.length === 1 ? 36 : 26;
     const x = box.x + (logos.length === 1 ? 19 : 24);
     const y = box.y + (logos.length === 1 ? 28 : 18 + index * 34);
-    const plate = logoPlate(id, themeName);
-    return `${plate ? `<rect x="${x - 3}" y="${y - 3}" width="${size + 6}" height="${size + 6}" rx="7" fill="${plate}"/>` : ''}<image href="${logoDataUri(id)}" x="${x}" y="${y}" width="${size}" height="${size}" preserveAspectRatio="xMidYMid meet"/>`;
+    const plate = logoPlate(id, themeName, customLogos);
+    return `${plate ? `<rect x="${x - 3}" y="${y - 3}" width="${size + 6}" height="${size + 6}" rx="7" fill="${plate}"/>` : ''}<image href="${logoDataUri(id, customLogos)}" x="${x}" y="${y}" width="${size}" height="${size}" preserveAspectRatio="xMidYMid meet"/>`;
   }).join('');
   return `<g data-network="${network.id}" role="button" tabindex="0" aria-label="Edit ${escapeXml(network.name)}"><title>${escapeXml(network.name)}</title><rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" rx="10" fill="${theme.card}" stroke="${theme.line}" stroke-opacity=".78"/>${iconBackground}${marks}${name}${kind}</g>`;
 }
 
-function renderService(service, x, y, width, height, theme, themeName, secondary) {
+function renderService(service, x, y, width, height, theme, themeName, secondary, customLogos) {
   const center = x + width / 2;
   const geometry = serviceTileGeometry(service.name, width, height, secondary);
-  const plate = logoPlate(service.logo, themeName);
+  const plate = logoPlate(service.logo, themeName, customLogos);
   const plateRect = plate ? `<rect x="${center - geometry.plateSize / 2}" y="${y + geometry.plateY}" width="${geometry.plateSize}" height="${geometry.plateSize}" rx="5" fill="${plate}"/>` : '';
   const name = textElement(service.name, center, y + geometry.firstBaseline, { fill: theme.text, size: geometry.fontSize, weight: 400, anchor: 'middle', maxChars: Math.max(5, Math.floor(width / (geometry.fontSize * .55))), maxLines: 2, lineHeight: geometry.lineHeight });
   const badge = service.count > 1 ? textElement(`×${service.count}`, x + width - 6, y + 11, { fill: theme.muted, size: 9, weight: 600, anchor: 'end', maxChars: 3 }) : '';
-  return `<g><title>${escapeXml(service.name)}${service.count > 1 ? ` ×${service.count}` : ''}</title><rect x="${x}" y="${y}" width="${width}" height="${height}" rx="6" fill="${theme.tile}" stroke="${theme.line}"/>${plateRect}<image href="${logoDataUri(service.logo)}" x="${center - geometry.logoSize / 2}" y="${y + geometry.logoY}" width="${geometry.logoSize}" height="${geometry.logoSize}" preserveAspectRatio="xMidYMid meet"/>${name}${badge}</g>`;
+  return `<g><title>${escapeXml(service.name)}${service.count > 1 ? ` ×${service.count}` : ''}</title><rect x="${x}" y="${y}" width="${width}" height="${height}" rx="6" fill="${theme.tile}" stroke="${theme.line}"/>${plateRect}<image href="${logoDataUri(service.logo, customLogos)}" x="${center - geometry.logoSize / 2}" y="${y + geometry.logoY}" width="${geometry.logoSize}" height="${geometry.logoSize}" preserveAspectRatio="xMidYMid meet"/>${name}${badge}</g>`;
 }
 
-function renderServiceRow(service, x, y, width, height, theme, themeName, compact) {
+function renderServiceRow(service, x, y, width, height, theme, themeName, compact, customLogos) {
   const geometry = serviceRowGeometry(service.name, width, height, compact, service.count > 1);
-  const plate = logoPlate(service.logo, themeName);
+  const plate = logoPlate(service.logo, themeName, customLogos);
   const iconY = y + (height - geometry.logoSize) / 2;
   const plateY = y + (height - geometry.plateSize) / 2;
   const plateRect = plate ? `<rect x="${x + 10}" y="${plateY}" width="${geometry.plateSize}" height="${geometry.plateSize}" rx="6" fill="${plate}"/>` : '';
   const name = textElement(service.name, x + geometry.textX + 10, y + geometry.firstBaseline, { fill: theme.text, size: geometry.fontSize, weight: 400, maxChars: Math.max(6, Math.floor((width - geometry.textX - geometry.countWidth - 22) / (geometry.fontSize * .55))), maxLines: 2, lineHeight: geometry.lineHeight });
   const badge = service.count > 1 ? textElement(`×${service.count}`, x + width - 12, y + height / 2 + 4, { fill: theme.muted, size: 11, weight: 600, anchor: 'end', maxChars: 3 }) : '';
-  return `<g><title>${escapeXml(service.name)}${service.count > 1 ? ` ×${service.count}` : ''}</title><rect x="${x}" y="${y}" width="${width}" height="${height}" rx="7" fill="${theme.tile}" stroke="${theme.line}"/>${plateRect}<image href="${logoDataUri(service.logo)}" x="${x + 13}" y="${iconY}" width="${geometry.logoSize}" height="${geometry.logoSize}" preserveAspectRatio="xMidYMid meet"/>${name}${badge}</g>`;
+  return `<g><title>${escapeXml(service.name)}${service.count > 1 ? ` ×${service.count}` : ''}</title><rect x="${x}" y="${y}" width="${width}" height="${height}" rx="7" fill="${theme.tile}" stroke="${theme.line}"/>${plateRect}<image href="${logoDataUri(service.logo, customLogos)}" x="${x + 13}" y="${iconY}" width="${geometry.logoSize}" height="${geometry.logoSize}" preserveAspectRatio="xMidYMid meet"/>${name}${badge}</g>`;
 }
 
-function renderCard(device, box, theme, themeName) {
+function renderCard(device, box, theme, themeName, customLogos) {
   const innerX = box.x + 20;
   const innerWidth = box.w - 40;
-  const plate = logoPlate(device.icon, themeName);
+  const plate = logoPlate(device.icon, themeName, customLogos);
   const iconPlate = plate ? `<rect x="${box.x + box.w - 72}" y="${box.y + 22}" width="52" height="52" rx="7" fill="${plate}"/>` : '';
   const roleY = box.y + (box.secondary ? 24 : 29);
   const nameY = box.y + (box.secondary ? 53 : 74);
@@ -567,12 +571,12 @@ function renderCard(device, box, theme, themeName) {
     const services = group.services.map((service, index) => {
       const x = groupX + (index % geometry.columns) * (tileWidth + tileGap);
       const serviceY = y + Math.floor(index / geometry.columns) * (geometry.itemHeight + tileGap);
-      return geometry.mode === 'rows' ? renderServiceRow(service, x, serviceY, tileWidth, geometry.itemHeight, theme, themeName, box.compact) : renderService(service, x, serviceY, tileWidth, geometry.itemHeight, theme, themeName, box.secondary);
+      return geometry.mode === 'rows' ? renderServiceRow(service, x, serviceY, tileWidth, geometry.itemHeight, theme, themeName, box.compact, customLogos) : renderService(service, x, serviceY, tileWidth, geometry.itemHeight, theme, themeName, box.secondary, customLogos);
     }).join('');
     y = groupTop + geometry.height;
     return `<g>${inset}${groupName}${services}</g>`;
   }).join('');
-  return `<g data-device="${device.id}" role="button" tabindex="0" aria-label="Edit ${escapeXml(device.name)}"><title>${escapeXml(device.name)}</title><rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" rx="12" fill="${theme.card}" stroke="${theme.line}"/><rect x="${innerX}" y="${box.y + 22}" width="3" height="58" rx="1.5" fill="${device.accent}"/>${iconPlate}<image href="${logoDataUri(device.icon)}" x="${box.x + box.w - 67}" y="${box.y + 27}" width="42" height="42" preserveAspectRatio="xMidYMid meet"/>${role}${name}${network}${hardware}${groups}</g>`;
+  return `<g data-device="${device.id}" role="button" tabindex="0" aria-label="Edit ${escapeXml(device.name)}"><title>${escapeXml(device.name)}</title><rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" rx="12" fill="${theme.card}" stroke="${theme.line}"/><rect x="${innerX}" y="${box.y + 22}" width="3" height="58" rx="1.5" fill="${device.accent}"/>${iconPlate}<image href="${logoDataUri(device.icon, customLogos)}" x="${box.x + box.w - 67}" y="${box.y + 27}" width="42" height="42" preserveAspectRatio="xMidYMid meet"/>${role}${name}${network}${hardware}${groups}</g>`;
 }
 
 function connectionLines(project, layout, theme) {
@@ -613,13 +617,13 @@ export function renderProject(project) {
   const statStart = layout.oneColumnHeader ? layout.margin : layout.width - layout.margin - 360;
   const statWidth = layout.oneColumnHeader ? (layout.width - layout.margin * 2) / 3 : 120;
   const stats = [[project.devices.length, 'HOSTS'], [serviceCount, 'SERVICES'], [project.vlans.length, 'VLANS']].map(([value, label], index) => `${textElement(String(value).padStart(2, '0'), statStart + index * statWidth, statsY, { fill: index ? theme.text : theme.teal, size: 44, weight: 600, maxChars: 3 })}${textElement(label, statStart + index * statWidth, statsY + 28, { fill: theme.muted, size: 10, weight: 600, maxChars: 10 })}`).join('');
-  const networks = project.networks.map(network => renderNetwork(network, layout.networks.find(box => box.id === network.id), theme, project.theme)).join('');
+  const networks = project.networks.map(network => renderNetwork(network, layout.networks.find(box => box.id === network.id), theme, project.theme, project.customLogos)).join('');
   const vlans = project.vlans.map(vlan => {
     const box = layout.vlans.find(item => item.id === vlan.id);
     const label = textElement(vlan.name, box.x + 20, box.y + 29, { fill: theme.text, size: 13, weight: 650, maxChars: Math.max(8, Math.floor((box.w - 30) / 7)) });
     return `<g><title>${escapeXml(vlan.name)}</title><rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" rx="6" fill="${theme.tile}" stroke="${theme.line}"/><rect x="${box.x + 9}" y="${box.y + 12}" width="3" height="22" rx="1.5" fill="${vlan.color}"/>${label}</g>`;
   }).join('');
-  const cards = layout.cards.map(box => renderCard(project.devices.find(device => device.id === box.id), box, theme, project.theme)).join('');
+  const cards = layout.cards.map(box => renderCard(project.devices.find(device => device.id === box.id), box, theme, project.theme, project.customLogos)).join('');
   const names = new Map([...project.networks, ...project.devices].map(item => [item.id, item.name]));
   const relationships = layout.relationships.map((connection, index) => {
     const column = index % layout.relationshipColumns;

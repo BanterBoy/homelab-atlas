@@ -1,9 +1,10 @@
-import { LOGOS, logoById, logoDataUri, logoPlate, networkLogoId, searchLogos } from './catalog.js';
+import { LOGOS, customLogoEntries, logoById, logoDataUri, logoPlate, networkLogoId, searchLogos } from './catalog.js';
 import {
   LIMITS, emptyProject, layoutProject, parseProject, removeDevice, removeNetwork, resetAutoLayout,
   renderProject, sampleProject, setManualCard, uid, validateProject,
 } from './model.js';
 import { applyProjectChange, filterInventory, hasStorageConflict, pngDimensions, updateSelection } from './state.js';
+import { CUSTOM_LOGO_LIMITS, normalizeLogoUpload, verifyCustomLogoDecodes } from './custom-logos.js';
 
 const $ = selector => document.querySelector(selector);
 const STORAGE_KEY = 'homelab-atlas.project';
@@ -40,6 +41,7 @@ let lastStored = '';
 let conflictRaw = '';
 let logoDialogState = null;
 let logoSelection = new Set();
+let logoDialogSession = 0;
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, character => ({
@@ -58,9 +60,13 @@ function icon(name) {
 }
 
 function logoPlateClass(id) {
-  const plate = logoPlate(id, 'navy');
+  const plate = logoPlate(id, 'navy', project?.customLogos || []);
   return plate === '#f8fafc' ? 'logo-plate-light' : plate ? 'logo-plate-dark' : '';
 }
+
+const logoSource = id => logoDataUri(id, project?.customLogos || []);
+const logoFor = id => logoById(id, project?.customLogos || []);
+const pickerPlateClass = logo => logo.background === 'light' ? 'logo-plate-light' : logo.background === 'dark' ? 'logo-plate-dark' : logoPlateClass(logo.id);
 
 function toast(message, persistent = false) {
   const element = $('#toast');
@@ -145,17 +151,20 @@ function saveProject(force = false) {
     setSaveStatus('Saved locally');
     return true;
   } catch {
-    setSaveStatus('Not saved — storage unavailable', true);
+    setSaveStatus('Not saved locally — use Save project', true);
+    toast('Local storage is full or unavailable. Your edit is still open. Use Save project to download it.', true);
     return false;
   }
 }
 
-function loadProject() {
+async function loadProject() {
   let fresh = false;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      project = parseProject(JSON.parse(raw).data);
+      const loaded = parseProject(JSON.parse(raw).data);
+      await verifyCustomLogoDecodes(loaded.customLogos);
+      project = loaded;
       lastStored = raw;
     } else {
       project = sampleProject();
@@ -261,7 +270,7 @@ function renderInventory() {
     const row = document.createElement('div');
     row.className = `inventory-item ${selected === device.id ? 'selected' : ''}`;
     row.dataset.id = device.id;
-    row.innerHTML = `<button class="inventory-select" aria-label="Edit ${escapeHtml(device.name)}"><img class="${logoPlateClass(device.icon)}" alt="" src="${logoDataUri(device.icon)}"><span><strong></strong><small></small></span></button><span class="reorder"><button class="mini" data-move="-1" aria-label="Move up">${icon('up')}</button><button class="mini" data-move="1" aria-label="Move down">${icon('down')}</button></span>`;
+    row.innerHTML = `<button class="inventory-select" aria-label="Edit ${escapeHtml(device.name)}"><img class="${logoPlateClass(device.icon)}" alt="" src="${logoSource(device.icon)}"><span><strong></strong><small></small></span></button><span class="reorder"><button class="mini" data-move="-1" aria-label="Move up">${icon('up')}</button><button class="mini" data-move="1" aria-label="Move down">${icon('down')}</button></span>`;
     row.querySelector('strong').textContent = device.name;
     row.querySelector('small').textContent = device.role;
     const buttons = row.querySelectorAll('[data-move]');
@@ -277,7 +286,7 @@ function renderInventory() {
     row.className = `inventory-item ${selected === network.id ? 'selected' : ''}`;
     row.dataset.id = network.id;
     const icon = networkLogoId(network);
-    row.innerHTML = `<button class="inventory-select" aria-label="Edit ${escapeHtml(network.name)}"><img class="${logoPlateClass(icon)}" alt="" src="${logoDataUri(icon)}"><span><strong></strong><small></small></span></button>`;
+    row.innerHTML = `<button class="inventory-select" aria-label="Edit ${escapeHtml(network.name)}"><img class="${logoPlateClass(icon)}" alt="" src="${logoSource(icon)}"><span><strong></strong><small></small></span></button>`;
     row.querySelector('strong').textContent = network.name;
     row.querySelector('small').textContent = network.kind;
     return row;
@@ -315,20 +324,20 @@ function renderInspector() {
     const logoChoice = (field, label) => {
       const id = field === 'icon' ? networkLogoId(network) : network.secondaryIcon;
       const value = network[field];
-      const text = value ? logoById(value).label : field === 'icon' ? `Auto · ${logoById(id).label}` : 'None';
-      const thumbnail = id ? `<img class="${logoPlateClass(id)}" alt="" src="${logoDataUri(id)}">` : '<span class="logo-none" aria-hidden="true">—</span>';
+      const text = value ? logoFor(value).label : field === 'icon' ? `Auto · ${logoFor(id).label}` : 'None';
+      const thumbnail = id ? `<img class="${logoPlateClass(id)}" alt="" src="${logoSource(id)}">` : '<span class="logo-none" aria-hidden="true">—</span>';
       return `<div class="network-logo-field"><span>${label}</span><button type="button" data-network-logo="${field}" aria-haspopup="dialog" aria-label="Choose ${label.toLowerCase()}: ${escapeHtml(text)}">${thumbnail}<span>${escapeHtml(text)}</span></button></div>`;
     };
     root.innerHTML = `<div class="inspector-head"><div><span class="eyebrow">Network node</span><h2>${escapeHtml(network.name)}</h2></div><button data-delete-network class="danger">Delete</button></div><section class="inspector-section"><h3>Identity</h3><label>Name<input data-network="name" maxlength="120"></label><div class="form-grid"><label>Kind<input data-network="kind" maxlength="120"></label><label>Accent<input data-network="accent" type="color"></label></div>${logoChoice('icon', 'Logo')}${logoChoice('secondaryIcon', 'Secondary logo')}<p class="help">Add a secondary logo for an optional backup provider in the same node.</p></section>`;
     for (const key of ['name', 'kind', 'accent']) root.querySelector(`[data-network=${key}]`).value = network[key];
     return;
   }
-  const iconOptions = LOGOS.map(logo => `<option value="${logo.id}">${escapeHtml(logo.label)}</option>`).join('');
+  const deviceLogo = logoFor(device.icon);
   const diagram = layoutProject(project);
   const card = diagram.cards.find(item => item.id === device.id);
   const position = { x: Math.round(card.x - diagram.margin), y: Math.round(card.y - diagram.cardsY), w: Math.round(card.w), h: Math.round(card.h) };
-  root.innerHTML = `<div class="inspector-head"><div><span class="eyebrow">Device</span><h2>${escapeHtml(device.name)}</h2></div><div><button data-duplicate title="Duplicate" aria-label="Duplicate device">Copy</button><button data-delete class="danger">Delete</button></div></div><section class="inspector-section"><h3>Identity</h3><label>Name<input data-device="name" maxlength="120"></label><label>Role<input data-device="role" maxlength="120"></label><div class="form-grid"><label>Network / VLAN<input data-device="network" maxlength="120"></label><label>Accent<input data-device="accent" type="color"></label></div><label>Device icon<input data-device="icon" list="icon-options" maxlength="64"><datalist id="icon-options">${iconOptions}</datalist></label></section><section class="inspector-section"><h3>Position</h3><div class="position-grid"><label>X<input data-position="x" type="number" min="0" max="100000" step="1" value="${position.x}"></label><label>Y<input data-position="y" type="number" min="0" max="100000" step="1" value="${position.y}"></label><label>Width<input data-position="w" type="number" min="240" max="100000" step="1" value="${position.w}"></label><label>Height<input data-position="h" type="number" min="100" max="100000" step="1" value="${position.h}"></label></div><p class="help">Positions use diagram units. Content sets the minimum height.</p></section><section class="inspector-section"><h3>Hardware</h3><label>Facts <span class="muted">One per line. Optional Label: value.</span><textarea data-hardware maxlength="1451"></textarea></label></section><section class="inspector-section"><div class="section-head"><h3>Service groups</h3><button data-add-group>${icon('add')}Group</button></div><div id="groups"></div></section>`;
-  for (const key of ['name', 'role', 'network', 'accent', 'icon']) root.querySelector(`[data-device=${key}]`).value = device[key];
+  root.innerHTML = `<div class="inspector-head"><div><span class="eyebrow">Device</span><h2>${escapeHtml(device.name)}</h2></div><div><button data-duplicate title="Duplicate" aria-label="Duplicate device">Copy</button><button data-delete class="danger">Delete</button></div></div><section class="inspector-section"><h3>Identity</h3><label>Name<input data-device="name" maxlength="120"></label><label>Role<input data-device="role" maxlength="120"></label><div class="form-grid"><label>Network / VLAN<input data-device="network" maxlength="120"></label><label>Accent<input data-device="accent" type="color"></label></div><div class="network-logo-field"><span>Device icon</span><button type="button" data-device-logo aria-haspopup="dialog" aria-label="Choose device icon: ${escapeHtml(deviceLogo.label)}"><img class="${logoPlateClass(device.icon)}" alt="" src="${logoSource(device.icon)}"><span>${escapeHtml(deviceLogo.label)}</span></button></div></section><section class="inspector-section"><h3>Position</h3><div class="position-grid"><label>X<input data-position="x" type="number" min="0" max="100000" step="1" value="${position.x}"></label><label>Y<input data-position="y" type="number" min="0" max="100000" step="1" value="${position.y}"></label><label>Width<input data-position="w" type="number" min="240" max="100000" step="1" value="${position.w}"></label><label>Height<input data-position="h" type="number" min="100" max="100000" step="1" value="${position.h}"></label></div><p class="help">Positions use diagram units. Content sets the minimum height.</p></section><section class="inspector-section"><h3>Hardware</h3><label>Facts <span class="muted">One per line. Optional Label: value.</span><textarea data-hardware maxlength="1451"></textarea></label></section><section class="inspector-section"><div class="section-head"><h3>Service groups</h3><button data-add-group>${icon('add')}Group</button></div><div id="groups"></div></section>`;
+  for (const key of ['name', 'role', 'network', 'accent']) root.querySelector(`[data-device=${key}]`).value = device[key];
   root.querySelector('[data-hardware]').value = device.hardware.join('\n');
   root.querySelector('#groups').replaceChildren(...device.groups.map(groupElement));
 }
@@ -343,7 +352,7 @@ function groupElement(group) {
     const row = document.createElement('div');
     row.className = 'service-row';
     row.dataset.service = service.id;
-    row.innerHTML = `<img class="${logoPlateClass(service.logo)}" alt="" src="${logoDataUri(service.logo)}"><input data-service-name maxlength="120" aria-label="Service name"><input data-service-count type="number" min="1" max="99" step="1" aria-label="Instance count"><button data-service-up class="mini" aria-label="Move up">${icon('up')}</button><button data-service-down class="mini" aria-label="Move down">${icon('down')}</button><button data-remove-service class="mini danger" aria-label="Remove service">${icon('close')}</button>`;
+    row.innerHTML = `<button type="button" data-service-logo class="service-logo" aria-haspopup="dialog" aria-label="Change logo for ${escapeHtml(service.name)}"><img class="${logoPlateClass(service.logo)}" alt="" src="${logoSource(service.logo)}"></button><input data-service-name maxlength="120" aria-label="Service name"><input data-service-count type="number" min="1" max="99" step="1" aria-label="Instance count"><button data-service-up class="mini" aria-label="Move up">${icon('up')}</button><button data-service-down class="mini" aria-label="Move down">${icon('down')}</button><button data-remove-service class="mini danger" aria-label="Remove service">${icon('close')}</button>`;
     row.querySelector('[data-service-name]').value = service.name;
     row.querySelector('[data-service-count]').value = service.count;
     return row;
@@ -441,6 +450,8 @@ $('#inspector-content').addEventListener('click', event => {
     if (confirm(`Delete ${name} and its connections?`)) change(candidate => removeNetwork(candidate, networkId), { select: null });
   } else if (button.matches('[data-network-logo]') && networkId) {
     openNetworkLogoDialog(networkId, button.dataset.networkLogo, button);
+  } else if (button.matches('[data-device-logo]') && deviceId) {
+    openSingleLogoDialog('device', { deviceId }, button);
   } else if (button.matches('[data-duplicate]') && deviceId) {
     const source = project.devices.find(device => device.id === deviceId);
     const sourceServices = source.groups.reduce((sum, group) => sum + group.services.length, 0);
@@ -481,6 +492,7 @@ $('#inspector-content').addEventListener('click', event => {
       const row = event.target.closest('[data-service]');
       if (!row) return;
       const serviceId = row.dataset.service;
+      if (button.matches('[data-service-logo]')) return openSingleLogoDialog('service', { deviceId, groupId, serviceId }, button);
       const action = ['data-remove-service', 'data-service-up', 'data-service-down'].find(attribute => button.hasAttribute(attribute));
       if (!action) return;
       change(candidate => {
@@ -500,7 +512,7 @@ function buildTemplates() {
     button.type = 'button';
     button.className = 'template';
     button.dataset.template = template.id;
-    button.innerHTML = `<img class="${logoPlateClass(template.icon)}" alt="" src="${logoDataUri(template.icon)}"><span><strong>${escapeHtml(template.name)}</strong><small class="muted">${template.network ? 'Network node' : 'Device'}</small></span>`;
+    button.innerHTML = `<img class="${logoPlateClass(template.icon)}" alt="" src="${logoSource(template.icon)}"><span><strong>${escapeHtml(template.name)}</strong><small class="muted">${template.network ? 'Network node' : 'Device'}</small></span>`;
     return button;
   }));
 }
@@ -531,80 +543,115 @@ $('#template-grid').addEventListener('click', event => {
 });
 
 function openLogoDialog(deviceId, groupId, opener) {
-  logoDialogState = { mode: 'service', deviceId, groupId, opener };
-  logoSelection = new Set();
-  $('#logo-search').value = '';
-  $('#logo-search').placeholder = 'Jellyfin, backup, network…';
-  $('#logo-dialog-eyebrow').textContent = 'Service catalog';
-  $('#logo-dialog-title').textContent = 'Add services';
-  for (const id of ['selection-count', 'add-custom', 'add-selected']) $(`#${id}`).hidden = false;
-  renderLogos();
-  $('#logo-dialog').showModal();
-  $('#logo-search').focus();
+  openLogoPicker({ mode: 'service-add', deviceId, groupId }, opener);
 }
 
 function openNetworkLogoDialog(networkId, field, opener) {
-  logoDialogState = { mode: 'network', networkId, field, opener };
+  openLogoPicker({ mode: 'network', networkId, field }, opener);
+}
+
+function openSingleLogoDialog(mode, target, opener) {
+  openLogoPicker({ mode, ...target }, opener);
+}
+
+function openLogoPicker(target, opener) {
+  logoDialogSession += 1;
+  logoDialogState = { ...target, opener, session: logoDialogSession, project, drafts: new Map(), filter: 'all', upload: null };
   logoSelection = new Set();
   $('#logo-search').value = '';
-  $('#logo-search').placeholder = 'Provider, country, or network…';
-  $('#logo-dialog-eyebrow').textContent = 'Network node';
-  $('#logo-dialog-title').textContent = field === 'icon' ? 'Choose network logo' : 'Choose secondary logo';
-  for (const id of ['selection-count', 'add-custom', 'add-selected']) $(`#${id}`).hidden = true;
+  $('#logo-search').placeholder = target.mode === 'network' ? 'Provider, country, or network…' : 'Jellyfin, device, backup…';
+  $('#logo-dialog-eyebrow').textContent = target.mode === 'service-add' ? 'Service catalog' : 'Logo catalog';
+  $('#logo-dialog-title').textContent = target.mode === 'service-add' ? 'Add services' : target.mode === 'network' ? (target.field === 'icon' ? 'Choose network logo' : 'Choose secondary logo') : target.mode === 'device' ? 'Choose device icon' : 'Change service logo';
+  const multiple = target.mode === 'service-add';
+  for (const id of ['selection-count', 'add-custom', 'add-selected']) $(`#${id}`).hidden = !multiple;
+  $('#logo-browser').hidden = false;
+  $('#logo-preview').hidden = true;
+  $('#logo-file').value = '';
+  updateLogoFilters();
   renderLogos();
   $('#logo-dialog').showModal();
   $('#logo-search').focus();
 }
 
+function pickerTargetExists(state = logoDialogState, source = project) {
+  if (!state || state.project !== source) return false;
+  if (state.mode === 'network') return source.networks.some(network => network.id === state.networkId);
+  const device = source.devices.find(item => item.id === state.deviceId);
+  if (!device) return false;
+  if (state.mode === 'device') return true;
+  const group = device.groups.find(item => item.id === state.groupId);
+  return Boolean(group && (state.mode === 'service-add' || group.services.some(service => service.id === state.serviceId)));
+}
+
+function currentPickerLogo() {
+  const state = logoDialogState;
+  if (state.mode === 'network') return project.networks.find(item => item.id === state.networkId)?.[state.field] ?? '';
+  const device = project.devices.find(item => item.id === state.deviceId);
+  if (state.mode === 'device') return device?.icon;
+  return device?.groups.find(item => item.id === state.groupId)?.services.find(item => item.id === state.serviceId)?.logo;
+}
+
 function renderLogos() {
+  if (!logoDialogState) return;
   const query = $('#logo-search').value.trim();
-  const networkMode = logoDialogState?.mode === 'network';
-  const available = networkMode
+  const networkMode = logoDialogState.mode === 'network';
+  const uploaded = [...customLogoEntries(project.customLogos), ...customLogoEntries([...logoDialogState.drafts.values()])];
+  const bundled = networkMode
     ? [...LOGOS.filter(logo => logo.category.startsWith('ISP ·')).sort((a, b) => a.label.localeCompare(b.label)), ...LOGOS.filter(logo => !logo.category.startsWith('ISP ·'))]
-    : LOGOS.filter(logo => !['server', 'router', 'switch', 'wifi', 'internet'].includes(logo.id));
+    : LOGOS;
+  const available = logoDialogState.filter === 'uploaded' ? uploaded : [...uploaded, ...bundled];
   const matches = searchLogos(available, query);
   const grid = $('#logo-grid');
-  if (networkMode) {
-    const network = project.networks.find(item => item.id === logoDialogState.networkId);
-    const selectedLogo = network?.[logoDialogState.field] ?? '';
+  if (logoDialogState.mode !== 'service-add') {
+    const selectedLogo = currentPickerLogo();
     const emptyLabel = logoDialogState.field === 'icon' ? 'Auto' : 'None';
     const emptyDetail = logoDialogState.field === 'icon' ? 'Use the kind-based logo' : 'No secondary logo';
-    grid.innerHTML = `<button type="button" class="logo-option logo-choice ${selectedLogo === '' ? 'selected' : ''}" data-logo-choice="" aria-pressed="${selectedLogo === ''}"><span class="logo-none" aria-hidden="true">—</span><span>${emptyLabel}<small class="muted">${emptyDetail}</small></span></button>${matches.map(logo => `<button type="button" class="logo-option logo-choice ${selectedLogo === logo.id ? 'selected' : ''}" data-logo-choice="${logo.id}" aria-pressed="${selectedLogo === logo.id}"><img class="${logoPlateClass(logo.id)}" alt="" src="${logoDataUri(logo.id)}"><span>${escapeHtml(logo.label)}<small class="muted">${escapeHtml(logo.category)}</small></span></button>`).join('')}${matches.length ? '' : '<p class="no-results">No matching local logos.</p>'}`;
+    const empty = networkMode ? `<button type="button" class="logo-option logo-choice ${selectedLogo === '' ? 'selected' : ''}" data-logo-choice="" aria-pressed="${selectedLogo === ''}"><span class="logo-none" aria-hidden="true">—</span><span>${emptyLabel}<small class="muted">${emptyDetail}</small></span></button>` : '';
+    grid.innerHTML = `${empty}${matches.map(logo => `<button type="button" class="logo-option logo-choice ${selectedLogo === logo.id ? 'selected' : ''}" data-logo-choice="${logo.id}" aria-pressed="${selectedLogo === logo.id}"><img class="${pickerPlateClass(logo)}" alt="" src="${logo.dataUrl || logoSource(logo.id)}"><span>${escapeHtml(logo.label)}<small class="muted">${escapeHtml(logo.category)}</small></span></button>`).join('')}${matches.length ? '' : `<p class="no-results">No uploaded logos yet. Use Upload logo to add one.</p>`}`;
   } else if (!matches.length) {
-    grid.innerHTML = '<p class="no-results">No matching local logos. Add a custom service instead.</p>';
+    grid.innerHTML = `<p class="no-results">${logoDialogState.filter === 'uploaded' ? 'No uploaded logos yet. Use Upload logo to add one.' : 'No matching local logos. Add a custom service instead.'}</p>`;
   } else {
-    grid.innerHTML = matches.map(logo => `<label class="logo-option"><input type="checkbox" value="${logo.id}" ${logoSelection.has(logo.id) ? 'checked' : ''}><img class="${logoPlateClass(logo.id)}" alt="" src="${logoDataUri(logo.id)}"><span>${escapeHtml(logo.label)}<small class="muted">${escapeHtml(logo.category)}</small></span></label>`).join('');
+    grid.innerHTML = matches.map(logo => `<label class="logo-option"><input type="checkbox" value="${logo.id}" ${logoSelection.has(logo.id) ? 'checked' : ''}><img class="${pickerPlateClass(logo)}" alt="" src="${logo.dataUrl || logoSource(logo.id)}"><span>${escapeHtml(logo.label)}<small class="muted">${escapeHtml(logo.category)}</small></span></label>`).join('');
   }
   $('#selection-count').textContent = `${logoSelection.size} selected`;
 }
 
 $('#logo-search').addEventListener('input', renderLogos);
-$('#logo-dialog form').addEventListener('submit', event => { if (logoDialogState?.mode === 'network' && event.submitter?.value !== 'cancel') event.preventDefault(); });
+$('#logo-dialog form').addEventListener('submit', event => { if (event.submitter?.value !== 'cancel') event.preventDefault(); });
 $('#logo-grid').addEventListener('change', event => {
-  if (logoDialogState?.mode !== 'service' || !event.target.matches('input[type=checkbox]')) return;
+  if (logoDialogState?.mode !== 'service-add' || !event.target.matches('input[type=checkbox]')) return;
   logoSelection = updateSelection(logoSelection, event.target.value, event.target.checked);
   $('#selection-count').textContent = `${logoSelection.size} selected`;
 });
 $('#logo-grid').addEventListener('click', event => {
   const choice = event.target.closest('[data-logo-choice]');
-  if (!choice || logoDialogState?.mode !== 'network') return;
-  const { networkId, field } = logoDialogState;
-  if (change(candidate => { candidate.networks.find(network => network.id === networkId)[field] = choice.dataset.logoChoice; })) $('#logo-dialog').close();
+  if (!choice || !logoDialogState || logoDialogState.mode === 'service-add' || !pickerTargetExists()) return;
+  const state = logoDialogState;
+  if (change(candidate => assignPickerLogo(candidate, state, choice.dataset.logoChoice))) $('#logo-dialog').close();
 });
+
+function assignPickerLogo(candidate, state, id) {
+  if (state.mode === 'network') candidate.networks.find(network => network.id === state.networkId)[state.field] = id;
+  else if (state.mode === 'device') candidate.devices.find(device => device.id === state.deviceId).icon = id;
+  else candidate.devices.find(device => device.id === state.deviceId).groups.find(group => group.id === state.groupId).services.find(service => service.id === state.serviceId).logo = id;
+}
+
 $('#add-selected').addEventListener('click', event => {
   event.preventDefault();
-  if (logoDialogState?.mode !== 'service') return;
-  const { deviceId, groupId } = logoDialogState;
+  if (logoDialogState?.mode !== 'service-add' || !pickerTargetExists()) return;
+  const state = logoDialogState;
+  const { deviceId, groupId } = state;
   const ids = [...logoSelection];
   if (!ids.length) return toast('Select at least one service.');
   if (countServices() + ids.length > LIMITS.services) return toast('Service limit reached.');
   if (change(candidate => {
+    candidate.customLogos.push(...ids.filter(id => state.drafts.has(id)).map(id => state.drafts.get(id)));
     const group = candidate.devices.find(device => device.id === deviceId).groups.find(item => item.id === groupId);
-    group.services.push(...ids.map(id => ({ id: uid('svc'), logo: id, name: logoById(id).label, count: 1 })));
+    group.services.push(...ids.map(id => ({ id: uid('svc'), logo: id, name: state.drafts.get(id)?.label || logoFor(id).label, count: 1 })));
   })) $('#logo-dialog').close();
 });
 $('#add-custom').addEventListener('click', () => {
-  if (logoDialogState?.mode !== 'service') return;
+  if (logoDialogState?.mode !== 'service-add') return;
   const name = prompt('Custom service name:')?.trim();
   if (!name) return;
   if (name.length > LIMITS.text) return toast(`Service names must be ${LIMITS.text} characters or fewer.`);
@@ -614,14 +661,107 @@ $('#add-custom').addEventListener('click', () => {
     candidate.devices.find(device => device.id === deviceId).groups.find(group => group.id === groupId).services.push({ id: uid('svc'), logo: 'generic', name, count: 1 });
   })) $('#logo-dialog').close();
 });
+
+function updateLogoFilters() {
+  document.querySelectorAll('[data-logo-filter]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.logoFilter === logoDialogState?.filter)));
+}
+
+document.querySelectorAll('[data-logo-filter]').forEach(button => button.addEventListener('click', () => {
+  logoDialogState.filter = button.dataset.logoFilter;
+  updateLogoFilters();
+  renderLogos();
+}));
+
+$('#upload-logo').addEventListener('click', () => $('#logo-file').click());
+$('#logo-file').addEventListener('change', async event => {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file || !logoDialogState) return;
+  const state = logoDialogState;
+  const token = Symbol('upload');
+  state.uploadToken = token;
+  $('#upload-logo').disabled = true;
+  $('#add-selected').disabled = true;
+  $('#upload-error').textContent = '';
+  const base = file.name.replace(/\.[^.]+$/, '').trim().slice(0, LIMITS.text) || 'Uploaded logo';
+  const allIds = new Set([...LOGOS.map(logo => logo.id), ...project.customLogos.map(logo => logo.id), ...state.drafts.keys(), ...project.networks.map(item => item.id), ...project.devices.flatMap(device => [device.id, ...device.groups.flatMap(group => [group.id, ...group.services.map(service => service.id)])])]);
+  let id;
+  do { id = uid('custom'); } while (allIds.has(id));
+  try {
+    const logo = await normalizeLogoUpload(file, { id, label: base, background: 'none' });
+    if (logoDialogState !== state || state.uploadToken !== token || state.project !== project || !pickerTargetExists(state)) return;
+    state.upload = logo;
+    $('#upload-name').value = logo.label;
+    $('#upload-background').value = logo.background;
+    $('.upload-preview-surface').classList.remove('preview-light', 'preview-dark');
+    $('#upload-preview-image').src = logo.dataUrl;
+    $('#use-upload').textContent = state.mode === 'service-add' ? 'Add to selection' : 'Use logo';
+    $('#logo-browser').hidden = true;
+    $('#logo-preview').hidden = false;
+    $('#upload-name').focus();
+  } catch (error) {
+    if (logoDialogState === state && state.uploadToken === token) toast(error.message);
+  } finally {
+    if (logoDialogState === state && state.uploadToken === token) {
+      $('#upload-logo').disabled = false;
+      $('#add-selected').disabled = false;
+    }
+  }
+});
+
+$('#back-to-logos').addEventListener('click', () => {
+  if (!logoDialogState) return;
+  logoDialogState.upload = null;
+  $('#logo-preview').hidden = true;
+  $('#logo-browser').hidden = false;
+  $('#logo-search').focus();
+});
+
+$('#upload-background').addEventListener('change', event => {
+  const surface = $('.upload-preview-surface');
+  surface.classList.toggle('preview-light', event.target.value === 'light');
+  surface.classList.toggle('preview-dark', event.target.value === 'dark');
+});
+
+$('#use-upload').addEventListener('click', () => {
+  const state = logoDialogState;
+  if (!state?.upload || !pickerTargetExists(state)) return;
+  const name = $('#upload-name').value.trim();
+  if (!name || name.length > LIMITS.text) return $('#upload-error').textContent = 'Enter a name of 120 characters or fewer.';
+  const logo = { ...state.upload, label: name, background: $('#upload-background').value };
+  if (state.mode === 'service-add') {
+    state.drafts.set(logo.id, logo);
+    logoSelection.add(logo.id);
+    state.upload = null;
+    $('#logo-preview').hidden = true;
+    $('#logo-browser').hidden = false;
+    renderLogos();
+    $('#logo-search').focus();
+  } else if (project.customLogos.length >= CUSTOM_LOGO_LIMITS.count) {
+    toast('Custom logo limit reached.');
+  } else if (change(candidate => {
+    candidate.customLogos.push(logo);
+    assignPickerLogo(candidate, state, logo.id);
+  })) $('#logo-dialog').close();
+});
+
 $('#logo-dialog').addEventListener('close', () => {
   const state = logoDialogState;
   const opener = state?.opener;
   logoDialogState = null;
+  logoDialogSession += 1;
   logoSelection = new Set();
   $('#logo-search').value = '';
+  $('#logo-file').value = '';
+  $('#upload-logo').disabled = false;
+  $('#add-selected').disabled = false;
+  $('#upload-preview-image').removeAttribute('src');
+  $('#logo-browser').hidden = false;
+  $('#logo-preview').hidden = true;
   if (opener?.isConnected) opener.focus();
   else if (state?.mode === 'network' && selected === state.networkId) $(`#inspector-content [data-network-logo="${state.field}"]`)?.focus();
+  else if (state?.mode === 'device' && selected === state.deviceId) $('#inspector-content [data-device-logo]')?.focus();
+  else if (state?.mode === 'service' && selected === state.deviceId) $(`#inspector-content [data-service="${CSS.escape(state.serviceId)}"] [data-service-logo]`)?.focus();
 });
 
 $('#add-network').addEventListener('click', () => {
@@ -729,9 +869,13 @@ $('#import').addEventListener('click', () => $('#file-input').click());
 $('#file-input').addEventListener('change', async event => {
   const file = event.target.files[0];
   if (!file) return;
+  const current = project;
   try {
-    if (file.size > LIMITS.bytes) throw new Error('File is larger than 1 MB.');
-    replaceProject(parseProject(await file.text()));
+    if (file.size > LIMITS.bytes) throw new Error('File is larger than 2 MB.');
+    const next = parseProject(await file.text());
+    await verifyCustomLogoDecodes(next.customLogos);
+    if (project !== current) throw new Error('The project changed while the file was loading. Import it again.');
+    replaceProject(next);
     toast('Project imported.');
   } catch (error) {
     toast(`Import failed: ${error.message}`);
@@ -945,13 +1089,17 @@ addEventListener('storage', event => {
   if (event.key === STORAGE_KEY && hasStorageConflict(event.newValue, lastStored, TAB_ID)) showConflict(event.newValue);
 });
 $('#conflict-keep').addEventListener('click', () => saveProject(true));
-$('#conflict-load').addEventListener('click', () => {
+$('#conflict-load').addEventListener('click', async () => {
+  const raw = conflictRaw;
+  const current = project;
   try {
-    const next = parseProject(JSON.parse(conflictRaw).data);
+    const next = parseProject(JSON.parse(raw).data);
+    await verifyCustomLogoDecodes(next.customLogos);
+    if (project !== current || conflictRaw !== raw) throw new Error('The saved project changed again. Review the latest conflict.');
     history.push(structuredClone(project));
     future = [];
     project = next;
-    lastStored = conflictRaw;
+    lastStored = raw;
     hideConflict();
     setSaveStatus('Saved locally');
     render();

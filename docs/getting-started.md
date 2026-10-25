@@ -14,7 +14,7 @@ You only need Git if you're building from source. Running without Docker require
 Download the release Compose file, then start the container:
 
 ```sh
-curl -fsSLO https://github.com/aiden0rchad/homelab-atlas/releases/download/v0.4.0/compose.release.yaml
+curl -fsSLO https://github.com/aiden0rchad/homelab-atlas/releases/download/v0.5.0/compose.release.yaml
 docker compose -f compose.release.yaml up -d
 ```
 
@@ -24,14 +24,14 @@ Open `http://localhost:8080`. Verify the server if needed:
 curl http://localhost:8080/healthz
 ```
 
-A healthy response is `ok`. By default, the Compose file pulls `ghcr.io/aiden0rchad/homelab-atlas:0.4.0`. It only listens on the machine running Docker and keeps the container read-only, drops its capabilities, and enables the no-new-privileges setting.
+A healthy response is `ok`. By default, the Compose file pulls `ghcr.io/aiden0rchad/homelab-atlas:0.5.0`. It only listens on the machine running Docker and keeps the container read-only, drops its capabilities, and enables the no-new-privileges setting.
 
 ## Pin and update versions
 
 To pin a version, create `.env` next to `compose.release.yaml`:
 
 ```dotenv
-ATLAS_VERSION=0.4.0
+ATLAS_VERSION=0.5.0
 ```
 
 When you want to update, change `ATLAS_VERSION` in `.env` to a version that has been published. Then pull it and recreate the container without changing the hostname or port:
@@ -41,12 +41,12 @@ docker compose -f compose.release.yaml pull
 docker compose -f compose.release.yaml up -d
 ```
 
-Save an editable JSON project before you update or downgrade. Your project is stored by the browser, not in a container volume. The browser treats each combination of hostname, port, and protocol as a separate site, so keep those the same if you want the same autosaved project to appear. Atlas 0.4 saves schema-version-3 files. It imports schema-version-1 and schema-version-2 files, preserving schema-version-2 manual layouts. Schema version 3 requires Atlas 0.4 or newer, so keep a pre-upgrade JSON backup if you plan to downgrade. Atlas does not migrate projects backward.
+Save an editable JSON project before you update or downgrade. Your project is stored by the browser, not in a container volume. Atlas 0.5 saves schema-version-4 files and imports schema versions 1 through 3. Existing inventory, manual layouts, and schema-version-3 network logos are preserved. Schema version 4, including uploaded logos, requires Atlas 0.5 or newer. Atlas does not migrate projects backward.
 
 The image tags work like this:
 
-- `0.4.0` and `v0.4.0` identify this release.
-- `0.4` moves to the newest compatible 0.4 patch.
+- `0.5.0` and `v0.5.0` identify this release.
+- `0.5` moves to the newest compatible 0.5 patch.
 - `latest` moves to the newest stable release.
 - A published image digest never changes; the [release guide](/releases/) explains how to pin one.
 
@@ -90,8 +90,8 @@ python3 server.py
 For the portable release, extract the ZIP and move into its top-level directory first:
 
 ```sh
-unzip homelab-atlas-0.4.0.zip
-cd homelab-atlas-0.4.0
+unzip homelab-atlas-0.5.0.zip
+cd homelab-atlas-0.5.0
 python3 server.py
 ```
 

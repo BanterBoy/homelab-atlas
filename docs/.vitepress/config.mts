@@ -42,6 +42,7 @@ export default defineConfig({
         text: 'Save and share',
         items: [
           { text: 'Sharing and backup', link: '/sharing' },
+          { text: 'Exporting', link: '/exporting' },
         ],
       },
       {
@@ -50,6 +51,7 @@ export default defineConfig({
           { text: 'Troubleshooting', link: '/troubleshooting' },
           { text: 'Project format', link: '/project-format' },
           { text: 'Releases', link: '/releases/' },
+          { text: 'v0.5.0', link: '/releases/v0.5.0' },
           { text: 'v0.4.0', link: '/releases/v0.4.0' },
           { text: 'v0.3.0', link: '/releases/v0.3.0' },
           { text: 'v0.2.0', link: '/releases/v0.2.0' },

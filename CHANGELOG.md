@@ -2,6 +2,18 @@
 
 This file lists the notable changes in each Homelab Atlas release.
 
+## [0.5.0] - 2026-10-25
+
+### Added
+
+- Added accessible visual pickers for device, service, and network logos.
+- Added previewed PNG, JPG, WebP, and SVG uploads stored as reusable project PNGs.
+
+### Changed
+
+- Saved projects now use schema version 4 and embed uploaded assets for offline use and exports.
+- Schema versions 1 through 3 now upgrade while preserving inventory, manual layouts, revisions, and existing network logo choices.
+
 ## [0.4.0] - 2026-10-25
 
 ### Added
@@ -48,3 +60,4 @@ This file lists the notable changes in each Homelab Atlas release.
 [0.2.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.2.0
 [0.3.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.3.0
 [0.4.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.4.0
+[0.5.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.5.0

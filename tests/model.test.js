@@ -83,7 +83,7 @@ test('bad and oversized imports are rejected', () => {
   const project = sampleProject();
   project.schemaVersion = 9;
   assert.throws(() => parseProject(JSON.stringify(project)), /schema/);
-  project.schemaVersion = 3;
+  project.schemaVersion = 4;
   project.devices[0].icon = 'data:image/svg+xml,<script>';
   assert.throws(() => validateProject(project), /Unknown logo/);
   const extra = sampleProject();
@@ -91,7 +91,7 @@ test('bad and oversized imports are rejected', () => {
   assert.throws(() => validateProject(extra), /structure/);
 });
 
-test('schema 3 layout rejects unknown keys, invalid bounds, duplicate IDs, and stale references', () => {
+test('schema 4 layout rejects unknown keys, invalid bounds, duplicate IDs, and stale references', () => {
   const project = sampleProject();
   project.extra = true;
   assert.throws(() => validateProject(project), /structure/);
@@ -121,24 +121,26 @@ test('schema 3 layout rejects unknown keys, invalid bounds, duplicate IDs, and s
   assert.throws(() => validateProject(project), /stale or duplicate/);
 });
 
-test('schema 1 and 2 imports migrate strictly while preserving revision and manual layout', () => {
+test('schema 1, 2, and 3 imports migrate strictly while preserving data', () => {
   const version2 = sampleProject();
   setManualCard(version2, 'dev-storage', { x: 64, y: 32, w: 300, h: 400 });
   version2.schemaVersion = 2;
+  delete version2.customLogos;
   for (const network of version2.networks) { delete network.icon; delete network.secondaryIcon; }
   const version2Before = structuredClone(version2);
   const migrated2 = parseProject(JSON.stringify(version2));
   assert.deepEqual(version2, version2Before);
-  assert.equal(migrated2.schemaVersion, 3);
+  assert.equal(migrated2.schemaVersion, 4);
   assert.equal(migrated2.revision, version2.revision);
   assert.deepEqual(migrated2.layout, version2.layout);
   assert.ok(migrated2.networks.every(network => network.icon === '' && network.secondaryIcon === ''));
+  assert.deepEqual(migrated2.customLogos, []);
 
   const version1 = structuredClone(version2);
   version1.schemaVersion = 1;
   delete version1.layout;
   const migrated1 = parseProject(JSON.stringify(version1));
-  assert.equal(migrated1.schemaVersion, 3);
+  assert.equal(migrated1.schemaVersion, 4);
   assert.equal(migrated1.revision, version1.revision);
   assert.deepEqual(migrated1.layout, { mode: 'auto', cards: [] });
   assert.ok(migrated1.networks.every(network => network.icon === '' && network.secondaryIcon === ''));
@@ -148,6 +150,17 @@ test('schema 1 and 2 imports migrate strictly while preserving revision and manu
   delete version1.unexpected;
   version2.networks[0].icon = '';
   assert.throws(() => parseProject(JSON.stringify(version2)), /structure/);
+
+  const version3 = sampleProject();
+  version3.schemaVersion = 3;
+  delete version3.customLogos;
+  version3.networks[0].icon = 'cloudflare';
+  version3.networks[0].secondaryIcon = 'tailscale';
+  const migrated3 = parseProject(JSON.stringify(version3));
+  assert.equal(migrated3.schemaVersion, 4);
+  assert.equal(migrated3.networks[0].icon, 'cloudflare');
+  assert.equal(migrated3.networks[0].secondaryIcon, 'tailscale');
+  assert.deepEqual(migrated3.customLogos, []);
 });
 
 test('network logo fields validate strictly and survive a saved roundtrip', () => {
