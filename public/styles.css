@@ -143,7 +143,7 @@ button.danger { color: #fda4af; }
 .group-head, .service-row { display: flex; align-items: center; gap: 6px; }
 .group-head input { font-weight: 700; }
 .service-list { display: grid; gap: 5px; margin-top: 8px; }
-.service-row img { width: 27px; height: 27px; object-fit: contain; border-radius: 7px; }
+.service-row img { width: 27px; height: 27px; padding: 2px; object-fit: contain; background: #f8fafc; border-radius: 7px; }
 .service-row input:first-of-type { min-width: 0; }
 .service-row input[type="number"] { width: 52px; }
 .mini { padding: 4px 7px; }
@@ -171,6 +171,7 @@ dialog footer { display: flex; align-items: center; justify-content: flex-end; g
 .template-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .template { display: flex; align-items: center; gap: 10px; padding: 12px; text-align: left; }
 .template img, .logo-option img { width: 38px; height: 38px; padding: 3px; object-fit: contain; background: #f8fafc; border-radius: 10px; }
+.inventory-item img.logo-plate-dark, .service-row img.logo-plate-dark, .template img.logo-plate-dark, .logo-option img.logo-plate-dark { background: #111827; }
 .logo-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; max-height: 48vh; margin-top: 12px; overflow: auto; }
 .logo-option { display: flex; align-items: center; gap: 8px; padding: 8px; font-size: 12px; border: 1px solid var(--line); border-radius: 9px; }
 .logo-option:has(input:checked) { background: #123b38; border-color: #34d399; }

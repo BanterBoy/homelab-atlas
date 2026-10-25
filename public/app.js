@@ -1,4 +1,4 @@
-import { LOGOS, logoById, logoDataUri } from './catalog.js';
+import { LOGOS, logoById, logoDataUri, logoPlate } from './catalog.js';
 import {
   LIMITS, emptyProject, parseProject, removeDevice, removeNetwork,
   renderProject, sampleProject, uid, validateProject,
@@ -7,7 +7,7 @@ import { applyProjectChange, hasStorageConflict, pngDimensions, updateSelection 
 
 const $ = selector => document.querySelector(selector);
 const STORAGE_KEY = 'homelab-atlas.project';
-const TAB_ID = crypto.randomUUID();
+const TAB_ID = uid('tab');
 const templates = [
   { id: 'server', name: 'Server', icon: 'server', accent: '#38bdf8', services: [] },
   { id: 'nas', name: 'NAS', icon: 'truenas', accent: '#22b8cf', services: [['truenas', 'TrueNAS']] },
@@ -39,6 +39,10 @@ function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
   })[character]);
+}
+
+function logoPlateClass(id) {
+  return logoPlate(id) === '#ffffff' ? '' : 'logo-plate-dark';
 }
 
 function toast(message, persistent = false) {
@@ -189,7 +193,7 @@ function renderInventory() {
     const row = document.createElement('div');
     row.className = `inventory-item ${selected === device.id ? 'selected' : ''}`;
     row.dataset.id = device.id;
-    row.innerHTML = `<button class="inventory-select" aria-label="Edit ${escapeHtml(device.name)}"><img alt="" src="${logoDataUri(device.icon)}"><span><strong></strong><small></small></span></button><span class="reorder"><button class="mini" data-move="-1" aria-label="Move up">↑</button><button class="mini" data-move="1" aria-label="Move down">↓</button></span>`;
+    row.innerHTML = `<button class="inventory-select" aria-label="Edit ${escapeHtml(device.name)}"><img class="${logoPlateClass(device.icon)}" alt="" src="${logoDataUri(device.icon)}"><span><strong></strong><small></small></span></button><span class="reorder"><button class="mini" data-move="-1" aria-label="Move up">↑</button><button class="mini" data-move="1" aria-label="Move down">↓</button></span>`;
     row.querySelector('strong').textContent = device.name;
     row.querySelector('small').textContent = device.role;
     const buttons = row.querySelectorAll('[data-move]');
@@ -203,7 +207,8 @@ function renderInventory() {
     const row = document.createElement('div');
     row.className = `inventory-item ${selected === network.id ? 'selected' : ''}`;
     row.dataset.id = network.id;
-    row.innerHTML = `<button class="inventory-select" aria-label="Edit ${escapeHtml(network.name)}"><img alt="" src="${logoDataUri(networkIcon(network.kind))}"><span><strong></strong><small></small></span></button>`;
+    const icon = networkIcon(network.kind);
+    row.innerHTML = `<button class="inventory-select" aria-label="Edit ${escapeHtml(network.name)}"><img class="${logoPlateClass(icon)}" alt="" src="${logoDataUri(icon)}"><span><strong></strong><small></small></span></button>`;
     row.querySelector('strong').textContent = network.name;
     row.querySelector('small').textContent = network.kind;
     return row;
@@ -269,7 +274,7 @@ function groupElement(group) {
     const row = document.createElement('div');
     row.className = 'service-row';
     row.dataset.service = service.id;
-    row.innerHTML = `<img alt="" src="${logoDataUri(service.logo)}"><input data-service-name maxlength="120" aria-label="Service name"><input data-service-count type="number" min="1" max="99" step="1" aria-label="Instance count"><button data-service-up class="mini" aria-label="Move up">↑</button><button data-service-down class="mini" aria-label="Move down">↓</button><button data-remove-service class="mini danger" aria-label="Remove service">×</button>`;
+    row.innerHTML = `<img class="${logoPlateClass(service.logo)}" alt="" src="${logoDataUri(service.logo)}"><input data-service-name maxlength="120" aria-label="Service name"><input data-service-count type="number" min="1" max="99" step="1" aria-label="Instance count"><button data-service-up class="mini" aria-label="Move up">↑</button><button data-service-down class="mini" aria-label="Move down">↓</button><button data-remove-service class="mini danger" aria-label="Remove service">×</button>`;
     row.querySelector('[data-service-name]').value = service.name;
     row.querySelector('[data-service-count]').value = service.count;
     return row;
@@ -413,7 +418,7 @@ function buildTemplates() {
     button.type = 'button';
     button.className = 'template';
     button.dataset.template = template.id;
-    button.innerHTML = `<img alt="" src="${logoDataUri(template.icon)}"><span><strong>${escapeHtml(template.name)}</strong><small class="muted">${template.network ? 'Network node' : 'Device'}</small></span>`;
+    button.innerHTML = `<img class="${logoPlateClass(template.icon)}" alt="" src="${logoDataUri(template.icon)}"><span><strong>${escapeHtml(template.name)}</strong><small class="muted">${template.network ? 'Network node' : 'Device'}</small></span>`;
     return button;
   }));
 }
@@ -459,7 +464,7 @@ function renderLogos() {
   if (!matches.length) {
     grid.innerHTML = '<p class="no-results">No matching local logos. Add a custom service instead.</p>';
   } else {
-    grid.innerHTML = matches.map(logo => `<label class="logo-option"><input type="checkbox" value="${logo.id}" ${logoSelection.has(logo.id) ? 'checked' : ''}><img alt="" src="${logoDataUri(logo.id)}"><span>${escapeHtml(logo.label)}<small class="muted">${escapeHtml(logo.category)}</small></span></label>`).join('');
+    grid.innerHTML = matches.map(logo => `<label class="logo-option"><input type="checkbox" value="${logo.id}" ${logoSelection.has(logo.id) ? 'checked' : ''}><img class="${logoPlateClass(logo.id)}" alt="" src="${logoDataUri(logo.id)}"><span>${escapeHtml(logo.label)}<small class="muted">${escapeHtml(logo.category)}</small></span></label>`).join('');
   }
   $('#selection-count').textContent = `${logoSelection.size} selected`;
 }

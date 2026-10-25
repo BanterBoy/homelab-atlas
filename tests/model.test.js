@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { LOGOS, logoDataUri } from '../public/catalog.js';
+import { LOGOS, logoDataUri, logoPlate } from '../public/catalog.js';
 import { ICON_DATA } from '../public/icon-data.js';
 import {
   LIMITS, layoutProject, parseProject, removeDevice, removeNetwork,
-  renderProject, sampleProject, validateProject, wrapText,
+  renderProject, sampleProject, uid, validateProject, wrapText,
 } from '../public/model.js';
 import { applyProjectChange, hasStorageConflict, pngDimensions, updateSelection } from '../public/state.js';
 
@@ -33,6 +33,31 @@ test('bundled catalog uses real embedded assets and safe generic fallbacks', () 
   assert.equal(logoDataUri('restic'), ICON_DATA.backup);
   assert.match(logoDataUri('jellyfin'), /^data:image\/svg\+xml;base64,/);
   assert.notEqual(logoDataUri('jellyfin'), logoDataUri('plex'));
+});
+
+test('IDs work without crypto.randomUUID', () => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis.crypto, 'randomUUID');
+  Object.defineProperty(globalThis.crypto, 'randomUUID', { value: undefined, configurable: true });
+  try {
+    const ids = new Set(Array.from({ length: 100 }, () => uid('test')));
+    assert.equal(ids.size, 100);
+    assert.match([...ids][0], /^test-[0-9a-f]{24}$/);
+  } finally {
+    if (descriptor) Object.defineProperty(globalThis.crypto, 'randomUUID', descriptor);
+    else delete globalThis.crypto.randomUUID;
+  }
+});
+
+test('light brand marks use dark plates in both themes', () => {
+  for (const id of ['amd', 'docmost', 'miniflux', 'tailscale']) assert.equal(logoPlate(id), '#111827');
+  assert.equal(logoPlate('jellyfin'), '#ffffff');
+  const project = sampleProject();
+  project.devices[0].icon = 'amd';
+  project.devices[0].groups[0].services[0].logo = 'docmost';
+  for (const theme of ['navy', 'light']) {
+    project.theme = theme;
+    assert.match(renderProject(project), /fill="#111827" fill-opacity="0.96"/);
+  }
 });
 
 test('bad and oversized imports are rejected', () => {
@@ -71,7 +96,10 @@ test('deleting endpoints cleans dangling connections', () => {
 });
 
 test('wrapping and service tiles contain long labels and count badges', () => {
-  assert.deepEqual(wrapText('A very long service label that cannot fit', 12, 2), ['A very long', 'service…']);
+  assert.deepEqual(wrapText('A very long service label that cannot fit', 12, 2), ['A very long', 'service lab…']);
+  assert.deepEqual(wrapText('Home Assistant', 12, 2), ['Home', 'Assistant']);
+  assert.deepEqual(wrapText('Music Assistant', 12, 2), ['Music', 'Assistant']);
+  assert.deepEqual(wrapText('Proxy Manager', 12, 2), ['Proxy', 'Manager']);
   const project = sampleProject();
   const service = project.devices[0].groups[0].services[0];
   service.name = 'A service label that is deliberately one hundred and twenty characters long'.padEnd(120, 'x');
@@ -97,6 +125,26 @@ test('network and VLAN rows wrap without expanding beyond selected columns', () 
   assert.equal(layout.width, 820);
   assert.ok(new Set(layout.networks.map(item => item.y)).size > 1);
   assert.ok(new Set(layout.vlans.map(item => item.y)).size > 1);
+});
+
+test('connection routes reserve clear label and VLAN lanes', () => {
+  const project = sampleProject();
+  const layout = layoutProject(project);
+  const vlanBottom = Math.max(...layout.vlans.map(vlan => vlan.y + vlan.h));
+  const lastNetworkBottom = Math.max(...layout.networks.map(network => network.y + network.h));
+  assert.ok(layout.networkRouteY < layout.networks[0].y);
+  assert.ok(layout.routingLaneY > vlanBottom);
+  assert.ok(layout.cardsY > layout.routingLaneY);
+  assert.ok(layout.routeX > Math.max(...layout.vlans.map(vlan => vlan.x + vlan.w)));
+  assert.ok(lastNetworkBottom + 12 < Math.min(...layout.vlans.map(vlan => vlan.y)));
+  const svg = renderProject(project);
+  assert.match(svg, new RegExp(`V ${layout.networkRouteY}`));
+  assert.match(svg, new RegExp(`V ${layout.routingLaneY}`));
+
+  project.columns = 1;
+  project.networks.push({ id: 'net-remote', name: 'Remote', kind: 'Router', accent: '#123456' });
+  project.connections.push({ id: 'conn-complex', from: 'net-internet', to: 'net-remote', label: 'Tunnel' });
+  assert.ok(layoutProject(project).relationships.some(connection => connection.id === 'conn-complex'));
 });
 
 test('invalid changes are atomic', () => {

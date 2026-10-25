@@ -2,6 +2,8 @@
 
 A local-first visual editor for polished homelab diagrams: automatic layouts, device cards, hardware facts, searchable service tiles, VLANs, logical connections, themes, and matching SVG/PNG export. No AI, accounts, database, telemetry, network scanning, or Docker socket access.
 
+![Homelab Atlas editor](docs/editor.png)
+
 ## Quick start
 
 ```sh
@@ -22,7 +24,7 @@ Open [http://localhost:8080](http://localhost:8080). Compose binds to localhost 
 
 Changes autosave to browser `localStorage`; that is not server storage and does not follow you to another browser or device. Use **Save project** for backup/sharing. Imports are validated before replacing the current diagram and can be undone. Concurrent-tab conflicts offer explicit keep, load, or download choices.
 
-The searchable catalog bundles more than 60 attributed homelab brand marks and works fully offline. Multi-select apps across searches, add custom services, edit VLANs with name/color controls, and use **Fit** or manual zoom for the preview. PNG export caps output at 36 megapixels and 16,384 pixels per side; SVG remains resolution-independent.
+The searchable catalog bundles more than 60 native-branded homelab logos and works fully offline. Multi-select apps across searches, add custom services, edit VLANs with name/color controls, and use **Fit** or manual zoom for the preview. PNG export caps output at 36 megapixels and 16,384 pixels per side; SVG remains resolution-independent.
 
 Limitations: automatic layout only; connections are logical relationships, not switch-port maps; no discovery or live monitoring.
 

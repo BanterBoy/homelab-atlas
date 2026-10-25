@@ -16,7 +16,12 @@ const entries = [
 export const LOGOS = entries.map(([id,label,category,color]) => ({id,label,category,color}));
 export const LOGO_IDS = new Set(LOGOS.map(x => x.id));
 export const logoById = id => LOGOS.find(x => x.id === id) || LOGOS.at(-1);
+const DARK_PLATES = new Set(['amd', 'docmost', 'miniflux', 'tailscale']);
 
 export function logoDataUri(id) {
   return ICON_DATA[id] || (id === 'restic' ? ICON_DATA.backup : ICON_DATA.generic);
+}
+
+export function logoPlate(id) {
+  return DARK_PLATES.has(id) ? '#111827' : '#ffffff';
 }

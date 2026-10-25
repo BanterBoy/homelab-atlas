@@ -1,4 +1,4 @@
-import { LOGO_IDS, logoDataUri } from './catalog.js';
+import { LOGO_IDS, logoDataUri, logoPlate } from './catalog.js';
 
 export const SCHEMA_VERSION = 1;
 export const THEMES = ['navy', 'light', 'midnight'];
@@ -23,7 +23,10 @@ const palettes = {
   midnight: { bg: '#0e0b1a', panel: '#19142a', card: '#211a36', tile: '#171226', line: '#67579d', text: '#f0edff', muted: '#aaa0cc', chip: '#31284c' },
 };
 
-export const uid = prefix => `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
+export function uid(prefix) {
+  const bytes = crypto.getRandomValues(new Uint8Array(12));
+  return `${prefix}-${Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('')}`;
+}
 export const escapeXml = value => String(value).replace(/[&<>"']/g, character => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;',
 })[character]);
@@ -181,8 +184,8 @@ export function wrapText(value, maxChars, maxLines = 2) {
   let remaining = text;
   while (remaining && lines.length < maxLines) {
     if (remaining.length <= maxChars) { lines.push(remaining); remaining = ''; break; }
-    let cut = remaining.lastIndexOf(' ', maxChars);
-    if (cut < Math.floor(maxChars * 0.55)) cut = maxChars;
+    let cut = remaining.lastIndexOf(' ', maxChars + 1);
+    if (cut <= 0) cut = maxChars;
     lines.push(remaining.slice(0, cut).trim());
     remaining = remaining.slice(cut).trim();
   }
@@ -209,7 +212,7 @@ export function layoutProject(project) {
   const networkGap = 16;
   const networksPerRow = Math.max(1, Math.floor((contentWidth + networkGap) / (networkWidth + networkGap)));
   const networkRows = Math.ceil(project.networks.length / networksPerRow);
-  const networkY = 128;
+  const networkY = 140;
   const networkHeight = project.networks.length ? networkRows * 70 + Math.max(0, networkRows - 1) * 14 : 0;
   const vlanWidth = 132;
   const vlanGap = 12;
@@ -217,7 +220,6 @@ export function layoutProject(project) {
   const vlanRows = Math.ceil(project.vlans.length / vlansPerRow);
   const vlanY = networkY + networkHeight + (project.networks.length && project.vlans.length ? 24 : 0);
   const vlanHeight = project.vlans.length ? vlanRows * 34 + Math.max(0, vlanRows - 1) * 10 : 0;
-  const cardsY = Math.max(154, vlanY + vlanHeight + 38);
   const tileHeight = compact ? 104 : 118;
 
   const networks = project.networks.map((network, index) => ({
@@ -234,6 +236,28 @@ export function layoutProject(project) {
     w: vlanWidth,
     h: 34,
   }));
+  const networkIds = new Set(project.networks.map(network => network.id));
+  const deviceIds = new Set(project.devices.map(device => device.id));
+  const lastNetworkY = networks.length ? Math.max(...networks.map(network => network.y)) : 0;
+  const networkRouteY = networkY - 24;
+  const routingLaneY = Math.max(networkY + networkHeight, vlanY + vlanHeight) + 28;
+  const routeX = width - 24;
+  const drawable = connection => {
+    const fromNetwork = networkIds.has(connection.from);
+    const toNetwork = networkIds.has(connection.to);
+    if (fromNetwork && toNetwork) {
+      const from = networks.find(network => network.id === connection.from);
+      const to = networks.find(network => network.id === connection.to);
+      return from.y === networkY && to.y === networkY && Math.abs(networks.indexOf(from) - networks.indexOf(to)) === 1;
+    }
+    if (fromNetwork !== toNetwork) {
+      const networkId = fromNetwork ? connection.from : connection.to;
+      return networks.find(network => network.id === networkId)?.y === lastNetworkY;
+    }
+    return false;
+  };
+  const hasRoutedConnections = project.connections.some(connection => drawable(connection) && ((networkIds.has(connection.from) && deviceIds.has(connection.to)) || (deviceIds.has(connection.from) && networkIds.has(connection.to))));
+  const cardsY = Math.max(154, routingLaneY + (hasRoutedConnections ? 38 : 10));
 
   const cards = project.devices.map(device => {
     const hardwareHeight = device.hardware.reduce((height, fact) => height + wrappedCount(`• ${fact}`, 48, 2) * 19, 0);
@@ -248,11 +272,11 @@ export function layoutProject(project) {
     card.y = y;
     rowHeight = Math.max(rowHeight, card.h);
   });
-  const relationships = project.connections.filter(connection => project.devices.some(device => device.id === connection.from) && project.devices.some(device => device.id === connection.to));
+  const relationships = project.connections.filter(connection => !drawable(connection));
   const relationshipRows = Math.ceil(relationships.length / 3);
   const cardsBottom = cards.length ? y + rowHeight : cardsY;
   const height = Math.max(520, cardsBottom + 56 + relationshipRows * 24);
-  return { width, height, margin, gap, cardWidth, cardsY, tileHeight, networks, vlans, cards, relationships };
+  return { width, height, margin, gap, cardWidth, cardsY, tileHeight, networks, vlans, cards, relationships, networkRouteY, routingLaneY, routeX, drawable };
 }
 
 function textElement(text, x, y, options) {
@@ -283,7 +307,7 @@ function renderService(service, x, y, width, height, theme) {
   const nameY = y + height - 35;
   const name = textElement(service.name, center, nameY, { fill: theme.text, size: 14, weight: 650, anchor: 'middle', maxChars: 12, maxLines: 2, lineHeight: 16 });
   const badge = service.count > 1 ? `<g><rect x="${x + width - 31}" y="${y + 8}" width="24" height="20" rx="10" fill="#0f766e"/><text x="${x + width - 19}" y="${y + 23}" fill="#ffffff" font-family="${FONT}" font-size="11" font-weight="800" text-anchor="middle">×${service.count}</text></g>` : '';
-  return `<g><title>${escapeXml(service.name)}${service.count > 1 ? ` ×${service.count}` : ''}</title><rect x="${x}" y="${y}" width="${width}" height="${height}" rx="12" fill="${theme.tile}" stroke="${theme.line}" stroke-opacity="0.62"/><rect x="${center - 25}" y="${y + 11}" width="50" height="50" rx="13" fill="#ffffff" fill-opacity="0.96"/><image href="${logoDataUri(service.logo)}" x="${center - 21}" y="${y + 15}" width="42" height="42" preserveAspectRatio="xMidYMid meet" filter="url(#logo-shadow)"/>${name}${badge}</g>`;
+  return `<g><title>${escapeXml(service.name)}${service.count > 1 ? ` ×${service.count}` : ''}</title><rect x="${x}" y="${y}" width="${width}" height="${height}" rx="12" fill="${theme.tile}" stroke="${theme.line}" stroke-opacity="0.62"/><rect x="${center - 25}" y="${y + 11}" width="50" height="50" rx="13" fill="${logoPlate(service.logo)}" fill-opacity="0.96"/><image href="${logoDataUri(service.logo)}" x="${center - 21}" y="${y + 15}" width="42" height="42" preserveAspectRatio="xMidYMid meet" filter="url(#logo-shadow)"/>${name}${badge}</g>`;
 }
 
 function renderCard(device, box, theme, tileHeight) {
@@ -315,32 +339,26 @@ function renderCard(device, box, theme, tileHeight) {
     y += rows * tileHeight + 6;
     return `<g><rect x="${innerX}" y="${groupY}" width="${innerWidth}" height="${y - groupY - 4}" rx="11" fill="${theme.panel}" fill-opacity="0.42" stroke="${theme.line}" stroke-opacity="0.4"/>${groupName}${services}</g>`;
   }).join('');
-  return `<g data-device="${device.id}" role="button" tabindex="0" aria-label="Edit ${escapeXml(device.name)}"><title>${escapeXml(device.name)}</title><rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" rx="20" fill="${theme.card}" stroke="${device.accent}" stroke-width="1.6"/><rect x="${box.x}" y="${box.y}" width="7" height="${box.h}" rx="4" fill="${device.accent}"/><rect x="${box.x + 20}" y="${box.y + 18}" width="56" height="56" rx="15" fill="#ffffff" fill-opacity="0.96"/><image href="${logoDataUri(device.icon)}" x="${box.x + 25}" y="${box.y + 23}" width="46" height="46" preserveAspectRatio="xMidYMid meet" filter="url(#logo-shadow)"/>${name}${role}${network}${hardware}${groups}</g>`;
+  return `<g data-device="${device.id}" role="button" tabindex="0" aria-label="Edit ${escapeXml(device.name)}"><title>${escapeXml(device.name)}</title><rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" rx="20" fill="${theme.card}" stroke="${device.accent}" stroke-width="1.6"/><rect x="${box.x}" y="${box.y}" width="7" height="${box.h}" rx="4" fill="${device.accent}"/><rect x="${box.x + 20}" y="${box.y + 18}" width="56" height="56" rx="15" fill="${logoPlate(device.icon)}" fill-opacity="0.96"/><image href="${logoDataUri(device.icon)}" x="${box.x + 25}" y="${box.y + 23}" width="46" height="46" preserveAspectRatio="xMidYMid meet" filter="url(#logo-shadow)"/>${name}${role}${network}${hardware}${groups}</g>`;
 }
 
 function connectionLines(project, layout, theme) {
   const points = new Map();
-  const deviceIds = new Set(project.devices.map(device => device.id));
-  layout.networks.forEach(box => points.set(box.id, { x: box.x + box.w / 2, left: box.x, right: box.x + box.w, top: box.y, bottom: box.y + box.h }));
-  layout.cards.forEach(box => points.set(box.id, { x: box.x + box.w / 2, left: box.x, right: box.x + box.w, top: box.y, bottom: box.y + box.h }));
-  return project.connections.filter(connection => points.has(connection.from) && points.has(connection.to)).map(connection => {
-    if (deviceIds.has(connection.from) && deviceIds.has(connection.to)) return '';
+  const networkIds = new Set(project.networks.map(network => network.id));
+  layout.networks.forEach(box => points.set(box.id, { x: box.x + box.w / 2, top: box.y, bottom: box.y + box.h }));
+  layout.cards.forEach(box => points.set(box.id, { x: box.x + box.w / 2, top: box.y, bottom: box.y + box.h }));
+  return project.connections.filter(connection => layout.drawable(connection)).map(connection => {
     const from = points.get(connection.from);
     const to = points.get(connection.to);
-    if (Math.abs(from.top - to.top) < 4) {
-      const left = from.x < to.x ? from : to;
-      const right = left === from ? to : from;
-      const y = (left.top + left.bottom) / 2;
-      const label = connection.label ? textElement(connection.label, (left.right + right.left) / 2, y - 8, { fill: theme.muted, size: 11, weight: 700, anchor: 'middle', maxChars: 18 }) : '';
-      return `<g><path d="M ${left.right} ${y} H ${right.left}" fill="none" stroke="${theme.line}" stroke-width="2" stroke-dasharray="5 5" opacity="0.8"/>${label}</g>`;
+    if (networkIds.has(connection.from) && networkIds.has(connection.to)) {
+      const label = connection.label ? textElement(connection.label, (from.x + to.x) / 2, layout.networkRouteY - 6, { fill: theme.muted, size: 11, weight: 700, anchor: 'middle', maxChars: 18 }) : '';
+      return `<g><path d="M ${from.x} ${from.top} V ${layout.networkRouteY} H ${to.x} V ${to.top}" fill="none" stroke="${theme.line}" stroke-width="2" stroke-dasharray="5 5" opacity="0.8"/>${label}</g>`;
     }
-    const first = from.top < to.top ? from : to;
-    const second = first === from ? to : from;
-    const startY = first.bottom;
-    const endY = second.top;
-    const middleY = startY + Math.max(14, (endY - startY) / 2);
-    const path = `M ${first.x} ${startY} V ${middleY} H ${second.x} V ${endY}`;
-    const label = connection.label ? textElement(connection.label, (first.x + second.x) / 2, middleY - 6, { fill: theme.muted, size: 11, weight: 700, anchor: 'middle', maxChars: 18 }) : '';
+    const network = networkIds.has(connection.from) ? from : to;
+    const device = network === from ? to : from;
+    const entryY = network.bottom + 12;
+    const path = `M ${network.x} ${network.bottom} V ${entryY} H ${layout.routeX} V ${layout.routingLaneY} H ${device.x} V ${device.top}`;
+    const label = connection.label ? textElement(connection.label, device.x, layout.routingLaneY - 7, { fill: theme.muted, size: 11, weight: 700, anchor: 'middle', maxChars: 18 }) : '';
     return `<g><path d="${path}" fill="none" stroke="${theme.line}" stroke-width="2" stroke-dasharray="5 5" opacity="0.8"/>${label}</g>`;
   }).join('');
 }
@@ -361,7 +379,7 @@ export function renderProject(project) {
   }).join('');
   const cards = layout.cards.map(box => renderCard(project.devices.find(device => device.id === box.id), box, theme, layout.tileHeight)).join('');
   const relationships = layout.relationships.map((connection, index) => {
-    const names = new Map(project.devices.map(device => [device.id, device.name]));
+    const names = new Map([...project.networks, ...project.devices].map(item => [item.id, item.name]));
     const column = index % 3;
     const row = Math.floor(index / 3);
     const columnWidth = (layout.width - layout.margin * 2) / 3;
