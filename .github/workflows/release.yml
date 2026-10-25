@@ -1,0 +1,238 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate and package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      minor: ${{ steps.version.outputs.minor }}
+    steps:
+      - name: Check out tagged commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate tag, version, and main ancestry
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Release tags must be stable SemVer without leading zeros: vMAJOR.MINOR.PATCH" >&2
+            exit 1
+          fi
+          MINOR="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+          VERSION="${GITHUB_REF_NAME#v}"
+          PACKAGE_VERSION="$(node --print "require('./package.json').version")"
+          if [[ "$VERSION" != "$PACKAGE_VERSION" ]]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $PACKAGE_VERSION" >&2
+            exit 1
+          fi
+          if [[ "$(git rev-list -n 1 "$GITHUB_REF_NAME")" != "$GITHUB_SHA" ]]; then
+            echo "Tag $GITHUB_REF_NAME does not point to the workflow commit" >&2
+            exit 1
+          fi
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "Release commit must be on origin/main" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "minor=$MINOR" >> "$GITHUB_OUTPUT"
+      - name: Refuse an existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists; refusing to republish its image tags or assets. Use a new version/tag." >&2
+            exit 1
+          fi
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Test application
+        run: npm test
+      - name: Validate documentation
+        run: |
+          npm --prefix docs ci
+          npm --prefix docs audit --audit-level=high
+          npm --prefix docs run build
+      - name: Validate Compose files
+        run: |
+          docker compose config --quiet
+          docker compose -f compose.release.yaml config --quiet
+      - name: Build source image
+        run: docker build --tag homelab-atlas:release .
+      - name: Smoke-test source image
+        run: |
+          set -euo pipefail
+          docker run --detach --name atlas-release-check --read-only --tmpfs /tmp:size=16m,mode=1777 --cap-drop ALL --security-opt no-new-privileges -p 127.0.0.1:8080:8080 homelab-atlas:release
+          for attempt in {1..20}; do
+            if curl --fail --silent --show-error http://127.0.0.1:8080/healthz; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs atlas-release-check
+          exit 1
+      - name: Stop smoke-test container
+        if: always()
+        run: docker rm --force atlas-release-check 2>/dev/null || true
+      - name: Build release files
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          python3 scripts/release.py "v$VERSION" --output dist
+          cp "docs/releases/v$VERSION.md" dist/RELEASE-NOTES.md
+          cd dist
+          sha256sum --check SHA256SUMS
+      - name: Upload release files
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: release-files
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            dist/homelab-atlas-${{ steps.version.outputs.version }}.zip
+            dist/compose.release.yaml
+            dist/SHA256SUMS
+            dist/RELEASE-NOTES.md
+
+  container:
+    name: Publish container
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+    steps:
+      - name: Check out tagged commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Build and push image
+        id: push
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/aiden0rchad/homelab-atlas:${{ needs.validate.outputs.version }}
+            ghcr.io/aiden0rchad/homelab-atlas:v${{ needs.validate.outputs.version }}
+            ghcr.io/aiden0rchad/homelab-atlas:${{ needs.validate.outputs.minor }}
+            ghcr.io/aiden0rchad/homelab-atlas:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/aiden0rchad/homelab-atlas
+            org.opencontainers.image.title=Homelab Atlas
+            org.opencontainers.image.description=Local-first visual editor for clear homelab diagrams
+            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ needs.validate.outputs.version }}
+          provenance: mode=max
+          sbom: true
+
+  github-release:
+    name: Publish GitHub release
+    needs: [validate, container]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Download release files
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: release-files
+          path: dist
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e
+      - name: Verify files and anonymous image access
+        env:
+          EXPECTED_DIGEST: ${{ needs.container.outputs.digest }}
+          VERSION: ${{ needs.validate.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum --check SHA256SUMS
+          cd ..
+          EMPTY_DOCKER_CONFIG="$(mktemp -d)"
+          trap 'rm -rf "$EMPTY_DOCKER_CONFIG"' EXIT
+          export DOCKER_CONFIG="$EMPTY_DOCKER_CONFIG"
+          IMAGE="ghcr.io/aiden0rchad/homelab-atlas:$VERSION"
+          if ! docker buildx imagetools inspect "$IMAGE" > image-inspect.txt; then
+            echo "Anonymous image access failed. Make the GHCR package public, then rerun only this failed release job." >&2
+            exit 1
+          fi
+          ACTUAL_DIGEST="$(awk '$1 == "Digest:" { print $2; exit }' image-inspect.txt)"
+          if [[ "$ACTUAL_DIGEST" != "$EXPECTED_DIGEST" ]]; then
+            echo "Published image digest $ACTUAL_DIGEST does not match build digest $EXPECTED_DIGEST" >&2
+            exit 1
+          fi
+          docker buildx imagetools inspect "$IMAGE" --raw > image-index.json
+          python3 - <<'PY'
+          import json
+          data = json.load(open("image-index.json", encoding="utf-8"))
+          platforms = {(item.get("platform", {}).get("os"), item.get("platform", {}).get("architecture")) for item in data.get("manifests", [])}
+          missing = {("linux", "amd64"), ("linux", "arm64")} - platforms
+          if missing:
+              raise SystemExit(f"published image is missing architectures: {sorted(missing)}")
+          PY
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.validate.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists; refusing to overwrite it. Use a new version/tag or remove the unintended release manually before retrying." >&2
+            exit 1
+          fi
+          gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "v$VERSION · Homelab Atlas" \
+            --notes-file dist/RELEASE-NOTES.md \
+            "dist/homelab-atlas-$VERSION.zip" \
+            dist/compose.release.yaml \
+            dist/SHA256SUMS

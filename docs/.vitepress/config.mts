@@ -19,8 +19,8 @@ export default defineConfig({
     logo: { src: '/atlas-mark.svg', alt: 'Homelab Atlas' },
     siteTitle: 'Homelab Atlas Docs',
     nav: [
-      { text: 'Guides', link: '/getting-started' },
-      { text: 'Reference', link: '/project-format' },
+      { text: 'Install', link: '/getting-started' },
+      { text: 'Releases', link: '/releases/' },
       { text: 'GitHub', link: 'https://github.com/aiden0rchad/homelab-atlas' },
     ],
     sidebar: [
@@ -49,6 +49,8 @@ export default defineConfig({
         items: [
           { text: 'Troubleshooting', link: '/troubleshooting' },
           { text: 'Project format', link: '/project-format' },
+          { text: 'Releases', link: '/releases/' },
+          { text: 'v0.1.0', link: '/releases/v0.1.0' },
           { text: 'Development', link: '/development' },
         ],
       },

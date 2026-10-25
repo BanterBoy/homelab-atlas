@@ -9,9 +9,11 @@ A local-first visual editor for polished, portable homelab diagrams.
 
 [![CI](https://github.com/aiden0rchad/homelab-atlas/actions/workflows/ci.yml/badge.svg)](https://github.com/aiden0rchad/homelab-atlas/actions/workflows/ci.yml)
 [![Docs](https://github.com/aiden0rchad/homelab-atlas/actions/workflows/docs.yml/badge.svg)](https://aiden0rchad.github.io/homelab-atlas/)
+[![Release](https://img.shields.io/github/v/release/aiden0rchad/homelab-atlas?display_name=tag&sort=semver)](https://github.com/aiden0rchad/homelab-atlas/releases/latest)
+[![Package](https://img.shields.io/badge/GHCR-homelab--atlas-55d6c9?logo=github)](https://github.com/users/aiden0rchad/packages/container/package/homelab-atlas)
 [![License: MIT](https://img.shields.io/badge/license-MIT-55d6c9.svg)](LICENSE)
 
-[Documentation](https://aiden0rchad.github.io/homelab-atlas/) · [Get started](https://aiden0rchad.github.io/homelab-atlas/getting-started) · [GitHub](https://github.com/aiden0rchad/homelab-atlas)
+[Documentation](https://aiden0rchad.github.io/homelab-atlas/) · [Install](https://aiden0rchad.github.io/homelab-atlas/getting-started) · [Releases](https://github.com/aiden0rchad/homelab-atlas/releases) · [Package](https://github.com/users/aiden0rchad/packages/container/package/homelab-atlas) · [GitHub](https://github.com/aiden0rchad/homelab-atlas)
 </div>
 
 ![Homelab Atlas editor showing a fictional sample project](docs/editor.png)
@@ -26,15 +28,14 @@ A local-first visual editor for polished, portable homelab diagrams.
 
 ## Quick start
 
-Install Git and Docker Engine or Docker Desktop with Compose v2, then run:
+Install Docker Engine or Docker Desktop with Compose v2, then download the release Compose file and start the published image:
 
 ```sh
-git clone https://github.com/aiden0rchad/homelab-atlas.git
-cd homelab-atlas
-docker compose up --build -d
+curl -fsSLO https://github.com/aiden0rchad/homelab-atlas/releases/download/v0.1.0/compose.release.yaml
+docker compose -f compose.release.yaml up -d
 ```
 
-Open [http://localhost:8080](http://localhost:8080). The container binds to loopback by default.
+Open `http://localhost:8080`. The container binds to loopback by default. See [installation options and version pinning](https://aiden0rchad.github.io/homelab-atlas/getting-started).
 
 ## From inventory to export
 
@@ -55,6 +56,7 @@ Open [http://localhost:8080](http://localhost:8080). The container binds to loop
 | [Privacy](https://aiden0rchad.github.io/homelab-atlas/privacy) | Data boundaries and safe deployment |
 | [Troubleshooting](https://aiden0rchad.github.io/homelab-atlas/troubleshooting) | Storage, imports, startup, layout, and export issues |
 | [Project format](https://aiden0rchad.github.io/homelab-atlas/project-format) | Schema version 1 and validation limits |
+| [Releases](https://aiden0rchad.github.io/homelab-atlas/releases/) | Images, downloads, checksums, and version tags |
 | [Development](https://aiden0rchad.github.io/homelab-atlas/development) | Source layout, checks, docs, and logo maintenance |
 
 ## Storage, privacy, and limits

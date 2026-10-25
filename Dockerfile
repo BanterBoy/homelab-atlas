@@ -1,4 +1,8 @@
 FROM python:3.13-alpine
+LABEL org.opencontainers.image.source="https://github.com/aiden0rchad/homelab-atlas" \
+      org.opencontainers.image.title="Homelab Atlas" \
+      org.opencontainers.image.description="Local-first visual editor for clear homelab diagrams" \
+      org.opencontainers.image.licenses="MIT"
 WORKDIR /app
 COPY --chown=10001:10001 public ./public
 COPY --chown=10001:10001 server.py .

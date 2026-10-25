@@ -1,16 +1,58 @@
 # Getting started
 
-Homelab Atlas is a static browser editor served from your own machine. Docker Compose is the shortest supported path.
+Homelab Atlas is a static browser editor served from your own machine. The published container is the preferred installation.
 
 ## Requirements
 
-- Git
 - Docker Engine or Docker Desktop with Compose v2
 - A current desktop browser
 
-The direct-server fallback requires Python 3.10 or newer. Node.js is only needed for app tests, icon maintenance, and documentation development—not to run the app.
+Git is needed only for a source build. The direct-server fallback requires Python 3.10 or newer. Node.js is only for app tests, icon maintenance, and documentation development.
 
-## Start with Docker Compose
+## Install the released image
+
+Download the release Compose file, then start the container:
+
+```sh
+curl -fsSLO https://github.com/aiden0rchad/homelab-atlas/releases/download/v0.1.0/compose.release.yaml
+docker compose -f compose.release.yaml up -d
+```
+
+Open `http://localhost:8080`. Verify the server if needed:
+
+```sh
+curl http://localhost:8080/healthz
+```
+
+A healthy response is `ok`. The Compose file pulls `ghcr.io/aiden0rchad/homelab-atlas:0.1.0` by default and retains the source deployment's loopback binding, read-only filesystem, dropped capabilities, and no-new-privileges policy.
+
+## Pin and update versions
+
+Create `.env` beside `compose.release.yaml` to choose an explicit image tag:
+
+```dotenv
+ATLAS_VERSION=0.1.0
+```
+
+Then update without changing the hostname or port:
+
+```sh
+docker compose -f compose.release.yaml pull
+docker compose -f compose.release.yaml up -d
+```
+
+Save an editable JSON project before any update or downgrade. Projects live in browser storage, not a container volume. Keeping the same origin—hostname, port, and protocol—keeps the same browser storage namespace. A downgrade may require a project compatible with that version's JSON schema; no automatic migration is promised.
+
+Version tags have different stability:
+
+- `0.1.0` and `v0.1.0` identify this release.
+- `0.1` moves to the newest compatible 0.1 patch.
+- `latest` moves to the newest stable release.
+- A published image digest is immutable; see the [release guide](/releases/) for digest pinning.
+
+## Build from source
+
+Install Git, then build the current checkout:
 
 ```sh
 git clone https://github.com/aiden0rchad/homelab-atlas.git
@@ -18,49 +60,38 @@ cd homelab-atlas
 docker compose up --build -d
 ```
 
-Open [http://localhost:8080](http://localhost:8080), then verify the server if needed:
+Update a source deployment with:
 
 ```sh
-curl http://localhost:8080/healthz
-```
-
-A healthy response is `ok`.
-
-## Stop, start, and update
-
-```sh
-# Stop and remove the container
-docker compose down
-
-# Start it again
-docker compose up -d
-
-# Update from source
 git pull --ff-only
 docker compose up --build -d
 ```
 
-Save an editable JSON project before updating. The container has no project volume because project data lives in browser storage, not on the app server.
+Stop either deployment with its matching Compose arguments:
+
+```sh
+docker compose -f compose.release.yaml down
+```
 
 ## Direct Python fallback
 
-From the repository root:
+From a source checkout or the portable release ZIP:
 
 ```sh
 python3 server.py
 ```
 
-Then open [http://localhost:8080](http://localhost:8080). The server exposes only `public/` and defaults to loopback.
+Open `http://localhost:8080`. The server exposes only `public/` and defaults to loopback.
 
 ## Trusted-LAN access
 
 The app has no authentication. Use LAN binding only on a network you trust:
 
 ```sh
-ATLAS_BIND=0.0.0.0 docker compose up --build -d
+ATLAS_BIND=0.0.0.0 docker compose -f compose.release.yaml up -d
 ```
 
-Open `http://<server-address>:8080` from the trusted client. That hostname creates a different browser origin from `localhost`, so its browser storage is separate. Save JSON before changing hostname, port, or protocol. Do not expose Homelab Atlas directly to the public internet.
+Open `http://<server-address>:8080` from the trusted client. That hostname is a different origin from `localhost`, so its browser storage is separate. Save JSON before changing hostname, port, or protocol. Do not expose Homelab Atlas directly to the public internet.
 
 ## First diagram
 

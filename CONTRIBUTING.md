@@ -22,7 +22,7 @@ npm --prefix docs ci
 npm --prefix docs run build
 ```
 
-For logo changes, use a pinned legitimate SVG source, update `public/licenses/logo-sources.json` and applicable license notices, then run:
+For logo changes, use a pinned legitimate SVG source. Update `public/catalog.js`, its contrast plate sets when needed, `public/licenses/logo-sources.json`, `THIRD_PARTY_NOTICES.md`, and applicable license files, then run:
 
 ```sh
 npm run build:icons
