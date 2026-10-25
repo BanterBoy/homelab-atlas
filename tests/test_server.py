@@ -1,33 +1,73 @@
 import http.client
-import subprocess
-import sys
-import time
+import os
+from pathlib import Path
+import threading
 import unittest
 
-PORT=18765
+from server import Handler
+from http.server import ThreadingHTTPServer
+
+
 class ServerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.proc=subprocess.Popen([sys.executable,"server.py","--port",str(PORT)],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-        for _ in range(30):
-            try:
-                c=http.client.HTTPConnection("127.0.0.1",PORT,timeout=.2);c.request("GET","/healthz");
-                if c.getresponse().status==200:return
-            except OSError:time.sleep(.05)
-        _,err=cls.proc.communicate(timeout=1)
-        if b"Operation not permitted" in err: raise unittest.SkipTest("sandbox forbids localhost bind")
-        raise RuntimeError(f"server did not start: {err.decode()}")
+        try:
+            cls.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        except PermissionError:
+            raise unittest.SkipTest("sandbox forbids localhost bind")
+        cls.port = cls.server.server_address[1]
+        cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
+        cls.thread.start()
+
     @classmethod
-    def tearDownClass(cls):cls.proc.terminate();cls.proc.wait(timeout=3)
-    def get(self,path):
-        c=http.client.HTTPConnection("127.0.0.1",PORT,timeout=2);c.request("GET",path);r=c.getresponse();body=r.read();return r,body
+    def tearDownClass(cls):
+        if hasattr(cls, "server"):
+            cls.server.shutdown()
+            cls.server.server_close()
+            cls.thread.join(timeout=3)
+
+    def get(self, path):
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=2)
+        try:
+            connection.request("GET", path)
+            response = connection.getresponse()
+            return response.status, dict(response.getheaders()), response.read()
+        finally:
+            connection.close()
+
     def test_index_assets_and_headers(self):
-        r,b=self.get("/");self.assertEqual(r.status,200);self.assertIn(b"Homelab Atlas",b);self.assertIn("default-src 'self'",r.getheader("Content-Security-Policy"));self.assertEqual(r.getheader("X-Content-Type-Options"),"nosniff")
-        r,b=self.get("/model.js");self.assertEqual(r.status,200);self.assertIn(b"validateProject",b)
-    def test_health(self):r,b=self.get("/healthz");self.assertEqual((r.status,b),(200,b"ok\n"))
-    def test_source_and_traversal_denied(self):
-        for path in ["/server.py","/../server.py","/%2e%2e/server.py","/.git/config","/"]:
-            r,b=self.get(path)
-            if path=="/":self.assertNotIn(b"Directory listing",b)
-            else:self.assertEqual(r.status,404,path)
-if __name__=="__main__":unittest.main()
+        status, headers, body = self.get("/")
+        self.assertEqual(status, 200)
+        self.assertIn(b"Homelab Atlas", body)
+        self.assertIn("default-src 'self'", headers["Content-Security-Policy"])
+        self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
+        status, _, body = self.get("/model.js")
+        self.assertEqual(status, 200)
+        self.assertIn(b"validateProject", body)
+
+    def test_health(self):
+        status, _, body = self.get("/healthz")
+        self.assertEqual((status, body), (200, b"ok\n"))
+
+    def test_source_traversal_and_directory_listing_denied(self):
+        for path in ["/server.py", "/../server.py", "/%2e%2e/server.py", "/.git/config", "/licenses/"]:
+            status, _, body = self.get(path)
+            self.assertEqual(status, 404, path)
+            self.assertNotIn(b"Directory listing", body)
+
+    def test_symlink_escape_denied(self):
+        public = Path("public")
+        link = public / "escape-test"
+        try:
+            link.symlink_to(Path("../server.py"))
+        except (OSError, NotImplementedError):
+            self.skipTest("symlinks unavailable")
+        try:
+            status, _, _ = self.get("/escape-test")
+            self.assertEqual(status, 404)
+        finally:
+            os.unlink(link)
+
+
+if __name__ == "__main__":
+    unittest.main()

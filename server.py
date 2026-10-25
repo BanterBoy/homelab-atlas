@@ -4,6 +4,7 @@ import argparse
 import http.server
 import os
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 PUBLIC = Path(__file__).resolve().parent / "public"
 
@@ -20,6 +21,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
         self.send_header("Cross-Origin-Resource-Policy", "same-origin")
         super().end_headers()
+
+    def translate_path(self, path):
+        relative = unquote(urlsplit(path).path).lstrip("/")
+        candidate = (PUBLIC / relative).resolve()
+        if candidate != PUBLIC and PUBLIC not in candidate.parents:
+            return str(PUBLIC / "__not_found__")
+        return str(candidate)
 
     def list_directory(self, path):
         self.send_error(404, "Not found")
@@ -41,7 +49,7 @@ def main():
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8080")))
     args = parser.parse_args()
     with http.server.ThreadingHTTPServer((args.host, args.port), Handler) as server:
-        print(f"Homelab Atlas: http://{args.host}:{args.port}", flush=True)
+        print(f"Homelab Atlas: http://{args.host}:{server.server_address[1]}", flush=True)
         server.serve_forever()
 
 if __name__ == "__main__":

@@ -1,0 +1,676 @@
+[
+  {
+    "id": "adguard-home",
+    "label": "AdGuard Home",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "adguard-home.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/adguard-home.svg",
+    "bytes": 672
+  },
+  {
+    "id": "amd",
+    "label": "AMD",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "amd-light.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/amd-light.svg",
+    "bytes": 201
+  },
+  {
+    "id": "audiobookshelf",
+    "label": "Audiobookshelf",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "audiobookshelf.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/audiobookshelf.svg",
+    "bytes": 1775
+  },
+  {
+    "id": "authelia",
+    "label": "Authelia",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "authelia.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/authelia.svg",
+    "bytes": 3524
+  },
+  {
+    "id": "authentik",
+    "label": "Authentik",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "authentik.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/authentik.svg",
+    "bytes": 2005
+  },
+  {
+    "id": "bazarr",
+    "label": "Bazarr",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "bazarr.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/bazarr.svg",
+    "bytes": 1121
+  },
+  {
+    "id": "caddy",
+    "label": "Caddy",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "caddy.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/caddy.svg",
+    "bytes": 3363
+  },
+  {
+    "id": "calibre-web",
+    "label": "Calibre Web",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "calibre-web.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/calibre-web.svg",
+    "bytes": 1047
+  },
+  {
+    "id": "cloudflare",
+    "label": "Cloudflare",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "cloudflare.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/cloudflare.svg",
+    "bytes": 1216
+  },
+  {
+    "id": "debian",
+    "label": "Debian",
+    "source": "Homarr Dashboard Icons",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/debian-linux.svg",
+    "bytes": 3107
+  },
+  {
+    "id": "docker",
+    "label": "Docker",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "docker.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/docker.svg",
+    "bytes": 608
+  },
+  {
+    "id": "dockge",
+    "label": "Dockge",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "dockge.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/dockge.svg",
+    "bytes": 918
+  },
+  {
+    "id": "docmost",
+    "label": "Docmost",
+    "source": "selfh.st Icons",
+    "url": "https://raw.githubusercontent.com/selfhst/icons/1d65d45a42e6323b54b8096967b1ea4b65321f97/svg/docmost-light.svg",
+    "bytes": 829
+  },
+  {
+    "id": "duplicati",
+    "label": "Duplicati",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "duplicati.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/duplicati.svg",
+    "bytes": 1273
+  },
+  {
+    "id": "fedora",
+    "label": "Fedora",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "fedora.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/fedora.svg",
+    "bytes": 2579
+  },
+  {
+    "id": "freshrss",
+    "label": "FreshRSS",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "freshrss.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/freshrss.svg",
+    "bytes": 550
+  },
+  {
+    "id": "gitea",
+    "label": "Gitea",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "gitea.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/gitea.svg",
+    "bytes": 2174
+  },
+  {
+    "id": "gitlab",
+    "label": "GitLab",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "gitlab.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/gitlab.svg",
+    "bytes": 1020
+  },
+  {
+    "id": "grafana",
+    "label": "Grafana",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "grafana.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/grafana.svg",
+    "bytes": 4233
+  },
+  {
+    "id": "homarr",
+    "label": "Homarr",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "homarr.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/homarr.svg",
+    "bytes": 1236
+  },
+  {
+    "id": "home-assistant",
+    "label": "Home Assistant",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "home-assistant.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/home-assistant.svg",
+    "bytes": 879
+  },
+  {
+    "id": "homepage",
+    "label": "Homepage",
+    "source": "selfh.st Icons",
+    "url": "https://raw.githubusercontent.com/selfhst/icons/1d65d45a42e6323b54b8096967b1ea4b65321f97/svg/homepage.svg",
+    "bytes": 907
+  },
+  {
+    "id": "immich",
+    "label": "Immich",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "immich.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/immich.svg",
+    "bytes": 1172
+  },
+  {
+    "id": "intel",
+    "label": "Intel",
+    "source": "Intel",
+    "url": "https://www.intel.com/content/dam/logos/intel-header-logo.svg",
+    "bytes": 2308
+  },
+  {
+    "id": "jellyfin",
+    "label": "Jellyfin",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "jellyfin.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/jellyfin.svg",
+    "bytes": 896
+  },
+  {
+    "id": "kavita",
+    "label": "Kavita",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "kavita.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/kavita.svg",
+    "bytes": 1996
+  },
+  {
+    "id": "komga",
+    "label": "Komga",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "komga.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/komga.svg",
+    "bytes": 2019
+  },
+  {
+    "id": "kopia",
+    "label": "Kopia",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "kopia.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/kopia.svg",
+    "bytes": 354
+  },
+  {
+    "id": "linux",
+    "label": "Linux",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "tux.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/tux.svg",
+    "bytes": 35988
+  },
+  {
+    "id": "mariadb",
+    "label": "MariaDB",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "mariadb.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/mariadb.svg",
+    "bytes": 2387
+  },
+  {
+    "id": "mealie",
+    "label": "Mealie",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "mealie.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/mealie.svg",
+    "bytes": 1238
+  },
+  {
+    "id": "miniflux",
+    "label": "Miniflux",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "miniflux-light.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/miniflux-light.svg",
+    "bytes": 914
+  },
+  {
+    "id": "minio",
+    "label": "MinIO",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "minio.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/minio.svg",
+    "bytes": 774
+  },
+  {
+    "id": "mongodb",
+    "label": "MongoDB",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "mongodb.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/mongodb.svg",
+    "bytes": 710
+  },
+  {
+    "id": "mosquitto",
+    "label": "Mosquitto",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "mosquitto.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/mosquitto.svg",
+    "bytes": 1510
+  },
+  {
+    "id": "music-assistant",
+    "label": "Music Assistant",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "music-assistant.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/music-assistant.svg",
+    "bytes": 11197
+  },
+  {
+    "id": "mysql",
+    "label": "MySQL",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "mysql.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/mysql.svg",
+    "bytes": 5566
+  },
+  {
+    "id": "n8n",
+    "label": "n8n",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "n8n.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/n8n.svg",
+    "bytes": 1248
+  },
+  {
+    "id": "netdata",
+    "label": "Netdata",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "netdata.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/netdata.svg",
+    "bytes": 253
+  },
+  {
+    "id": "nextcloud",
+    "label": "Nextcloud",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "nextcloud.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/nextcloud.svg",
+    "bytes": 739
+  },
+  {
+    "id": "nginx",
+    "label": "nginx",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "nginx.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/nginx.svg",
+    "bytes": 877
+  },
+  {
+    "id": "nginx-proxy-manager",
+    "label": "Nginx Proxy Manager",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "nginx-proxy-manager.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/nginx-proxy-manager.svg",
+    "bytes": 9130
+  },
+  {
+    "id": "node-red",
+    "label": "Node-RED",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "node-red.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/node-red.svg",
+    "bytes": 1052
+  },
+  {
+    "id": "ollama",
+    "label": "Ollama",
+    "source": "Homarr Dashboard Icons",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/ollama.svg",
+    "bytes": 8811
+  },
+  {
+    "id": "open-webui",
+    "label": "Open WebUI",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "open-webui-light.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/open-webui-light.svg",
+    "bytes": 293
+  },
+  {
+    "id": "paperless-ngx",
+    "label": "Paperless-ngx",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "paperless-ngx.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/paperless-ngx.svg",
+    "bytes": 629
+  },
+  {
+    "id": "pi-hole",
+    "label": "Pi-hole",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "pi-hole.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/pi-hole.svg",
+    "bytes": 1434
+  },
+  {
+    "id": "plex",
+    "label": "Plex",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "plex.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/plex.svg",
+    "bytes": 191
+  },
+  {
+    "id": "podman",
+    "label": "Podman",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "podman.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/podman.svg",
+    "bytes": 12245
+  },
+  {
+    "id": "portainer",
+    "label": "Portainer",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "portainer.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/portainer.svg",
+    "bytes": 675
+  },
+  {
+    "id": "postgresql",
+    "label": "PostgreSQL",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "postgresql.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/postgresql.svg",
+    "bytes": 2888
+  },
+  {
+    "id": "prometheus",
+    "label": "Prometheus",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "prometheus.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/prometheus.svg",
+    "bytes": 764
+  },
+  {
+    "id": "prowlarr",
+    "label": "Prowlarr",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "prowlarr.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/prowlarr.svg",
+    "bytes": 9043
+  },
+  {
+    "id": "proxmox",
+    "label": "Proxmox",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "proxmox.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/proxmox.svg",
+    "bytes": 1196
+  },
+  {
+    "id": "qbittorrent",
+    "label": "qBittorrent",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "qbittorrent.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/qbittorrent.svg",
+    "bytes": 1549
+  },
+  {
+    "id": "qwen",
+    "label": "Qwen",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "qwen.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/qwen.svg",
+    "bytes": 1594
+  },
+  {
+    "id": "radarr",
+    "label": "Radarr",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "radarr.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/radarr.svg",
+    "bytes": 778
+  },
+  {
+    "id": "raspberry-pi",
+    "label": "Raspberry Pi",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "raspberry-pi.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/raspberry-pi.svg",
+    "bytes": 4552
+  },
+  {
+    "id": "redis",
+    "label": "Redis",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "redis.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/redis.svg",
+    "bytes": 2682
+  },
+  {
+    "id": "sabnzbd",
+    "label": "SABnzbd",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "sabnzbd.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/sabnzbd.svg",
+    "bytes": 921
+  },
+  {
+    "id": "searxng",
+    "label": "SearXNG",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "searxng.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/searxng.svg",
+    "bytes": 469
+  },
+  {
+    "id": "seerr",
+    "label": "Seerr",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "seerr.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/seerr.svg",
+    "bytes": 1975
+  },
+  {
+    "id": "sonarr",
+    "label": "Sonarr",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "sonarr.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/sonarr.svg",
+    "bytes": 1978
+  },
+  {
+    "id": "stirling-pdf",
+    "label": "Stirling PDF",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "stirling-pdf.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/stirling-pdf.svg",
+    "bytes": 1029
+  },
+  {
+    "id": "syncthing",
+    "label": "Syncthing",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "syncthing.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/syncthing.svg",
+    "bytes": 1187
+  },
+  {
+    "id": "tailscale",
+    "label": "Tailscale",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "tailscale-light.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/tailscale-light.svg",
+    "bytes": 1290
+  },
+  {
+    "id": "tdarr",
+    "label": "Tdarr",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "tdarr.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/tdarr.svg",
+    "bytes": 9104
+  },
+  {
+    "id": "traefik",
+    "label": "Traefik",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "traefik.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/traefik.svg",
+    "bytes": 2188
+  },
+  {
+    "id": "truenas",
+    "label": "TrueNAS",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "truenas-scale.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/truenas-scale.svg",
+    "bytes": 3407
+  },
+  {
+    "id": "ubiquiti",
+    "label": "Ubiquiti",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "ubiquiti.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/ubiquiti.svg",
+    "bytes": 1067
+  },
+  {
+    "id": "ubuntu",
+    "label": "Ubuntu",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "ubuntu-linux.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/ubuntu-linux.svg",
+    "bytes": 816
+  },
+  {
+    "id": "unraid",
+    "label": "Unraid",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "unraid.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/unraid.svg",
+    "bytes": 624
+  },
+  {
+    "id": "uptime-kuma",
+    "label": "Uptime Kuma",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "uptime-kuma.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/uptime-kuma.svg",
+    "bytes": 630
+  },
+  {
+    "id": "vaultwarden",
+    "label": "Vaultwarden",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "vaultwarden.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/vaultwarden.svg",
+    "bytes": 5364
+  },
+  {
+    "id": "wireguard",
+    "label": "WireGuard",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "wireguard.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/wireguard.svg",
+    "bytes": 4328
+  },
+  {
+    "id": "xwiki",
+    "label": "XWiki",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "xwiki.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/xwiki.svg",
+    "bytes": 837
+  }
+]
