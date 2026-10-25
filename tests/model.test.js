@@ -4,7 +4,7 @@ import { LOGOS, logoDataUri, logoPlate } from '../public/catalog.js';
 import { ICON_DATA } from '../public/icon-data.js';
 import {
   LIMITS, layoutProject, parseProject, removeDevice, removeNetwork,
-  renderProject, sampleProject, uid, validateProject, wrapText,
+  renderProject, sampleProject, serviceTileGeometry, uid, validateProject, wrapText,
 } from '../public/model.js';
 import { applyProjectChange, hasStorageConflict, pngDimensions, updateSelection } from '../public/state.js';
 
@@ -117,6 +117,19 @@ test('wrapping and service tiles contain long labels and count badges', () => {
   assert.ok(card.x + card.w <= layout.width);
 });
 
+test('service tile logos, plates, and one or two label lines never overlap', () => {
+  for (const [secondary, height] of [[false, 78], [true, 72]]) {
+    for (const label of ['Grafana', 'Music Assistant']) {
+      const geometry = serviceTileGeometry(label, secondary ? 64 : 100, height, secondary);
+      assert.ok(geometry.logoY >= 0 && geometry.logoY + geometry.logoSize <= height);
+      assert.ok(geometry.plateY >= 0 && geometry.plateY + geometry.plateSize <= height);
+      assert.ok(geometry.logoY + geometry.logoSize < geometry.textTop);
+      assert.ok(geometry.plateY + geometry.plateSize < geometry.textTop);
+      assert.ok(geometry.firstBaseline + (geometry.lines.length - 1) * geometry.lineHeight <= height);
+    }
+  }
+});
+
 test('network and VLAN rows wrap without expanding beyond selected columns', () => {
   const project = sampleProject();
   project.columns = 1;
@@ -127,6 +140,9 @@ test('network and VLAN rows wrap without expanding beyond selected columns', () 
   assert.equal(layout.width, 600);
   assert.ok(new Set(layout.networks.map(item => item.y)).size > 1);
   assert.ok(new Set(layout.vlans.map(item => item.y)).size > 1);
+  assert.ok(layout.networks.every(item => item.w >= 200));
+  assert.ok(layout.vlans.every(item => item.w >= 130));
+  assert.equal(layout.vlanGaps.length, 2);
   for (const item of [...layout.networks, ...layout.vlans]) {
     assert.ok(item.x >= layout.margin);
     assert.ok(item.x + item.w <= layout.width - layout.margin);
@@ -154,6 +170,25 @@ test('connections use straight network arrows, a VLAN-gap bus, and lower-card fa
   assert.ok(layoutProject(project).relationships.some(connection => connection.id === 'conn-complex'));
 });
 
+test('routing uses bottom network rows, single-VLAN margins, and directed arrows', () => {
+  const project = sampleProject();
+  project.columns = 1;
+  project.networks = Array.from({ length: 5 }, (_, index) => ({ id: `net-${index}`, name: `Network ${index}`, kind: 'Switch', accent: '#123456' }));
+  project.vlans = [{ id: 'vlan-only', name: 'Main', color: '#654321' }];
+  project.connections = [
+    { id: 'top-device', from: 'net-0', to: 'dev-storage', label: '' },
+    { id: 'bottom-device', from: 'net-4', to: 'dev-storage', label: '' },
+    { id: 'reverse', from: 'net-1', to: 'net-0', label: '' },
+  ];
+  const layout = layoutProject(project);
+  assert.equal(layout.drawable(project.connections[0]), false);
+  assert.equal(layout.drawable(project.connections[1]), true);
+  assert.ok(layout.vlanRouteXs[0] > layout.vlans[0].x + layout.vlans[0].w);
+  const from = layout.networks[1];
+  const to = layout.networks[0];
+  assert.match(renderProject(project), new RegExp(`M ${from.x} ${from.y + from.h / 2} H ${to.x + to.w}`));
+});
+
 test('masonry cards preserve order, stay in bounds, and never overlap', () => {
   const project = sampleProject();
   const layout = layoutProject(project);
@@ -174,6 +209,12 @@ test('masonry cards preserve order, stay in bounds, and never overlap', () => {
     }
   }
   assert.equal(layout.cards.find(card => card.id === 'dev-ai').tileColumns, 3);
+  for (const id of ['dev-edge', 'dev-remote']) {
+    const card = layout.cards.find(item => item.id === id);
+    assert.equal(card.secondary, true);
+    assert.equal(card.tileColumns, 4);
+    assert.ok(card.h >= 230 && card.h <= 270);
+  }
 });
 
 test('card labels and hardware remain bounded across one to four columns', () => {
@@ -183,11 +224,24 @@ test('card labels and hardware remain bounded across one to four columns', () =>
     project.devices[0].name = 'An unusually long storage host name for wrapping';
     project.devices[0].hardware = ['A hardware description that is long enough to wrap without leaving its card boundary'];
     const layout = layoutProject(project);
-    const svg = renderProject(project);
-    assert.match(svg, /…/);
+    renderProject(project);
     assert.ok(layout.cards.every(card => card.x + card.w <= layout.width - layout.margin));
+    assert.ok(layout.cards.every(card => card.contentBottom <= card.y + card.h));
     assert.ok(layout.footerY < layout.height);
   }
+});
+
+test('narrow names fit, and maximum hardware content stays above services and card bottom', () => {
+  const project = sampleProject();
+  project.devices[2].name = 'Compute Node';
+  project.devices[2].hardware = Array.from({ length: 12 }, (_, index) => `Hardware fact ${index + 1} ${'x'.repeat(104)}`.slice(0, 120));
+  const layout = layoutProject(project);
+  const card = layout.cards.find(item => item.id === 'dev-ai');
+  assert.equal(wrapText(project.devices[2].name, card.name.maxChars, 2)[0], 'Compute Node');
+  assert.ok(card.name.size >= 22);
+  assert.ok(card.contentBottom <= card.y + card.h);
+  assert.ok(card.hardwareHeight >= 12 * 2 * 19);
+  assert.equal(project.devices[1].groups[0].services.find(service => service.name === 'llama.cpp').logo, 'generic');
 });
 
 test('invalid changes are atomic', () => {

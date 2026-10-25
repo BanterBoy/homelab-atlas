@@ -70,7 +70,7 @@ export function sampleProject() {
         id: 'dev-media', name: 'Relay', role: 'Unraid / media + voice', icon: 'unraid', accent: '#f28a61', network: '20 Servers',
         hardware: ['i9-10900K · 32 GB RAM', 'RTX 3060 · 12 GB', '7 data HDDs + 2 parity · NVMe mirror'],
         groups: [
-          { id: 'grp-media', name: 'Containers', services: services('relay-a', [['jellyfin', 'Jellyfin'], ['sonarr', 'Sonarr', 3], ['radarr', 'Radarr'], ['prowlarr', 'Prowlarr'], ['bazarr', 'Bazarr', 3], ['seerr', 'Seerr'], ['sabnzbd', 'SABnzbd'], ['qbittorrent', 'qBittorrent'], ['tdarr', 'Tdarr', 3], ['open-webui', 'Open WebUI'], ['adguard-home', 'AdGuard'], ['grafana', 'Grafana'], ['postgresql', 'Postgres'], ['home-assistant', 'HA helper'], ['ollama', 'llama.cpp'], ['music-assistant', 'Music Assistant'], ['mosquitto', 'Mosquitto'], ['node-red', 'Node-RED']]) },
+          { id: 'grp-media', name: 'Containers', services: services('relay-a', [['jellyfin', 'Jellyfin'], ['sonarr', 'Sonarr', 3], ['radarr', 'Radarr'], ['prowlarr', 'Prowlarr'], ['bazarr', 'Bazarr', 3], ['seerr', 'Seerr'], ['sabnzbd', 'SABnzbd'], ['qbittorrent', 'qBittorrent'], ['tdarr', 'Tdarr', 3], ['open-webui', 'Open WebUI'], ['adguard-home', 'AdGuard'], ['grafana', 'Grafana'], ['postgresql', 'Postgres'], ['home-assistant', 'HA helper'], ['generic', 'llama.cpp'], ['music-assistant', 'Music Assistant'], ['mosquitto', 'Mosquitto'], ['node-red', 'Node-RED']]) },
           { id: 'grp-ha', name: 'Home automation', services: services('relay-b', [['home-assistant', 'Home Assistant'], ['node-red', 'Node-RED'], ['music-assistant', 'Music'], ['mosquitto', 'MQTT']]) },
         ],
       },
@@ -211,18 +211,42 @@ export function wrapText(value, maxChars, maxLines = 2) {
   return lines;
 }
 
-function hardwareHeight(device, width) {
-  if (!device.hardware.length) return 0;
-  const chars = Math.max(18, Math.floor((width - 48) / 7.4));
-  const lines = device.hardware.reduce((sum, fact) => sum + wrapText(fact, chars, 2).length, 0);
-  return lines * 19 + (device.hardware.length > 1 ? 28 : 14);
+function nameGeometry(device, width, secondary) {
+  const available = width - 100;
+  const maxSize = secondary ? 28 : width < 380 ? 30 : 44;
+  const size = Math.max(22, Math.min(maxSize, available / Math.max(1, device.name.length * .55)));
+  const maxChars = Math.max(8, Math.floor(available / (size * .55)));
+  const lines = wrapText(device.name, maxChars, 2).length;
+  return { size, maxChars, lines, lineHeight: Math.round(size * 1.05) };
 }
 
-function cardHeight(device, width, compact) {
-  const tileColumns = width < 380 ? 3 : 4;
-  const tileHeight = compact ? 76 : 82;
-  const groups = device.groups.reduce((height, group) => height + 34 + Math.ceil(group.services.length / tileColumns) * tileHeight + 12, 0);
-  return Math.max(236, 116 + hardwareHeight(device, width) + groups + 18);
+function cardMetrics(device, width, compact, secondary) {
+  const serviceCount = device.groups.reduce((sum, group) => sum + group.services.length, 0);
+  const tileColumns = secondary && serviceCount <= 4 ? 4 : width < 380 ? 3 : 4;
+  const tileHeight = secondary ? 80 : 86;
+  const hardwareChars = Math.max(18, Math.floor((width - 64) / 7.4));
+  const hardwareLines = device.hardware.map(fact => wrapText(fact, hardwareChars, 2).length);
+  const name = nameGeometry(device, width, secondary);
+  const headerHeight = (secondary ? 96 : 118) + (name.lines - 1) * name.lineHeight;
+  let hardwareHeight = 0;
+  if (device.hardware.length > 1) hardwareHeight = 34 + hardwareLines.reduce((sum, lines) => sum + lines * 19, 0);
+  else if (device.hardware.length) hardwareHeight = hardwareLines[0] * (secondary ? 16 : 19) + (secondary ? 10 : 13);
+  const groupHeader = secondary ? 26 : 30;
+  const groupGap = secondary ? 8 : 12;
+  const groupsHeight = device.groups.reduce((height, group) => height + groupHeader + Math.ceil(group.services.length / tileColumns) * tileHeight + groupGap, 0);
+  const contentHeight = headerHeight + hardwareHeight + groupsHeight;
+  return { secondary, compact, name, tileColumns, tileHeight, hardwareChars, hardwareLines, headerHeight, hardwareHeight, groupHeader, groupGap, contentHeight, height: Math.max(secondary ? 220 : 236, contentHeight + (secondary ? 14 : 18)) };
+}
+
+export function serviceTileGeometry(name, width, height, secondary = false) {
+  const fontSize = secondary ? 11 : 13;
+  const lineHeight = secondary ? 13 : 14;
+  const lines = wrapText(name, Math.max(6, Math.floor(width / (secondary ? 6 : 7))), 2);
+  const lastBaseline = height - 10;
+  const firstBaseline = lastBaseline - (lines.length - 1) * lineHeight;
+  const logoSize = secondary ? 28 : 32;
+  const plateSize = secondary ? 34 : 38;
+  return { fontSize, lineHeight, lines, firstBaseline, logoY: 8, logoSize, plateY: 5, plateSize, textTop: firstBaseline - fontSize * .8 };
 }
 
 export function layoutProject(project) {
@@ -241,7 +265,7 @@ export function layoutProject(project) {
   const headerHeight = (oneColumnHeader ? 252 : 160) + (titleLines - 1) * 74;
   const networkY = headerHeight + 22;
   const networkGap = 18;
-  const networksPerRow = Math.min(5, Math.max(1, project.networks.length));
+  const networksPerRow = Math.min(5, Math.max(1, project.networks.length), Math.max(1, Math.floor((contentWidth + networkGap) / (200 + networkGap))));
   const networkWidth = (contentWidth - networkGap * (networksPerRow - 1)) / networksPerRow;
   const networkRows = Math.ceil(project.networks.length / networksPerRow);
   const networkHeight = project.networks.length ? networkRows * 80 + Math.max(0, networkRows - 1) * 14 : 0;
@@ -254,7 +278,7 @@ export function layoutProject(project) {
   }));
 
   const vlanGap = 10;
-  const vlansPerRow = Math.min(6, Math.max(1, project.vlans.length));
+  const vlansPerRow = Math.min(6, Math.max(1, project.vlans.length), Math.max(1, Math.floor((contentWidth + vlanGap) / (130 + vlanGap))));
   const vlanWidth = (contentWidth - vlanGap * (vlansPerRow - 1)) / vlansPerRow;
   const vlanRows = Math.ceil(project.vlans.length / vlansPerRow);
   const vlanY = networkY + networkHeight + (project.networks.length && project.vlans.length ? 30 : 0);
@@ -266,7 +290,8 @@ export function layoutProject(project) {
     w: vlanWidth,
     h: 46,
   }));
-  const vlanGaps = vlans.slice(0, -1).filter((box, index) => vlans[index + 1].y === box.y).map((box, index) => (box.x + box.w + vlans[index + 1].x) / 2);
+  const vlanGaps = Array.from({ length: Math.max(0, vlansPerRow - 1) }, (_, index) => margin + (index + 1) * vlanWidth + index * vlanGap + vlanGap / 2);
+  const vlanRouteXs = vlanGaps.length ? vlanGaps : [width - margin / 2];
   const routingLaneY = Math.max(networkY + networkHeight, vlanY + vlanHeight) + 28;
   const cardsY = routingLaneY + 34;
   const columnX = [];
@@ -277,11 +302,15 @@ export function layoutProject(project) {
   const columnBottoms = Array(columns).fill(cardsY);
   const cards = project.devices.map((device, index) => {
     const column = index < columns ? index : columnBottoms.indexOf(Math.min(...columnBottoms));
-    const card = { id: device.id, column, x: columnX[column], y: columnBottoms[column], w: widths[column], h: cardHeight(device, widths[column], compact), tileColumns: widths[column] < 380 ? 3 : 4, tileHeight: compact ? 76 : 82 };
+    const serviceCount = device.groups.reduce((sum, group) => sum + group.services.length, 0);
+    const secondary = index >= columns && device.hardware.length <= 1 && device.groups.length === 1 && serviceCount <= 4;
+    const metrics = cardMetrics(device, widths[column], compact, secondary);
+    const card = { id: device.id, column, x: columnX[column], y: columnBottoms[column], w: widths[column], h: metrics.height, contentBottom: columnBottoms[column] + metrics.contentHeight, ...metrics };
     columnBottoms[column] += card.h + gap;
     return card;
   });
   const networkIds = new Set(project.networks.map(network => network.id));
+  const bottomNetworkY = networks.length ? Math.max(...networks.map(network => network.y)) : 0;
   const drawable = connection => {
     const fromNetwork = networkIds.has(connection.from);
     const toNetwork = networkIds.has(connection.to);
@@ -291,8 +320,9 @@ export function layoutProject(project) {
       return Boolean(from && to && from.y === to.y && Math.abs(networks.indexOf(from) - networks.indexOf(to)) === 1);
     }
     if (fromNetwork === toNetwork) return false;
+    const network = networks.find(item => item.id === (fromNetwork ? connection.from : connection.to));
     const device = cards.find(item => item.id === (fromNetwork ? connection.to : connection.from));
-    return Boolean(device && device.y === cardsY);
+    return Boolean(network && network.y === bottomNetworkY && device && device.y === cardsY);
   };
   const relationships = project.connections;
   const relationshipColumns = width < 900 ? 1 : 3;
@@ -301,7 +331,7 @@ export function layoutProject(project) {
   const relationshipsY = cardsBottom + 42;
   const footerY = relationshipsY + Math.max(24, relationshipRows * 25) + 34;
   const height = Math.max(560, footerY + 52);
-  return { width, height, margin, gap, columns, widths, cardsY, networks, vlans, vlanGaps, cards, relationships, relationshipColumns, relationshipsY, footerY, routingLaneY, oneColumnHeader, titleMaxChars, drawable };
+  return { width, height, margin, gap, columns, widths, cardsY, networks, vlans, vlanGaps, vlanRouteXs, cards, relationships, relationshipColumns, relationshipsY, footerY, routingLaneY, oneColumnHeader, titleMaxChars, drawable };
 }
 
 function textElement(text, x, y, options) {
@@ -328,14 +358,14 @@ function renderNetwork(network, box, theme) {
   return `<g data-network="${network.id}" role="button" tabindex="0" aria-label="Edit ${escapeXml(network.name)}"><title>${escapeXml(network.name)}</title><rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" rx="10" fill="${theme.card}" stroke="${theme.line}"/><rect x="${box.x + 14}" y="${box.y + 19}" width="42" height="42" rx="8" fill="${network.accent}" fill-opacity="0.13"/><image href="${logoDataUri(networkIcon(network.kind))}" x="${box.x + 17}" y="${box.y + 22}" width="36" height="36"/>${name}${kind}</g>`;
 }
 
-function renderService(service, x, y, width, height, theme, themeName) {
+function renderService(service, x, y, width, height, theme, themeName, secondary) {
   const center = x + width / 2;
-  const logoSize = 34;
+  const geometry = serviceTileGeometry(service.name, width, height, secondary);
   const plate = logoPlate(service.logo, themeName);
-  const plateRect = plate ? `<rect x="${center - 21}" y="${y + 8}" width="42" height="42" rx="5" fill="${plate}"/>` : '';
-  const name = textElement(service.name, center, y + height - 21, { fill: theme.text, size: 13, weight: 500, anchor: 'middle', maxChars: Math.max(8, Math.floor(width / 7)), maxLines: 2, lineHeight: 14 });
+  const plateRect = plate ? `<rect x="${center - geometry.plateSize / 2}" y="${y + geometry.plateY}" width="${geometry.plateSize}" height="${geometry.plateSize}" rx="5" fill="${plate}"/>` : '';
+  const name = textElement(service.name, center, y + geometry.firstBaseline, { fill: theme.text, size: geometry.fontSize, weight: 500, anchor: 'middle', maxChars: Math.max(6, Math.floor(width / (secondary ? 6 : 7))), maxLines: 2, lineHeight: geometry.lineHeight });
   const badge = service.count > 1 ? textElement(`×${service.count}`, x + width - 7, y + 14, { fill: theme.muted, size: 10, weight: 700, anchor: 'end', maxChars: 3 }) : '';
-  return `<g><title>${escapeXml(service.name)}${service.count > 1 ? ` ×${service.count}` : ''}</title><rect x="${x}" y="${y}" width="${width}" height="${height}" rx="6" fill="${theme.tile}" stroke="${theme.line}"/>${plateRect}<image href="${logoDataUri(service.logo)}" x="${center - logoSize / 2}" y="${y + 12}" width="${logoSize}" height="${logoSize}" preserveAspectRatio="xMidYMid meet"/>${name}${badge}</g>`;
+  return `<g><title>${escapeXml(service.name)}${service.count > 1 ? ` ×${service.count}` : ''}</title><rect x="${x}" y="${y}" width="${width}" height="${height}" rx="6" fill="${theme.tile}" stroke="${theme.line}"/>${plateRect}<image href="${logoDataUri(service.logo)}" x="${center - geometry.logoSize / 2}" y="${y + geometry.logoY}" width="${geometry.logoSize}" height="${geometry.logoSize}" preserveAspectRatio="xMidYMid meet"/>${name}${badge}</g>`;
 }
 
 function renderCard(device, box, theme, themeName) {
@@ -345,37 +375,43 @@ function renderCard(device, box, theme, themeName) {
   const tileWidth = (innerWidth - tileGap * (box.tileColumns - 1)) / box.tileColumns;
   const plate = logoPlate(device.icon, themeName);
   const iconPlate = plate ? `<rect x="${box.x + box.w - 68}" y="${box.y + 22}" width="48" height="48" rx="6" fill="${plate}"/>` : '';
-  const nameSize = Math.max(30, (box.w < 380 ? 38 : 44) - Math.max(0, device.name.length - 12) * 0.7);
-  const role = textElement(device.role.toUpperCase(), innerX, box.y + 29, { fill: device.accent, size: 11, weight: 750, maxChars: Math.floor((box.w - 96) / 7) });
-  const name = textElement(device.name, innerX, box.y + 74, { fill: theme.text, size: nameSize, weight: 780, maxChars: Math.max(8, Math.floor((box.w - 100) / (nameSize * .55))) });
-  const network = textElement(device.network, innerX, box.y + 101, { fill: theme.muted, size: 12, weight: 550, maxChars: 32 });
-  let y = box.y + 118;
+  const roleY = box.y + (box.secondary ? 26 : 29);
+  const nameY = box.y + (box.secondary ? 58 : 74);
+  const nameExtra = (box.name.lines - 1) * box.name.lineHeight;
+  const role = textElement(device.role.toUpperCase(), innerX, roleY, { fill: device.accent, size: box.secondary ? 10 : 11, weight: 750, maxChars: Math.max(8, Math.floor((box.w - 98) / 7)) });
+  const name = textElement(device.name, innerX, nameY, { fill: theme.text, size: box.name.size, weight: 780, maxChars: box.name.maxChars, maxLines: 2, lineHeight: box.name.lineHeight });
+  const network = textElement(device.network, innerX, box.y + (box.secondary ? 82 : 101) + nameExtra, { fill: theme.muted, size: box.secondary ? 11 : 12, weight: 550, maxChars: Math.max(8, Math.floor(innerWidth / 7)) });
+  let y = box.y + box.headerHeight;
   let hardware = '';
-  if (device.hardware.length > 1) {
+  if (device.hardware.length > 1 && !box.secondary) {
     const top = y;
     y += 18;
-    hardware = device.hardware.map(fact => {
-      const lines = wrapText(fact, Math.max(18, Math.floor((box.w - 64) / 7.4)), 2);
-      const value = textElement(fact, innerX + 12, y, { fill: theme.muted, size: 13, weight: 500, maxChars: Math.max(18, Math.floor((box.w - 64) / 7.4)), maxLines: 2, lineHeight: 19 });
-      y += lines.length * 19;
+    hardware = device.hardware.map((fact, index) => {
+      const value = textElement(fact, innerX + 12, y, { fill: theme.muted, size: 13, weight: 500, maxChars: box.hardwareChars, maxLines: 2, lineHeight: 19 });
+      y += box.hardwareLines[index] * 19;
       return value;
     }).join('');
     hardware = `<rect x="${innerX}" y="${top}" width="${innerWidth}" height="${y - top + 6}" rx="6" fill="${theme.tile}" stroke="${theme.line}"/>${hardware}`;
     y += 16;
   } else if (device.hardware.length) {
-    hardware = textElement(device.hardware[0], innerX, y + 5, { fill: theme.muted, size: 13, maxChars: Math.floor(innerWidth / 7), maxLines: 2, lineHeight: 19 });
-    y += 32;
+    const lineHeight = box.secondary ? 16 : 19;
+    hardware = textElement(device.hardware[0], innerX, y + (box.secondary ? 3 : 5), { fill: theme.muted, size: box.secondary ? 12 : 13, maxChars: box.hardwareChars, maxLines: 2, lineHeight });
+    y += box.hardwareHeight;
   }
   const groups = device.groups.map(group => {
-    const groupName = `${textElement(group.name.toUpperCase(), innerX, y + 13, { fill: device.accent, size: 11, weight: 750, maxChars: 42 })}<line x1="${innerX + Math.min(150, group.name.length * 8 + 16)}" y1="${y + 10}" x2="${innerX + innerWidth}" y2="${y + 10}" stroke="${theme.line}"/>`;
-    y += 30;
+    const groupMaxChars = Math.max(8, Math.floor(innerWidth / (box.secondary ? 6 : 7)));
+    const shownGroup = wrapText(group.name.toUpperCase(), groupMaxChars, 1)[0];
+    const lineStart = innerX + shownGroup.length * (box.secondary ? 6 : 7) + 14;
+    const rule = lineStart < innerX + innerWidth - 12 ? `<line x1="${lineStart}" y1="${y + 10}" x2="${innerX + innerWidth}" y2="${y + 10}" stroke="${theme.line}"/>` : '';
+    const groupName = `${textElement(group.name.toUpperCase(), innerX, y + 13, { fill: device.accent, size: box.secondary ? 10 : 11, weight: 750, maxChars: groupMaxChars })}${rule}`;
+    y += box.groupHeader;
     const rows = Math.ceil(group.services.length / box.tileColumns);
     const services = group.services.map((service, index) => {
       const x = innerX + (index % box.tileColumns) * (tileWidth + tileGap);
       const serviceY = y + Math.floor(index / box.tileColumns) * box.tileHeight;
-      return renderService(service, x, serviceY, tileWidth, box.tileHeight - 8, theme, themeName);
+      return renderService(service, x, serviceY, tileWidth, box.tileHeight - 8, theme, themeName, box.secondary);
     }).join('');
-    y += rows * box.tileHeight + 12;
+    y += rows * box.tileHeight + box.groupGap;
     return `<g>${groupName}${services}</g>`;
   }).join('');
   return `<g data-device="${device.id}" role="button" tabindex="0" aria-label="Edit ${escapeXml(device.name)}"><title>${escapeXml(device.name)}</title><rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" rx="12" fill="${theme.card}" stroke="${theme.line}"/><rect x="${innerX}" y="${box.y + 12}" width="38" height="3" rx="1.5" fill="${device.accent}"/>${iconPlate}<image href="${logoDataUri(device.icon)}" x="${box.x + box.w - 61}" y="${box.y + 29}" width="34" height="34" preserveAspectRatio="xMidYMid meet"/>${role}${name}${network}${hardware}${groups}</g>`;
@@ -390,13 +426,16 @@ function connectionLines(project, layout, theme) {
     const from = points.get(connection.from);
     const to = points.get(connection.to);
     if (networkIds.has(connection.from) && networkIds.has(connection.to)) {
-      const left = from.x < to.x ? from : to;
-      const right = left === from ? to : from;
-      return `<path d="M ${left.x + layout.networks.find(item => item.id === (left === from ? connection.from : connection.to)).w / 2} ${(left.top + left.bottom) / 2} H ${right.x - layout.networks.find(item => item.id === (right === from ? connection.from : connection.to)).w / 2}" fill="none" stroke="${theme.muted}" stroke-width="1.5" marker-end="url(#arrow)"/>`;
+      const fromBox = layout.networks.find(item => item.id === connection.from);
+      const toBox = layout.networks.find(item => item.id === connection.to);
+      const forward = from.x < to.x;
+      const startX = forward ? fromBox.x + fromBox.w : fromBox.x;
+      const endX = forward ? toBox.x : toBox.x + toBox.w;
+      return `<path d="M ${startX} ${(from.top + from.bottom) / 2} H ${endX}" fill="none" stroke="${theme.muted}" stroke-width="1.5" marker-end="url(#arrow)"/>`;
     }
     const network = networkIds.has(connection.from) ? from : to;
     const device = network === from ? to : from;
-    const gapX = layout.vlanGaps.length ? layout.vlanGaps.reduce((best, x) => Math.abs(x - network.x) < Math.abs(best - network.x) ? x : best) : network.x;
+    const gapX = layout.vlanRouteXs.reduce((best, x) => Math.abs(x - network.x) < Math.abs(best - network.x) ? x : best);
     const laneTop = layout.vlans.length ? layout.vlans[0].y - 14 : network.bottom + 12;
     const path = `M ${network.x} ${network.bottom} V ${laneTop} H ${gapX} V ${layout.routingLaneY} H ${device.x} V ${device.top}`;
     return `<g><path d="${path}" fill="none" stroke="${theme.muted}" stroke-width="1.4"/><circle cx="${gapX}" cy="${layout.routingLaneY}" r="3" fill="${theme.teal}"/><circle cx="${device.x}" cy="${layout.routingLaneY}" r="3" fill="${theme.teal}"/></g>`;

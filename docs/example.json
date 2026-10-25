@@ -1,0 +1,568 @@
+{
+  "schemaVersion": 1,
+  "revision": 1,
+  "title": "Home Lab",
+  "subtitle": "Private infrastructure · Local services · Built to last",
+  "theme": "navy",
+  "columns": 3,
+  "density": "comfortable",
+  "networks": [
+    {
+      "id": "net-internet",
+      "name": "Internet",
+      "kind": "Internet",
+      "accent": "#48bfe3"
+    },
+    {
+      "id": "net-router",
+      "name": "Core Router",
+      "kind": "Router",
+      "accent": "#55d6c9"
+    },
+    {
+      "id": "net-switch",
+      "name": "UniFi Switch",
+      "kind": "Ubiquiti Switch",
+      "accent": "#7dd3fc"
+    }
+  ],
+  "vlans": [
+    {
+      "id": "vlan-management",
+      "name": "01 Management",
+      "color": "#55d6c9"
+    },
+    {
+      "id": "vlan-main",
+      "name": "10 Main",
+      "color": "#8db4d6"
+    },
+    {
+      "id": "vlan-servers",
+      "name": "20 Servers",
+      "color": "#7aa2c6"
+    },
+    {
+      "id": "vlan-iot",
+      "name": "30 IoT",
+      "color": "#f0a36a"
+    },
+    {
+      "id": "vlan-lab",
+      "name": "40 Lab",
+      "color": "#a78bfa"
+    },
+    {
+      "id": "vlan-guest",
+      "name": "50 Guest",
+      "color": "#91a4b7"
+    }
+  ],
+  "devices": [
+    {
+      "id": "dev-storage",
+      "name": "Atlas",
+      "role": "TrueNAS / storage",
+      "icon": "truenas",
+      "accent": "#55d6c9",
+      "network": "20 Servers",
+      "hardware": [
+        "i5-13500 · 32 GB RAM",
+        "5 × 26 TB · RAIDZ1",
+        "2 × 2 TB NVMe · mirror"
+      ],
+      "groups": [
+        {
+          "id": "grp-infra",
+          "name": "Containers",
+          "services": [
+            {
+              "id": "svc-atlas-a-0",
+              "logo": "nginx-proxy-manager",
+              "name": "Proxy Manager",
+              "count": 1
+            },
+            {
+              "id": "svc-atlas-a-1",
+              "logo": "adguard-home",
+              "name": "AdGuard",
+              "count": 1
+            },
+            {
+              "id": "svc-atlas-a-2",
+              "logo": "syncthing",
+              "name": "DNS Sync",
+              "count": 1
+            },
+            {
+              "id": "svc-atlas-a-3",
+              "logo": "portainer",
+              "name": "Portainer",
+              "count": 1
+            },
+            {
+              "id": "svc-atlas-a-4",
+              "logo": "dockge",
+              "name": "Dockge",
+              "count": 1
+            },
+            {
+              "id": "svc-atlas-a-5",
+              "logo": "homepage",
+              "name": "Homepage",
+              "count": 1
+            },
+            {
+              "id": "svc-atlas-a-6",
+              "logo": "gitea",
+              "name": "Gitea",
+              "count": 1
+            },
+            {
+              "id": "svc-atlas-a-7",
+              "logo": "uptime-kuma",
+              "name": "Uptime Kuma",
+              "count": 1
+            },
+            {
+              "id": "svc-atlas-a-8",
+              "logo": "searxng",
+              "name": "SearXNG",
+              "count": 1
+            },
+            {
+              "id": "svc-atlas-a-9",
+              "logo": "xwiki",
+              "name": "XWiki",
+              "count": 1
+            },
+            {
+              "id": "svc-atlas-a-10",
+              "logo": "docmost",
+              "name": "Docmost",
+              "count": 1
+            },
+            {
+              "id": "svc-atlas-a-11",
+              "logo": "prometheus",
+              "name": "Metrics",
+              "count": 1
+            },
+            {
+              "id": "svc-atlas-a-12",
+              "logo": "freshrss",
+              "name": "FreshRSS",
+              "count": 1
+            },
+            {
+              "id": "svc-atlas-a-13",
+              "logo": "paperless-ngx",
+              "name": "Paperless",
+              "count": 1
+            },
+            {
+              "id": "svc-atlas-a-14",
+              "logo": "immich",
+              "name": "Immich",
+              "count": 1
+            },
+            {
+              "id": "svc-atlas-a-15",
+              "logo": "nextcloud",
+              "name": "Nextcloud",
+              "count": 1
+            },
+            {
+              "id": "svc-atlas-a-16",
+              "logo": "vaultwarden",
+              "name": "Vaultwarden",
+              "count": 1
+            },
+            {
+              "id": "svc-atlas-a-17",
+              "logo": "tailscale",
+              "name": "Tailscale",
+              "count": 1
+            },
+            {
+              "id": "svc-atlas-a-18",
+              "logo": "nginx",
+              "name": "Admin ingress",
+              "count": 1
+            },
+            {
+              "id": "svc-atlas-a-19",
+              "logo": "wireguard",
+              "name": "Net guards",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "id": "grp-cloud",
+          "name": "Data services",
+          "services": [
+            {
+              "id": "svc-atlas-b-0",
+              "logo": "postgresql",
+              "name": "Postgres",
+              "count": 2
+            },
+            {
+              "id": "svc-atlas-b-1",
+              "logo": "redis",
+              "name": "Redis",
+              "count": 1
+            },
+            {
+              "id": "svc-atlas-b-2",
+              "logo": "minio",
+              "name": "MinIO",
+              "count": 1
+            },
+            {
+              "id": "svc-atlas-b-3",
+              "logo": "restic",
+              "name": "Backups",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dev-media",
+      "name": "Relay",
+      "role": "Unraid / media + voice",
+      "icon": "unraid",
+      "accent": "#f28a61",
+      "network": "20 Servers",
+      "hardware": [
+        "i9-10900K · 32 GB RAM",
+        "RTX 3060 · 12 GB",
+        "7 data HDDs + 2 parity · NVMe mirror"
+      ],
+      "groups": [
+        {
+          "id": "grp-media",
+          "name": "Containers",
+          "services": [
+            {
+              "id": "svc-relay-a-0",
+              "logo": "jellyfin",
+              "name": "Jellyfin",
+              "count": 1
+            },
+            {
+              "id": "svc-relay-a-1",
+              "logo": "sonarr",
+              "name": "Sonarr",
+              "count": 3
+            },
+            {
+              "id": "svc-relay-a-2",
+              "logo": "radarr",
+              "name": "Radarr",
+              "count": 1
+            },
+            {
+              "id": "svc-relay-a-3",
+              "logo": "prowlarr",
+              "name": "Prowlarr",
+              "count": 1
+            },
+            {
+              "id": "svc-relay-a-4",
+              "logo": "bazarr",
+              "name": "Bazarr",
+              "count": 3
+            },
+            {
+              "id": "svc-relay-a-5",
+              "logo": "seerr",
+              "name": "Seerr",
+              "count": 1
+            },
+            {
+              "id": "svc-relay-a-6",
+              "logo": "sabnzbd",
+              "name": "SABnzbd",
+              "count": 1
+            },
+            {
+              "id": "svc-relay-a-7",
+              "logo": "qbittorrent",
+              "name": "qBittorrent",
+              "count": 1
+            },
+            {
+              "id": "svc-relay-a-8",
+              "logo": "tdarr",
+              "name": "Tdarr",
+              "count": 3
+            },
+            {
+              "id": "svc-relay-a-9",
+              "logo": "open-webui",
+              "name": "Open WebUI",
+              "count": 1
+            },
+            {
+              "id": "svc-relay-a-10",
+              "logo": "adguard-home",
+              "name": "AdGuard",
+              "count": 1
+            },
+            {
+              "id": "svc-relay-a-11",
+              "logo": "grafana",
+              "name": "Grafana",
+              "count": 1
+            },
+            {
+              "id": "svc-relay-a-12",
+              "logo": "postgresql",
+              "name": "Postgres",
+              "count": 1
+            },
+            {
+              "id": "svc-relay-a-13",
+              "logo": "home-assistant",
+              "name": "HA helper",
+              "count": 1
+            },
+            {
+              "id": "svc-relay-a-14",
+              "logo": "generic",
+              "name": "llama.cpp",
+              "count": 1
+            },
+            {
+              "id": "svc-relay-a-15",
+              "logo": "music-assistant",
+              "name": "Music Assistant",
+              "count": 1
+            },
+            {
+              "id": "svc-relay-a-16",
+              "logo": "mosquitto",
+              "name": "Mosquitto",
+              "count": 1
+            },
+            {
+              "id": "svc-relay-a-17",
+              "logo": "node-red",
+              "name": "Node-RED",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "id": "grp-ha",
+          "name": "Home automation",
+          "services": [
+            {
+              "id": "svc-relay-b-0",
+              "logo": "home-assistant",
+              "name": "Home Assistant",
+              "count": 1
+            },
+            {
+              "id": "svc-relay-b-1",
+              "logo": "node-red",
+              "name": "Node-RED",
+              "count": 1
+            },
+            {
+              "id": "svc-relay-b-2",
+              "logo": "music-assistant",
+              "name": "Music",
+              "count": 1
+            },
+            {
+              "id": "svc-relay-b-3",
+              "logo": "mosquitto",
+              "name": "MQTT",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dev-ai",
+      "name": "Vector",
+      "role": "Fedora / local AI",
+      "icon": "amd",
+      "accent": "#a78bfa",
+      "network": "40 Lab",
+      "hardware": [
+        "Ryzen AI Max+ 395",
+        "128 GB unified memory",
+        "2 TB NVMe"
+      ],
+      "groups": [
+        {
+          "id": "grp-ai",
+          "name": "Inference",
+          "services": [
+            {
+              "id": "svc-vector-0",
+              "logo": "ollama",
+              "name": "Ollama",
+              "count": 1
+            },
+            {
+              "id": "svc-vector-1",
+              "logo": "open-webui",
+              "name": "Open WebUI",
+              "count": 1
+            },
+            {
+              "id": "svc-vector-2",
+              "logo": "qwen",
+              "name": "Qwen",
+              "count": 3
+            },
+            {
+              "id": "svc-vector-3",
+              "logo": "n8n",
+              "name": "n8n",
+              "count": 1
+            },
+            {
+              "id": "svc-vector-4",
+              "logo": "podman",
+              "name": "Podman",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dev-edge",
+      "name": "Edge Pi",
+      "role": "Raspberry Pi / edge",
+      "icon": "raspberry-pi",
+      "accent": "#ef6f91",
+      "network": "30 IoT",
+      "hardware": [
+        "Pi 4 · 4 GB RAM"
+      ],
+      "groups": [
+        {
+          "id": "grp-edge",
+          "name": "Native services",
+          "services": [
+            {
+              "id": "svc-edge-0",
+              "logo": "nginx",
+              "name": "nginx",
+              "count": 1
+            },
+            {
+              "id": "svc-edge-1",
+              "logo": "cloudflare",
+              "name": "Cloudflare",
+              "count": 1
+            },
+            {
+              "id": "svc-edge-2",
+              "logo": "tailscale",
+              "name": "Tailscale",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dev-remote",
+      "name": "Remote",
+      "role": "Friend-owned node",
+      "icon": "tailscale",
+      "accent": "#f0a36a",
+      "network": "50 Guest",
+      "hardware": [
+        "K3s · remote tunnel"
+      ],
+      "groups": [
+        {
+          "id": "grp-remote",
+          "name": "Remote stack",
+          "services": [
+            {
+              "id": "svc-remote-0",
+              "logo": "docmost",
+              "name": "Docmost",
+              "count": 1
+            },
+            {
+              "id": "svc-remote-1",
+              "logo": "nextcloud",
+              "name": "Files",
+              "count": 1
+            },
+            {
+              "id": "svc-remote-2",
+              "logo": "postgresql",
+              "name": "Postgres",
+              "count": 1
+            },
+            {
+              "id": "svc-remote-3",
+              "logo": "redis",
+              "name": "Redis",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "conn-wan",
+      "from": "net-internet",
+      "to": "net-router",
+      "label": "WAN"
+    },
+    {
+      "id": "conn-lan",
+      "from": "net-router",
+      "to": "net-switch",
+      "label": "LAN"
+    },
+    {
+      "id": "conn-storage",
+      "from": "net-switch",
+      "to": "dev-storage",
+      "label": "Main"
+    },
+    {
+      "id": "conn-media",
+      "from": "net-switch",
+      "to": "dev-media",
+      "label": "Main"
+    },
+    {
+      "id": "conn-ai",
+      "from": "net-switch",
+      "to": "dev-ai",
+      "label": "Main"
+    },
+    {
+      "id": "conn-edge",
+      "from": "net-switch",
+      "to": "dev-edge",
+      "label": "IoT"
+    },
+    {
+      "id": "conn-remote",
+      "from": "net-router",
+      "to": "dev-remote",
+      "label": "Tailscale"
+    }
+  ]
+}
