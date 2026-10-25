@@ -1,6 +1,6 @@
 import { LOGO_IDS, logoDataUri, logoPlate } from './catalog.js';
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 export const THEMES = ['navy', 'light', 'midnight'];
 export const DENSITIES = ['comfortable', 'compact'];
 export const LIMITS = {
@@ -37,13 +37,14 @@ function services(prefix, items) {
 
 export function sampleProject() {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     revision: 1,
     title: 'Home Lab',
     subtitle: 'Private infrastructure · Local services · Built to last',
     theme: 'navy',
     columns: 3,
     density: 'comfortable',
+    layout: { mode: 'auto', cards: [] },
     networks: [
       { id: 'net-internet', name: 'Internet', kind: 'Internet', accent: '#48bfe3' },
       { id: 'net-router', name: 'Core Router', kind: 'Router', accent: '#55d6c9' },
@@ -110,11 +111,21 @@ export function parseProject(text) {
   if (new TextEncoder().encode(text).length > LIMITS.bytes) throw new Error('File is larger than 1 MB.');
   let data;
   try { data = JSON.parse(text); } catch { throw new Error('This file is not valid JSON.'); }
+  if (data?.schemaVersion === 1) {
+    validateProjectVersion(data, 1);
+    const migrated = { ...structuredClone(data), schemaVersion: 2, layout: { mode: 'auto', cards: [] } };
+    validateProject(migrated);
+    return migrated;
+  }
   validateProject(data);
   return structuredClone(data);
 }
 
 export function validateProject(project) {
+  return validateProjectVersion(project, SCHEMA_VERSION);
+}
+
+function validateProjectVersion(project, version) {
   const fail = message => { throw new Error(message); };
   const string = (value, label = 'Text') => {
     if (typeof value !== 'string' || value.length > LIMITS.text) fail(`${label} must be text under ${LIMITS.text + 1} characters.`);
@@ -123,8 +134,9 @@ export function validateProject(project) {
     if (!object || typeof object !== 'object' || Array.isArray(object) || Object.keys(object).some(key => !allowed.includes(key))) fail(`${label} has an invalid structure.`);
   };
   if (!project || typeof project !== 'object' || Array.isArray(project)) fail('Project must be an object.');
-  exact(project, ['schemaVersion', 'revision', 'title', 'subtitle', 'theme', 'columns', 'density', 'networks', 'vlans', 'devices', 'connections'], 'Project');
-  if (project.schemaVersion !== SCHEMA_VERSION) fail(`Unsupported schema version: ${project.schemaVersion ?? 'missing'}.`);
+  const keys = ['schemaVersion', 'revision', 'title', 'subtitle', 'theme', 'columns', 'density', ...(version === 2 ? ['layout'] : []), 'networks', 'vlans', 'devices', 'connections'];
+  exact(project, keys, 'Project');
+  if (project.schemaVersion !== version) fail(`Unsupported schema version: ${project.schemaVersion ?? 'missing'}.`);
   string(project.title, 'Title');
   string(project.subtitle, 'Subtitle');
   if (!Number.isInteger(project.revision) || project.revision < 0 || project.revision > 1_000_000_000) fail('Invalid revision.');
@@ -172,6 +184,20 @@ export function validateProject(project) {
       }
     }
   }
+  if (version === 2) {
+    exact(project.layout, ['mode', 'cards'], 'Layout');
+    if (!['auto', 'manual'].includes(project.layout.mode) || !Array.isArray(project.layout.cards) || project.layout.cards.length > project.devices.length) fail('Invalid layout.');
+    if (project.layout.mode === 'auto' && project.layout.cards.length) fail('Automatic layout cannot contain card positions.');
+    const deviceIds = new Set(project.devices.map(device => device.id));
+    const cardIds = new Set();
+    for (const card of project.layout.cards) {
+      exact(card, ['id', 'x', 'y', 'w', 'h'], 'Layout card');
+      if (!deviceIds.has(card.id) || cardIds.has(card.id)) fail('Layout card has a stale or duplicate device reference.');
+      cardIds.add(card.id);
+      for (const key of ['x', 'y', 'w', 'h']) if (!Number.isFinite(card[key]) || !Number.isInteger(card[key])) fail('Layout card coordinates must be finite integers.');
+      if (card.x < 0 || card.x > 20_000 || card.y < 0 || card.y > 20_000 || card.w < 240 || card.w > 20_000 || card.h < 100 || card.h > 20_000) fail('Layout card is outside the allowed bounds.');
+    }
+  }
   if (serviceCount > LIMITS.services || groupCount > LIMITS.groups) fail('Project contains too many services or groups.');
   const endpoints = new Set([...project.networks, ...project.devices].map(item => item.id));
   for (const connection of project.connections) {
@@ -185,6 +211,7 @@ export function validateProject(project) {
 export function removeDevice(project, id) {
   project.devices = project.devices.filter(device => device.id !== id);
   project.connections = project.connections.filter(connection => connection.from !== id && connection.to !== id);
+  project.layout.cards = project.layout.cards.filter(card => card.id !== id);
 }
 
 export function removeNetwork(project, id) {
@@ -350,7 +377,7 @@ export function layoutProject(project) {
     return x + cardWidth + gap;
   }, margin);
   const columnBottoms = Array(columns).fill(cardsY);
-  const cards = project.devices.map((device, index) => {
+  let cards = project.devices.map((device, index) => {
     const serviceCount = device.groups.reduce((sum, group) => sum + group.services.length, 0);
     const secondary = index >= columns && device.hardware.length <= 1 && device.groups.length === 1 && serviceCount <= 4;
     let column = index < columns ? index : columnBottoms.indexOf(Math.min(...columnBottoms));
@@ -364,6 +391,34 @@ export function layoutProject(project) {
     columnBottoms[column] += card.h + gap;
     return card;
   });
+  if (project.layout.mode === 'manual') {
+    const saved = new Map(project.layout.cards.map(card => [card.id, card]));
+    const measured = (device, requested) => {
+      const w = Math.max(240, Math.min(Math.round(requested.w), contentWidth, 20_000));
+      const x = Math.max(0, Math.min(Math.round(requested.x), contentWidth - w, 20_000));
+      const y = Math.max(0, Math.min(Math.round(requested.y), 20_000));
+      const serviceCount = device.groups.reduce((sum, group) => sum + group.services.length, 0);
+      const secondary = device.hardware.length <= 1 && device.groups.length === 1 && serviceCount <= 4;
+      const metrics = cardMetrics(device, w, compact, secondary);
+      return { x, y, w, h: Math.min(20_000, Math.max(Math.round(requested.h), metrics.height)), metrics };
+    };
+    let unpinnedY = 0;
+    for (const [id, stored] of saved) {
+      const device = project.devices.find(item => item.id === id);
+      if (device) {
+        const card = measured(device, stored);
+        unpinnedY = Math.max(unpinnedY, card.y + card.h + gap);
+      }
+    }
+    cards = project.devices.map((device, index) => {
+      const prior = cards[index];
+      const stored = saved.get(device.id);
+      const requested = stored || { x: 0, y: unpinnedY, w: prior.w, h: prior.h };
+      const { x, y, w, h, metrics } = measured(device, requested);
+      if (!stored) unpinnedY = y + h + gap;
+      return { id: device.id, column: null, x: margin + x, y: cardsY + y, w, h, contentBottom: cardsY + y + metrics.contentHeight, ...metrics };
+    });
+  }
   const networkIds = new Set(project.networks.map(network => network.id));
   const bottomNetworkY = networks.length ? Math.max(...networks.map(network => network.y)) : 0;
   const drawable = connection => {
@@ -387,6 +442,33 @@ export function layoutProject(project) {
   const footerY = relationshipsY + Math.max(28, relationshipRows * 32) + 32;
   const height = Math.max(560, footerY + 52);
   return { width, height, margin, gap, columns, widths, cardsY, networks, vlans, vlanGaps, vlanRouteXs, cards, relationships, relationshipColumns, relationshipsY, footerY, routingLaneY, oneColumnHeader, titleMaxChars, drawable };
+}
+
+export function snapshotManualLayout(project) {
+  const layout = layoutProject(project);
+  return {
+    mode: 'manual',
+    cards: layout.cards.map(card => ({
+      id: card.id,
+      x: Math.round(card.x - layout.margin),
+      y: Math.round(card.y - layout.cardsY),
+      w: Math.round(card.w),
+      h: Math.round(card.h),
+    })),
+  };
+}
+
+export function setManualCard(project, id, updates) {
+  if (!project.devices.some(device => device.id === id)) throw new Error('Unknown device card.');
+  project.layout = snapshotManualLayout(project);
+  const card = project.layout.cards.find(item => item.id === id);
+  for (const key of ['x', 'y', 'w', 'h']) if (key in updates) card[key] = Math.round(Number(updates[key]));
+  project.layout = snapshotManualLayout(project);
+  return project.layout.cards.find(item => item.id === id);
+}
+
+export function resetAutoLayout(project) {
+  project.layout = { mode: 'auto', cards: [] };
 }
 
 function textElement(text, x, y, options) {

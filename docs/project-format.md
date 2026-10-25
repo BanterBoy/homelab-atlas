@@ -1,17 +1,18 @@
 # Project format
 
-**Save project** downloads schema-version-1 JSON. When you import a file, Atlas rejects unknown keys, wrong value types, unsafe IDs, unknown logos, and broken references before it replaces the project you have open.
+**Save project** downloads schema-version-2 JSON. Atlas 0.3 and newer can open it. Schema-version-1 files still import and migrate to automatic layout without changing their content. When you import a file, Atlas rejects unknown keys, wrong value types, unsafe IDs, unknown logos, broken references, and invalid card geometry before it replaces the project you have open.
 
 ## Top-level fields
 
 | Field | Type | Meaning |
 |---|---|---|
-| `schemaVersion` | integer | Must be `1` |
+| `schemaVersion` | integer | Must be `2` |
 | `revision` | integer | Browser conflict/change revision, from 0 through 1,000,000,000 |
 | `title`, `subtitle` | string | Diagram heading text, at most 120 characters each |
 | `theme` | string | `navy`, `light`, or `midnight` |
 | `columns` | integer | Device layout columns, 1–4 |
 | `density` | string | `comfortable` or `compact` |
+| `layout` | object | Device-card layout mode and saved rectangles |
 | `networks` | array | Network node records |
 | `vlans` | array | VLAN chip records |
 | `devices` | array | Device cards, hardware facts, groups, and services |
@@ -27,6 +28,8 @@
 | Group | `id`, `name`, `services` |
 | Service | `id`, `logo`, `name`, `count` |
 | Connection | `id`, `from`, `to`, `label` |
+| Layout | `mode`, `cards` |
+| Layout card | `id`, `x`, `y`, `w`, `h` |
 
 Colors use six-digit hexadecimal values such as `#55d6c9`. A device `icon` or service `logo` must exist in the included catalog. A service `count` must be an integer from 1 through 99.
 
@@ -39,6 +42,12 @@ Every network, VLAN, device, group, service, and connection needs a unique ID ac
 ```
 
 Connection `from` and `to` values must point to two different existing network or device IDs. VLAN, group, and service IDs cannot be used as connection endpoints.
+
+## Device layout
+
+`layout.mode` is `auto` or `manual`. Automatic layout requires an empty `cards` array. Each manual card ID references one existing device, with no duplicates. A device may be omitted; Atlas places it below the saved cards until its position is saved.
+
+Coordinates are integer diagram units relative to the upper-left of the device region, not browser pixels. `x` and `y` range from 0 through 20,000. Width ranges from 240 through 20,000 and height from 100 through 20,000. Atlas clamps cards to the poster width and treats the rendered content height as the effective minimum.
 
 ## Limits
 
@@ -53,6 +62,7 @@ Connection `from` and `to` values must point to two different existing network o
 | Service groups, total | 160 |
 | Services, total | 800 |
 | Hardware facts per device | 12 |
+| Manual card rectangles | No more than the device count |
 
 The group limit applies to each device array and to the whole project. Each object only accepts the keys listed above. Extra fields are rejected rather than preserved.
 
@@ -60,13 +70,17 @@ The group limit applies to each device array and to the whole project. Each obje
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "revision": 1,
   "title": "Small Lab",
   "subtitle": "Fictional example",
   "theme": "navy",
   "columns": 1,
   "density": "comfortable",
+  "layout": {
+    "mode": "auto",
+    "cards": []
+  },
   "networks": [],
   "vlans": [],
   "devices": [],

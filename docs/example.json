@@ -1,11 +1,15 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "revision": 1,
   "title": "Home Lab",
   "subtitle": "Private infrastructure · Local services · Built to last",
   "theme": "navy",
   "columns": 3,
   "density": "comfortable",
+  "layout": {
+    "mode": "auto",
+    "cards": []
+  },
   "networks": [
     {
       "id": "net-internet",

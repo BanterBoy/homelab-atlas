@@ -1,7 +1,7 @@
 import { LOGOS, logoById, logoDataUri, logoPlate } from './catalog.js';
 import {
-  LIMITS, emptyProject, parseProject, removeDevice, removeNetwork,
-  renderProject, sampleProject, uid, validateProject,
+  LIMITS, emptyProject, layoutProject, parseProject, removeDevice, removeNetwork, resetAutoLayout,
+  renderProject, sampleProject, setManualCard, uid, validateProject,
 } from './model.js';
 import { applyProjectChange, filterInventory, hasStorageConflict, pngDimensions, updateSelection } from './state.js';
 
@@ -32,6 +32,9 @@ let fitMode = 'width';
 let inventoryQuery = '';
 let focusMode = false;
 let inventoryOpen = false;
+let arrangeMode = false;
+let gesture = null;
+let suppressDiagramClick = false;
 let saveTimer;
 let lastStored = '';
 let conflictRaw = '';
@@ -175,6 +178,7 @@ function render() {
   $('#preview').innerHTML = renderProject(project);
   const selectedNode = selected && $(`#preview [data-device="${CSS.escape(selected)}"], #preview [data-network="${CSS.escape(selected)}"]`);
   selectedNode?.classList.add('editor-selected');
+  decorateArrange();
   renderInventory();
   renderInspector();
   $('.inspector').classList.toggle('open', inspectorOpen);
@@ -184,6 +188,9 @@ function render() {
   $('#inventory-toggle').setAttribute('aria-expanded', String(inventoryOpen));
   $('#focus-canvas span').textContent = focusMode ? 'Exit focus' : 'Focus canvas';
   $('#focus-canvas').setAttribute('aria-pressed', String(focusMode));
+  $('#arrange').setAttribute('aria-pressed', String(arrangeMode));
+  $('#auto-layout').disabled = project.layout.mode === 'auto';
+  $('#arrange-hint').hidden = !arrangeMode;
   $('#undo').disabled = !history.length;
   $('#redo').disabled = !future.length;
   requestAnimationFrame(() => fitMode === 'manual' ? applyZoom() : fitPreview(fitMode));
@@ -207,6 +214,36 @@ function fitPreview(mode = fitMode) {
   const availableWidth = Math.max(100, canvas.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight));
   const availableHeight = Math.max(100, canvas.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom));
   zoom = Math.min(1, availableWidth / svg.viewBox.baseVal.width, mode === 'page' ? availableHeight / svg.viewBox.baseVal.height : 1);
+  applyZoom();
+}
+
+function decorateArrange(guides = []) {
+  const preview = $('#preview');
+  preview.classList.toggle('arranging', arrangeMode);
+  if (!arrangeMode || !selected) return;
+  const group = preview.querySelector(`[data-device="${CSS.escape(selected)}"]`);
+  const box = layoutProject(project).cards.find(card => card.id === selected);
+  if (!group || !box) return;
+  group.classList.add('editor-selected');
+  const size = Math.max(14, 20 / zoom);
+  group.insertAdjacentHTML('beforeend', `<rect class="resize-handle" x="${box.x + box.w - size}" y="${box.y + box.h - size}" width="${size}" height="${size}" rx="${size / 5}" role="button" aria-label="Resize ${escapeHtml(project.devices.find(device => device.id === selected).name)}"/>`);
+  const svg = preview.querySelector('svg');
+  for (const guide of guides) svg.insertAdjacentHTML('beforeend', guide.axis === 'x'
+    ? `<line class="alignment-guide" x1="${box.x - box.x + guide.value + layoutProject(project).margin}" y1="${layoutProject(project).cardsY}" x2="${guide.value + layoutProject(project).margin}" y2="${svg.viewBox.baseVal.height}"/>`
+    : `<line class="alignment-guide" x1="${layoutProject(project).margin}" y1="${guide.value + layoutProject(project).cardsY}" x2="${svg.viewBox.baseVal.width - layoutProject(project).margin}" y2="${guide.value + layoutProject(project).cardsY}"/>`);
+}
+
+function renderPreview(source = project, guides = []) {
+  $('#preview').innerHTML = renderProject(source);
+  const node = selected && $(`#preview [data-device="${CSS.escape(selected)}"], #preview [data-network="${CSS.escape(selected)}"]`);
+  node?.classList.add('editor-selected');
+  if (source === project) decorateArrange(guides);
+  else {
+    const current = project;
+    project = source;
+    decorateArrange(guides);
+    project = current;
+  }
   applyZoom();
 }
 
@@ -286,7 +323,10 @@ function renderInspector() {
     return;
   }
   const iconOptions = LOGOS.map(logo => `<option value="${logo.id}">${escapeHtml(logo.label)}</option>`).join('');
-  root.innerHTML = `<div class="inspector-head"><div><span class="eyebrow">Device</span><h2>${escapeHtml(device.name)}</h2></div><div><button data-duplicate title="Duplicate" aria-label="Duplicate device">Copy</button><button data-delete class="danger">Delete</button></div></div><section class="inspector-section"><h3>Identity</h3><label>Name<input data-device="name" maxlength="120"></label><label>Role<input data-device="role" maxlength="120"></label><div class="form-grid"><label>Network / VLAN<input data-device="network" maxlength="120"></label><label>Accent<input data-device="accent" type="color"></label></div><label>Device icon<input data-device="icon" list="icon-options" maxlength="64"><datalist id="icon-options">${iconOptions}</datalist></label></section><section class="inspector-section"><h3>Hardware</h3><label>Facts <span class="muted">One per line. Optional Label: value.</span><textarea data-hardware maxlength="1451"></textarea></label></section><section class="inspector-section"><div class="section-head"><h3>Service groups</h3><button data-add-group>${icon('add')}Group</button></div><div id="groups"></div></section>`;
+  const diagram = layoutProject(project);
+  const card = diagram.cards.find(item => item.id === device.id);
+  const position = { x: Math.round(card.x - diagram.margin), y: Math.round(card.y - diagram.cardsY), w: Math.round(card.w), h: Math.round(card.h) };
+  root.innerHTML = `<div class="inspector-head"><div><span class="eyebrow">Device</span><h2>${escapeHtml(device.name)}</h2></div><div><button data-duplicate title="Duplicate" aria-label="Duplicate device">Copy</button><button data-delete class="danger">Delete</button></div></div><section class="inspector-section"><h3>Identity</h3><label>Name<input data-device="name" maxlength="120"></label><label>Role<input data-device="role" maxlength="120"></label><div class="form-grid"><label>Network / VLAN<input data-device="network" maxlength="120"></label><label>Accent<input data-device="accent" type="color"></label></div><label>Device icon<input data-device="icon" list="icon-options" maxlength="64"><datalist id="icon-options">${iconOptions}</datalist></label></section><section class="inspector-section"><h3>Position</h3><div class="position-grid"><label>X<input data-position="x" type="number" min="0" max="20000" step="1" value="${position.x}"></label><label>Y<input data-position="y" type="number" min="0" max="20000" step="1" value="${position.y}"></label><label>Width<input data-position="w" type="number" min="240" max="20000" step="1" value="${position.w}"></label><label>Height<input data-position="h" type="number" min="100" max="20000" step="1" value="${position.h}"></label></div><p class="help">Positions use diagram units. Content sets the minimum height.</p></section><section class="inspector-section"><h3>Hardware</h3><label>Facts <span class="muted">One per line. Optional Label: value.</span><textarea data-hardware maxlength="1451"></textarea></label></section><section class="inspector-section"><div class="section-head"><h3>Service groups</h3><button data-add-group>${icon('add')}Group</button></div><div id="groups"></div></section>`;
   for (const key of ['name', 'role', 'network', 'accent', 'icon']) root.querySelector(`[data-device=${key}]`).value = device[key];
   root.querySelector('[data-hardware]').value = device.hardware.join('\n');
   root.querySelector('#groups').replaceChildren(...device.groups.map(groupElement));
@@ -343,7 +383,12 @@ $('#project-title').addEventListener('change', event => change(candidate => { ca
 $('#inspector-content').addEventListener('change', event => {
   const deviceId = project.devices.some(item => item.id === selected) ? selected : null;
   const networkId = project.networks.some(item => item.id === selected) ? selected : null;
-  if (event.target.dataset.device && deviceId) {
+  if (event.target.dataset.position && deviceId) {
+    const key = event.target.dataset.position;
+    const value = Number(event.target.value);
+    if (!Number.isInteger(value)) { render(); return toast('Position values must be whole numbers.'); }
+    change(candidate => setManualCard(candidate, deviceId, { [key]: value }));
+  } else if (event.target.dataset.device && deviceId) {
     const key = event.target.dataset.device;
     change(candidate => { candidate.devices.find(item => item.id === deviceId)[key] = event.target.value; });
   } else if (event.target.matches('[data-hardware]') && deviceId) {
@@ -606,6 +651,11 @@ $('#undo').addEventListener('click', undo);
 $('#redo').addEventListener('click', redo);
 addEventListener('keydown', event => {
   const editing = event.target.matches('input, select, textarea, [contenteditable=true]');
+  if (event.key === 'Escape' && gesture) {
+    event.preventDefault();
+    finishGesture(false);
+    return;
+  }
   if (event.key === 'Escape' && !editing && !document.querySelector('dialog[open]') && focusMode) {
     focusMode = false;
     render();
@@ -706,13 +756,121 @@ function selectDiagramTarget(target) {
   if (item) selectInventoryItem(item.dataset.device || item.dataset.network);
 }
 
-$('#preview').addEventListener('click', event => selectDiagramTarget(event.target));
+function diagramPoint(event) {
+  const svg = $('#preview svg');
+  const rect = svg.getBoundingClientRect();
+  return { x: (event.clientX - rect.left) * svg.viewBox.baseVal.width / rect.width, y: (event.clientY - rect.top) * svg.viewBox.baseVal.height / rect.height };
+}
+
+function snap(value, candidates, guides, axis, gridOffset = 0) {
+  const grid = Math.round(value / 8) * 8;
+  let best = { value: grid, distance: Math.abs(grid - value), guide: grid + gridOffset };
+  for (const candidate of candidates) {
+    const distance = Math.abs(candidate.value - value);
+    if (distance <= 8 && distance < best.distance) best = { value: candidate.value, distance, guide: candidate.guide };
+  }
+  if (best.distance <= 8) guides.push({ axis, value: best.guide });
+  return best.value;
+}
+
+function gestureRect(event) {
+  const point = diagramPoint(event);
+  const dx = point.x - gesture.startPoint.x;
+  const dy = point.y - gesture.startPoint.y;
+  const guides = [];
+  let next = { ...gesture.startRect };
+  if (gesture.resize) {
+    next.w += dx;
+    next.h += dy;
+  } else {
+    next.x += dx;
+    next.y += dy;
+  }
+  if (!event.altKey) {
+    const layout = layoutProject(gesture.base);
+    const peers = layout.cards.filter(card => card.id !== gesture.id).map(card => ({ x: card.x - layout.margin, y: card.y - layout.cardsY, w: card.w, h: card.h }));
+    if (gesture.resize) {
+      next.w = snap(next.w, peers.flatMap(peer => [{ value: peer.x - next.x, guide: peer.x }, { value: peer.x + peer.w - next.x, guide: peer.x + peer.w }]), guides, 'x', next.x);
+      next.h = snap(next.h, peers.flatMap(peer => [{ value: peer.y - next.y, guide: peer.y }, { value: peer.y + peer.h - next.y, guide: peer.y + peer.h }]), guides, 'y', next.y);
+    } else {
+      next.x = snap(next.x, peers.flatMap(peer => [{ value: peer.x, guide: peer.x }, { value: peer.x + peer.w - next.w, guide: peer.x + peer.w }, { value: peer.x + peer.w / 2 - next.w / 2, guide: peer.x + peer.w / 2 }]), guides, 'x');
+      next.y = snap(next.y, peers.flatMap(peer => [{ value: peer.y, guide: peer.y }, { value: peer.y + peer.h - next.h, guide: peer.y + peer.h }, { value: peer.y + peer.h + 24, guide: peer.y + peer.h + 24 }, { value: peer.y - next.h - 24, guide: peer.y - 24 }, { value: peer.y + peer.h / 2 - next.h / 2, guide: peer.y + peer.h / 2 }]), guides, 'y');
+    }
+  }
+  const candidate = structuredClone(gesture.base);
+  setManualCard(candidate, gesture.id, next);
+  gesture.current = candidate.layout.cards.find(card => card.id === gesture.id);
+  renderPreview(candidate, guides);
+}
+
+$('#preview').addEventListener('pointerdown', event => {
+  if (!arrangeMode || event.button !== 0) return;
+  const item = event.target.closest('[data-device]');
+  if (!item) return;
+  event.preventDefault();
+  const id = item.dataset.device;
+  const resize = event.target.classList.contains('resize-handle');
+  selected = id;
+  fitMode = 'manual';
+  const layout = layoutProject(project);
+  const card = layout.cards.find(entry => entry.id === id);
+  gesture = {
+    id, resize, pointerId: event.pointerId, startClient: { x: event.clientX, y: event.clientY }, startPoint: diagramPoint(event),
+    startRect: { x: card.x - layout.margin, y: card.y - layout.cardsY, w: card.w, h: card.h }, current: null, moved: false, base: structuredClone(project),
+  };
+  $('#preview').setPointerCapture(event.pointerId);
+  renderPreview();
+  renderInventory();
+  if (inspectorOpen) renderInspector();
+});
+
+$('#preview').addEventListener('pointermove', event => {
+  if (!gesture || event.pointerId !== gesture.pointerId) return;
+  if (!gesture.moved && Math.hypot(event.clientX - gesture.startClient.x, event.clientY - gesture.startClient.y) < 4) return;
+  gesture.moved = true;
+  gestureRect(event);
+});
+
+function finishGesture(commit) {
+  if (!gesture) return;
+  const finished = gesture;
+  gesture = null;
+  if (commit && finished.moved && finished.current) {
+    suppressDiagramClick = true;
+    change(candidate => setManualCard(candidate, finished.id, finished.current));
+  } else renderPreview();
+}
+
+$('#preview').addEventListener('pointerup', event => { if (gesture?.pointerId === event.pointerId) finishGesture(true); });
+$('#preview').addEventListener('pointercancel', event => { if (gesture?.pointerId === event.pointerId) finishGesture(false); });
+$('#preview').addEventListener('lostpointercapture', () => { if (gesture) finishGesture(false); });
+$('#preview').addEventListener('click', event => {
+  if (suppressDiagramClick) { suppressDiagramClick = false; return; }
+  if (arrangeMode && event.target.closest('[data-device]')) return;
+  selectDiagramTarget(event.target);
+});
 $('#preview').addEventListener('keydown', event => {
+  const item = event.target.closest('[data-device]');
+  if (arrangeMode && item && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
+    event.preventDefault();
+    selected = item.dataset.device;
+    const step = event.shiftKey ? 32 : 8;
+    const delta = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[event.key];
+    const layout = layoutProject(project);
+    const card = layout.cards.find(entry => entry.id === selected);
+    const rect = { x: card.x - layout.margin, y: card.y - layout.cardsY, w: card.w, h: card.h };
+    if (event.altKey) { rect.w += delta[0]; rect.h += delta[1]; } else { rect.x += delta[0]; rect.y += delta[1]; }
+    change(candidate => setManualCard(candidate, selected, rect));
+    requestAnimationFrame(() => $(`#preview [data-device="${CSS.escape(selected)}"]`)?.focus());
+    return;
+  }
   if (event.key === 'Enter' || event.key === ' ') {
     const item = event.target.closest('[data-device], [data-network]');
     if (item) { event.preventDefault(); selectDiagramTarget(item); }
   }
 });
+$('#arrange').addEventListener('click', () => { arrangeMode = !arrangeMode; if (!arrangeMode) gesture = null; render(); });
+$('#auto-layout').addEventListener('click', () => { if (project.layout.mode === 'manual') change(candidate => resetAutoLayout(candidate)); });
 $('#settings').addEventListener('click', () => { focusMode = false; inventoryOpen = false; selected = null; inspectorOpen = true; render(); });
 $('#focus-canvas').addEventListener('click', () => { focusMode = !focusMode; inventoryOpen = false; render(); });
 $('#inventory-toggle').addEventListener('click', () => { focusMode = false; inventoryOpen = !inventoryOpen; render(); });

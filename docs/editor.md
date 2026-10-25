@@ -1,6 +1,6 @@
 # Editor guide
 
-You enter your devices and services, and Atlas lays out the diagram for you. It is not a freeform drawing tool.
+You enter your devices and services, and Atlas starts with an automatic layout. You can arrange device cards yourself when you need a specific composition.
 
 ## Start from a sample or empty project
 
@@ -48,7 +48,13 @@ Use **Fit page**, **Fit width**, zoom in, or zoom out to adjust the preview. You
 
 **Focus canvas** hides the inventory and inspector. Select a card or press `Escape` to leave focus view. On mobile, opening **Inventory** also leaves focus view so the drawer is visible.
 
-The layout is automatic, so you cannot drag cards into place. Their positions depend on inventory order, column count, content length, and density. If a card is crowded, shorten its text, switch density, reorder devices, or try a different column count.
+Automatic layout uses inventory order, column count, content length, and density. Choose **Arrange** to move or resize device cards without moving network nodes or VLANs. Drag a card to move it or use its lower-right handle to resize it. Movement snaps to an 8-unit grid, nearby card edges and centers, and a 24-unit vertical gap. Hold `Alt` while dragging to bypass snapping.
+
+With a card selected in Arrange mode, arrow keys move it by 8 units and `Shift` increases that to 32. `Alt` plus an arrow resizes it. The Position fields in the device inspector accept exact X, Y, Width, and Height values.
+
+**Columns** still controls the poster width. Cards stay inside that width, and their minimum height grows when their hardware or services need more room. A larger height adds whitespace. New or duplicated devices appear below existing manually placed cards. **Auto layout** clears all saved card rectangles; use **Undo** if you change your mind.
+
+Manual positions are part of the project JSON and appear in SVG and PNG exports. Arrange handles, selection outlines, and alignment guides are editor-only.
 
 ## Undo and redo
 

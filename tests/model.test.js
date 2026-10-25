@@ -4,7 +4,8 @@ import { LOGOS, logoDataUri, logoPlate } from '../public/catalog.js';
 import { ICON_DATA } from '../public/icon-data.js';
 import {
   LIMITS, layoutProject, parseProject, removeDevice, removeNetwork,
-  renderProject, sampleProject, serviceRowGeometry, serviceTileGeometry, uid, validateProject, wrapText,
+  renderProject, resetAutoLayout, sampleProject, serviceRowGeometry, serviceTileGeometry,
+  setManualCard, snapshotManualLayout, uid, validateProject, wrapText,
 } from '../public/model.js';
 import { applyProjectChange, filterInventory, hasStorageConflict, pngDimensions, updateSelection } from '../public/state.js';
 
@@ -68,12 +69,58 @@ test('bad and oversized imports are rejected', () => {
   const project = sampleProject();
   project.schemaVersion = 9;
   assert.throws(() => parseProject(JSON.stringify(project)), /schema/);
-  project.schemaVersion = 1;
+  project.schemaVersion = 2;
   project.devices[0].icon = 'data:image/svg+xml,<script>';
   assert.throws(() => validateProject(project), /Unknown logo/);
   const extra = sampleProject();
   extra.devices[0].html = '<img onerror=alert(1)>';
   assert.throws(() => validateProject(extra), /structure/);
+});
+
+test('schema 2 layout rejects unknown keys, invalid bounds, duplicate IDs, and stale references', () => {
+  const project = sampleProject();
+  project.extra = true;
+  assert.throws(() => validateProject(project), /structure/);
+  delete project.extra;
+  project.layout.extra = true;
+  assert.throws(() => validateProject(project), /structure/);
+  delete project.layout.extra;
+  project.layout = { mode: 'manual', cards: [{ id: 'dev-storage', x: 0, y: 0, w: 239, h: 100 }] };
+  assert.throws(() => validateProject(project), /bounds/);
+  project.layout.cards[0].w = 240;
+  for (const [key, value] of [['x', -1], ['x', 20_001], ['y', -1], ['y', 20_001], ['w', 20_001], ['h', 99], ['h', 20_001]]) {
+    const card = project.layout.cards[0];
+    const previous = card[key];
+    card[key] = value;
+    assert.throws(() => validateProject(project), /bounds/);
+    card[key] = previous;
+  }
+  project.layout.cards[0].extra = true;
+  assert.throws(() => validateProject(project), /structure/);
+  delete project.layout.cards[0].extra;
+  project.layout.cards[0].x = Number.NaN;
+  assert.throws(() => validateProject(project), /finite integers/);
+  project.layout.cards[0].x = 0;
+  project.layout.cards.push({ ...project.layout.cards[0] });
+  assert.throws(() => validateProject(project), /stale or duplicate/);
+  project.layout.cards[1].id = 'missing';
+  assert.throws(() => validateProject(project), /stale or duplicate/);
+});
+
+test('schema 1 imports migrate without mutation or accepting extra keys', () => {
+  const legacy = sampleProject();
+  legacy.schemaVersion = 1;
+  delete legacy.layout;
+  const before = structuredClone(legacy);
+  const migrated = parseProject(JSON.stringify(legacy));
+  assert.deepEqual(legacy, before);
+  assert.equal(migrated.schemaVersion, 2);
+  assert.deepEqual(migrated.layout, { mode: 'auto', cards: [] });
+  legacy.unexpected = true;
+  assert.throws(() => parseProject(JSON.stringify(legacy)), /structure/);
+  delete legacy.unexpected;
+  legacy.devices[0].unexpected = true;
+  assert.throws(() => parseProject(JSON.stringify(legacy)), /structure/);
 });
 
 test('IDs, counts, and connection references are enforced', () => {
@@ -337,6 +384,92 @@ test('ancillary placement favors the third column without an unbounded tower', (
   assert.ok(extras.some(card => card.column !== 2));
   const bottoms = [0, 1, 2].map(column => Math.max(...layout.cards.filter(card => card.column === column).map(card => card.y + card.h)));
   assert.ok(bottoms[2] <= Math.max(bottoms[0], bottoms[1]) + 160 + Math.max(...extras.map(card => card.h)) + layout.gap);
+});
+
+test('manual snapshots are deterministic and moving one card leaves every peer fixed', () => {
+  const project = sampleProject();
+  const first = snapshotManualLayout(project);
+  assert.deepEqual(first, snapshotManualLayout(project));
+  project.layout = first;
+  const peers = structuredClone(project.layout.cards.slice(1));
+  const moved = setManualCard(project, 'dev-storage', { x: 64, y: 32 });
+  assert.equal(moved.x, 64);
+  assert.equal(moved.y, 32);
+  assert.deepEqual(project.layout.cards.slice(1), peers);
+  assert.equal(validateProject(project), true);
+});
+
+test('manual resizing reflows content and enforces measured minimum height', () => {
+  const project = sampleProject();
+  setManualCard(project, 'dev-storage', { w: 240, h: 100 });
+  const card = layoutProject(project).cards.find(item => item.id === 'dev-storage');
+  assert.equal(card.w, 240);
+  assert.ok(card.h > 100);
+  assert.ok(card.contentBottom <= card.y + card.h);
+  assert.equal(project.layout.cards.find(item => item.id === 'dev-storage').h, card.h);
+});
+
+test('content growth and column changes clamp only the effective rectangle', () => {
+  const project = sampleProject();
+  project.layout = snapshotManualLayout(project);
+  const relayBefore = project.layout.cards.find(card => card.id === 'dev-media');
+  project.devices[0].hardware = Array.from({ length: 12 }, (_, index) => `Fact ${index} ${'x'.repeat(105)}`.slice(0, 120));
+  let layout = layoutProject(project);
+  const storage = layout.cards.find(card => card.id === 'dev-storage');
+  const relay = layout.cards.find(card => card.id === 'dev-media');
+  assert.ok(storage.h > project.layout.cards.find(card => card.id === 'dev-storage').h);
+  assert.deepEqual({ x: relay.x - layout.margin, y: relay.y - layout.cardsY }, { x: relayBefore.x, y: relayBefore.y });
+  project.columns = 1;
+  layout = layoutProject(project);
+  assert.ok(layout.cards.every(card => card.x >= layout.margin && card.x + card.w <= layout.width - layout.margin));
+});
+
+test('small manual cards can stack in the right column', () => {
+  const project = sampleProject();
+  const auto = layoutProject(project);
+  const rightX = auto.width - auto.margin * 2 - 300;
+  setManualCard(project, 'dev-edge', { x: rightX, y: 0, w: 300, h: 100 });
+  const edge = project.layout.cards.find(card => card.id === 'dev-edge');
+  setManualCard(project, 'dev-remote', { x: rightX, y: edge.y + edge.h + 24, w: 300, h: 100 });
+  const layout = layoutProject(project);
+  const cards = ['dev-edge', 'dev-remote'].map(id => layout.cards.find(card => card.id === id));
+  assert.equal(cards[0].x, cards[1].x);
+  assert.equal(cards[1].y, cards[0].y + cards[0].h + 24);
+  assert.ok(cards.every(card => card.x + card.w <= layout.width - layout.margin));
+});
+
+test('manual add and delete lifecycle keeps positions valid', () => {
+  const project = sampleProject();
+  project.layout = snapshotManualLayout(project);
+  const source = structuredClone(project.devices.at(-1));
+  source.id = 'dev-new';
+  source.groups = [];
+  project.devices.push(source);
+  const layout = layoutProject(project);
+  const added = layout.cards.find(card => card.id === source.id);
+  assert.ok(added.y >= Math.max(...layout.cards.filter(card => card.id !== source.id).map(card => card.y + card.h)) + layout.gap);
+  removeDevice(project, 'dev-edge');
+  assert.ok(!project.layout.cards.some(card => card.id === 'dev-edge'));
+  assert.equal(validateProject(project), true);
+});
+
+test('manual canvas and footer expand to include requested rectangles', () => {
+  const project = sampleProject();
+  setManualCard(project, 'dev-remote', { y: 4000, h: 600 });
+  const layout = layoutProject(project);
+  const card = layout.cards.find(item => item.id === 'dev-remote');
+  assert.ok(layout.relationshipsY > card.y + card.h);
+  assert.ok(layout.footerY < layout.height);
+});
+
+test('auto reset is atomic through project history and renderer stays editor-free', () => {
+  const project = sampleProject();
+  setManualCard(project, 'dev-edge', { x: 500, y: 200 });
+  const reset = applyProjectChange(project, resetAutoLayout);
+  assert.deepEqual(reset.layout, { mode: 'auto', cards: [] });
+  assert.equal(reset.revision, project.revision + 1);
+  assert.equal(project.layout.mode, 'manual');
+  assert.doesNotMatch(renderProject(project), /resize-handle|alignment-guide|editor-selected/);
 });
 
 test('inventory filtering is case-insensitive and does not mutate selection or input', () => {
