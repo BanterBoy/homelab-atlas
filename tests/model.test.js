@@ -4,9 +4,9 @@ import { LOGOS, logoDataUri, logoPlate } from '../public/catalog.js';
 import { ICON_DATA } from '../public/icon-data.js';
 import {
   LIMITS, layoutProject, parseProject, removeDevice, removeNetwork,
-  renderProject, sampleProject, serviceTileGeometry, uid, validateProject, wrapText,
+  renderProject, sampleProject, serviceRowGeometry, serviceTileGeometry, uid, validateProject, wrapText,
 } from '../public/model.js';
-import { applyProjectChange, hasStorageConflict, pngDimensions, updateSelection } from '../public/state.js';
+import { applyProjectChange, filterInventory, hasStorageConflict, pngDimensions, updateSelection } from '../public/state.js';
 
 test('sample validates and renders deterministically in dark and light themes', () => {
   const project = sampleProject();
@@ -130,6 +130,20 @@ test('service tile logos, plates, and one or two label lines never overlap', () 
   }
 });
 
+test('single-service groups use bounded full-width row geometry', () => {
+  const geometry = serviceRowGeometry('A service label that needs two lines', 280, 58);
+  assert.ok(geometry.lines.length <= 2);
+  assert.ok(geometry.textX > geometry.plateSize);
+  assert.ok(geometry.firstBaseline > 0);
+  assert.ok(geometry.firstBaseline + (geometry.lines.length - 1) * geometry.lineHeight < 58);
+  const project = sampleProject();
+  project.devices[0].groups = [{ id: 'one', name: 'Single service group', services: [project.devices[0].groups[0].services[0]] }];
+  const group = layoutProject(project).cards[0].groups[0];
+  assert.equal(group.mode, 'rows');
+  assert.equal(group.columns, 1);
+  assert.equal(group.itemHeight, 58);
+});
+
 test('network and VLAN rows wrap without expanding beyond selected columns', () => {
   const project = sampleProject();
   project.columns = 1;
@@ -208,12 +222,13 @@ test('masonry cards preserve order, stay in bounds, and never overlap', () => {
       assert.ok(a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y);
     }
   }
-  assert.equal(layout.cards.find(card => card.id === 'dev-ai').tileColumns, 3);
+  assert.equal(layout.cards.find(card => card.id === 'dev-ai').groups[0].columns, 3);
   for (const id of ['dev-edge', 'dev-remote']) {
     const card = layout.cards.find(item => item.id === id);
     assert.equal(card.secondary, true);
-    assert.equal(card.tileColumns, 4);
-    assert.ok(card.h >= 230 && card.h <= 270);
+    assert.equal(card.groups[0].mode, 'rows');
+    assert.equal(card.groups[0].columns, 2);
+    assert.ok(card.h >= 280 && card.h <= 330);
   }
 });
 
@@ -242,6 +257,49 @@ test('narrow names fit, and maximum hardware content stays above services and ca
   assert.ok(card.contentBottom <= card.y + card.h);
   assert.ok(card.hardwareHeight >= 12 * 2 * 19);
   assert.equal(project.devices[1].groups[0].services.find(service => service.name === 'llama.cpp').logo, 'generic');
+});
+
+test('maximum hardware and group labels remain measured and bounded', () => {
+  const project = sampleProject();
+  project.devices[2].hardware = Array.from({ length: 12 }, (_, index) => `CPU ${index}: ${'x'.repeat(110)}`.slice(0, 120));
+  project.devices[2].groups[0].name = 'A group label '.repeat(10).slice(0, 120);
+  const card = layoutProject(project).cards[2];
+  assert.equal(card.hardwareFacts.length, 12);
+  assert.ok(card.hardwareFacts.every(fact => fact.lines.length <= 4 && fact.lines.every(line => line.length <= fact.chars)));
+  assert.ok(card.groups[0].nameLines.length <= 2);
+  assert.ok(card.groups[0].nameLines.every(line => line.length <= card.groups[0].nameChars));
+  assert.ok(card.contentBottom <= card.y + card.h);
+});
+
+test('compact density reduces vertical card geometry without clipping', () => {
+  const comfortable = sampleProject();
+  const compact = structuredClone(comfortable);
+  compact.density = 'compact';
+  const roomy = layoutProject(comfortable);
+  const tight = layoutProject(compact);
+  assert.ok(tight.cards.every((card, index) => card.h < roomy.cards[index].h));
+  assert.ok(tight.cards.every(card => card.contentBottom <= card.y + card.h));
+});
+
+test('ancillary placement favors the third column without an unbounded tower', () => {
+  const project = sampleProject();
+  const source = project.devices.at(-1);
+  for (let index = 0; index < 7; index += 1) project.devices.push({ ...structuredClone(source), id: `side-${index}`, name: `Side ${index}` });
+  const layout = layoutProject(project);
+  const extras = layout.cards.slice(3);
+  assert.equal(extras[0].column, 2);
+  assert.ok(extras.some(card => card.column !== 2));
+  const bottoms = [0, 1, 2].map(column => Math.max(...layout.cards.filter(card => card.column === column).map(card => card.y + card.h)));
+  assert.ok(bottoms[2] <= Math.min(bottoms[0], bottoms[1]) + 180 + Math.max(...extras.map(card => card.h)) + layout.gap);
+});
+
+test('inventory filtering is case-insensitive and does not mutate selection or input', () => {
+  const items = [{ id: 'a', name: 'Storage', role: 'NAS' }, { id: 'b', name: 'Compute', role: 'AI' }];
+  const selection = 'a';
+  assert.deepEqual(filterInventory(items, 'nas', ['name', 'role']).map(item => item.id), ['a']);
+  assert.deepEqual(filterInventory(items, 'COMP', ['name', 'role']).map(item => item.id), ['b']);
+  assert.equal(selection, 'a');
+  assert.equal(items.length, 2);
 });
 
 test('invalid changes are atomic', () => {

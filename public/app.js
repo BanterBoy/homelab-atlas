@@ -3,7 +3,7 @@ import {
   LIMITS, emptyProject, parseProject, removeDevice, removeNetwork,
   renderProject, sampleProject, uid, validateProject,
 } from './model.js';
-import { applyProjectChange, hasStorageConflict, pngDimensions, updateSelection } from './state.js';
+import { applyProjectChange, filterInventory, hasStorageConflict, pngDimensions, updateSelection } from './state.js';
 
 const $ = selector => document.querySelector(selector);
 const STORAGE_KEY = 'homelab-atlas.project';
@@ -28,7 +28,9 @@ let inspectorOpen = false;
 let history = [];
 let future = [];
 let zoom = 1;
-let fitMode = 'width';
+let fitMode = 'page';
+let inventoryQuery = '';
+let focusMode = false;
 let saveTimer;
 let lastStored = '';
 let conflictRaw = '';
@@ -39,6 +41,16 @@ function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
   })[character]);
+}
+
+function icon(name) {
+  const paths = {
+    add: '<path d="M10 4v12M4 10h12"/>',
+    close: '<path d="m5 5 10 10M15 5 5 15"/>',
+    up: '<path d="m5 12 5-5 5 5"/>',
+    down: '<path d="m5 8 5 5 5-5"/>',
+  };
+  return `<svg viewBox="0 0 20 20" aria-hidden="true">${paths[name]}</svg>`;
 }
 
 function logoPlateClass(id) {
@@ -160,10 +172,15 @@ function render() {
   validateProject(project);
   $('#project-title').value = project.title;
   $('#preview').innerHTML = renderProject(project);
+  const selectedNode = selected && $(`#preview [data-device="${CSS.escape(selected)}"], #preview [data-network="${CSS.escape(selected)}"]`);
+  selectedNode?.classList.add('editor-selected');
   renderInventory();
   renderInspector();
   $('.inspector').classList.toggle('open', inspectorOpen);
   $('.workspace').classList.toggle('inspector-open', inspectorOpen);
+  $('.workspace').classList.toggle('focus-mode', focusMode);
+  $('#focus-canvas span').textContent = focusMode ? 'Exit focus' : 'Focus canvas';
+  $('#focus-canvas').setAttribute('aria-pressed', String(focusMode));
   $('#undo').disabled = !history.length;
   $('#redo').disabled = !future.length;
   requestAnimationFrame(() => fitMode === 'manual' ? applyZoom() : fitPreview(fitMode));
@@ -190,12 +207,17 @@ function fitPreview(mode = fitMode) {
 }
 
 function renderInventory() {
+  const devices = filterInventory(project.devices, inventoryQuery, ['name', 'role']);
+  const networks = filterInventory(project.networks, inventoryQuery, ['name', 'kind']);
+  $('#device-count').textContent = project.devices.length;
+  $('#network-count').textContent = project.networks.length;
   const deviceList = $('#device-list');
-  deviceList.replaceChildren(...project.devices.map((device, index) => {
+  deviceList.replaceChildren(...devices.map(device => {
+    const index = project.devices.indexOf(device);
     const row = document.createElement('div');
     row.className = `inventory-item ${selected === device.id ? 'selected' : ''}`;
     row.dataset.id = device.id;
-    row.innerHTML = `<button class="inventory-select" aria-label="Edit ${escapeHtml(device.name)}"><img class="${logoPlateClass(device.icon)}" alt="" src="${logoDataUri(device.icon)}"><span><strong></strong><small></small></span></button><span class="reorder"><button class="mini" data-move="-1" aria-label="Move up">↑</button><button class="mini" data-move="1" aria-label="Move down">↓</button></span>`;
+    row.innerHTML = `<button class="inventory-select" aria-label="Edit ${escapeHtml(device.name)}"><img class="${logoPlateClass(device.icon)}" alt="" src="${logoDataUri(device.icon)}"><span><strong></strong><small></small></span></button><span class="reorder"><button class="mini" data-move="-1" aria-label="Move up">${icon('up')}</button><button class="mini" data-move="1" aria-label="Move down">${icon('down')}</button></span>`;
     row.querySelector('strong').textContent = device.name;
     row.querySelector('small').textContent = device.role;
     const buttons = row.querySelectorAll('[data-move]');
@@ -203,9 +225,10 @@ function renderInventory() {
     buttons[1].disabled = index === project.devices.length - 1;
     return row;
   }));
+  if (!devices.length) deviceList.innerHTML = '<p class="inventory-empty">No matching devices.</p>';
 
   const networkList = $('#network-list');
-  networkList.replaceChildren(...project.networks.map(network => {
+  networkList.replaceChildren(...networks.map(network => {
     const row = document.createElement('div');
     row.className = `inventory-item ${selected === network.id ? 'selected' : ''}`;
     row.dataset.id = network.id;
@@ -215,6 +238,7 @@ function renderInventory() {
     row.querySelector('small').textContent = network.kind;
     return row;
   }));
+  if (!networks.length) networkList.innerHTML = '<p class="inventory-empty">No matching network nodes.</p>';
 }
 
 function networkIcon(kind) {
@@ -227,7 +251,7 @@ function networkIcon(kind) {
 }
 
 function projectForm() {
-  return `<div class="settings"><span class="eyebrow">Appearance</span><label>Subtitle<input data-project="subtitle" maxlength="120"></label><div class="form-grid"><label>Theme<select data-project="theme"><option value="navy">Navy</option><option value="light">Light</option><option value="midnight">Midnight</option></select></label><label>Columns<select data-project="columns"><option>1</option><option>2</option><option>3</option><option>4</option></select></label></div><label>Density<select data-project="density"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label><div class="section-head"><h2>VLAN chips</h2><button type="button" data-add-vlan>＋ VLAN</button></div><div id="vlan-list" class="vlan-list"></div></div>`;
+  return `<div class="settings"><section class="inspector-section"><h3>Appearance</h3><label>Subtitle<input data-project="subtitle" maxlength="120"></label><div class="form-grid"><label>Theme<select data-project="theme"><option value="navy">Navy</option><option value="light">Light</option><option value="midnight">Midnight</option></select></label><label>Columns<select data-project="columns"><option>1</option><option>2</option><option>3</option><option>4</option></select></label></div><label>Density<select data-project="density"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label></section><section class="inspector-section"><div class="section-head"><h3>VLANs</h3><button type="button" data-add-vlan>${icon('add')}VLAN</button></div><div id="vlan-list" class="vlan-list"></div></section><section class="inspector-section"><h3>Links</h3><button type="button" data-edit-connections>Edit connections</button></section></div>`;
 }
 
 function bindProjectForm(root) {
@@ -236,7 +260,7 @@ function bindProjectForm(root) {
     const row = document.createElement('div');
     row.className = 'vlan-row';
     row.dataset.vlan = vlan.id;
-    row.innerHTML = '<input data-vlan-name maxlength="120" aria-label="VLAN name"><input data-vlan-color type="color" aria-label="VLAN color"><button type="button" data-remove-vlan class="danger" aria-label="Remove VLAN">×</button>';
+    row.innerHTML = `<input data-vlan-name maxlength="120" aria-label="VLAN name"><input data-vlan-color type="color" aria-label="VLAN color"><button type="button" data-remove-vlan class="danger" aria-label="Remove VLAN">${icon('close')}</button>`;
     row.querySelector('[data-vlan-name]').value = vlan.name;
     row.querySelector('[data-vlan-color]').value = vlan.color;
     return row;
@@ -253,30 +277,28 @@ function renderInspector() {
     return;
   }
   if (network) {
-    root.innerHTML = `<div class="inspector-head"><div><span class="eyebrow">Network node</span><h2>${escapeHtml(network.name)}</h2></div><button data-delete-network class="danger">Delete</button></div><label>Name<input data-network="name" maxlength="120"></label><div class="form-grid"><label>Kind<input data-network="kind" maxlength="120"></label><label>Accent<input data-network="accent" type="color"></label></div>${projectForm()}`;
+    root.innerHTML = `<div class="inspector-head"><div><span class="eyebrow">Network node</span><h2>${escapeHtml(network.name)}</h2></div><button data-delete-network class="danger">Delete</button></div><section class="inspector-section"><h3>Identity</h3><label>Name<input data-network="name" maxlength="120"></label><div class="form-grid"><label>Kind<input data-network="kind" maxlength="120"></label><label>Accent<input data-network="accent" type="color"></label></div></section>`;
     for (const key of ['name', 'kind', 'accent']) root.querySelector(`[data-network=${key}]`).value = network[key];
-    bindProjectForm(root);
     return;
   }
   const iconOptions = LOGOS.map(logo => `<option value="${logo.id}">${escapeHtml(logo.label)}</option>`).join('');
-  root.innerHTML = `<div class="inspector-head"><div><span class="eyebrow">Device</span><h2>${escapeHtml(device.name)}</h2></div><div><button data-duplicate title="Duplicate">⧉</button><button data-delete class="danger">Delete</button></div></div><label>Name<input data-device="name" maxlength="120"></label><label>Role<input data-device="role" maxlength="120"></label><div class="form-grid"><label>Network / VLAN<input data-device="network" maxlength="120"></label><label>Accent<input data-device="accent" type="color"></label></div><label>Search device icon<input data-device="icon" list="icon-options" maxlength="64"><datalist id="icon-options">${iconOptions}</datalist></label><label>Hardware facts <span class="muted">one per line</span><textarea data-hardware maxlength="1451"></textarea></label><div class="section-head"><h2>Service groups</h2><button data-add-group>＋ Group</button></div><div id="groups"></div>${projectForm()}`;
+  root.innerHTML = `<div class="inspector-head"><div><span class="eyebrow">Device</span><h2>${escapeHtml(device.name)}</h2></div><div><button data-duplicate title="Duplicate" aria-label="Duplicate device">Copy</button><button data-delete class="danger">Delete</button></div></div><section class="inspector-section"><h3>Identity</h3><label>Name<input data-device="name" maxlength="120"></label><label>Role<input data-device="role" maxlength="120"></label><div class="form-grid"><label>Network / VLAN<input data-device="network" maxlength="120"></label><label>Accent<input data-device="accent" type="color"></label></div><label>Device icon<input data-device="icon" list="icon-options" maxlength="64"><datalist id="icon-options">${iconOptions}</datalist></label></section><section class="inspector-section"><h3>Hardware</h3><label>Facts <span class="muted">One per line. Optional Label: value.</span><textarea data-hardware maxlength="1451"></textarea></label></section><section class="inspector-section"><div class="section-head"><h3>Service groups</h3><button data-add-group>${icon('add')}Group</button></div><div id="groups"></div></section>`;
   for (const key of ['name', 'role', 'network', 'accent', 'icon']) root.querySelector(`[data-device=${key}]`).value = device[key];
   root.querySelector('[data-hardware]').value = device.hardware.join('\n');
   root.querySelector('#groups').replaceChildren(...device.groups.map(groupElement));
-  bindProjectForm(root);
 }
 
 function groupElement(group) {
   const element = document.createElement('section');
   element.className = 'group';
   element.dataset.group = group.id;
-  element.innerHTML = '<div class="group-head"><input data-group-name maxlength="120" aria-label="Group name"><button data-add-services>＋ Apps</button><button data-remove-group class="danger" aria-label="Remove group">×</button></div><div class="service-list"></div>';
+  element.innerHTML = `<div class="group-head"><input data-group-name maxlength="120" aria-label="Group name"><button data-add-services>${icon('add')}Apps</button><button data-remove-group class="danger" aria-label="Remove group">${icon('close')}</button></div><div class="service-list"></div>`;
   element.querySelector('[data-group-name]').value = group.name;
   element.querySelector('.service-list').replaceChildren(...group.services.map(service => {
     const row = document.createElement('div');
     row.className = 'service-row';
     row.dataset.service = service.id;
-    row.innerHTML = `<img class="${logoPlateClass(service.logo)}" alt="" src="${logoDataUri(service.logo)}"><input data-service-name maxlength="120" aria-label="Service name"><input data-service-count type="number" min="1" max="99" step="1" aria-label="Instance count"><button data-service-up class="mini" aria-label="Move up">↑</button><button data-service-down class="mini" aria-label="Move down">↓</button><button data-remove-service class="mini danger" aria-label="Remove service">×</button>`;
+    row.innerHTML = `<img class="${logoPlateClass(service.logo)}" alt="" src="${logoDataUri(service.logo)}"><input data-service-name maxlength="120" aria-label="Service name"><input data-service-count type="number" min="1" max="99" step="1" aria-label="Instance count"><button data-service-up class="mini" aria-label="Move up">${icon('up')}</button><button data-service-down class="mini" aria-label="Move down">${icon('down')}</button><button data-remove-service class="mini danger" aria-label="Remove service">${icon('close')}</button>`;
     row.querySelector('[data-service-name]').value = service.name;
     row.querySelector('[data-service-count]').value = service.count;
     return row;
@@ -355,15 +377,17 @@ $('#inspector-content').addEventListener('change', event => {
 });
 
 $('#inspector-content').addEventListener('click', event => {
+  const button = event.target.closest('button');
+  if (!button) return;
   const deviceId = project.devices.some(item => item.id === selected) ? selected : null;
   const networkId = project.networks.some(item => item.id === selected) ? selected : null;
-  if (event.target.matches('[data-delete]') && deviceId) {
+  if (button.matches('[data-delete]') && deviceId) {
     const name = project.devices.find(device => device.id === deviceId).name;
     if (confirm(`Delete ${name} and its connections?`)) change(candidate => removeDevice(candidate, deviceId), { select: null });
-  } else if (event.target.matches('[data-delete-network]') && networkId) {
+  } else if (button.matches('[data-delete-network]') && networkId) {
     const name = project.networks.find(network => network.id === networkId).name;
     if (confirm(`Delete ${name} and its connections?`)) change(candidate => removeNetwork(candidate, networkId), { select: null });
-  } else if (event.target.matches('[data-duplicate]') && deviceId) {
+  } else if (button.matches('[data-duplicate]') && deviceId) {
     const source = project.devices.find(device => device.id === deviceId);
     const sourceServices = source.groups.reduce((sum, group) => sum + group.services.length, 0);
     if (project.devices.length >= LIMITS.devices) return toast('Device limit reached.');
@@ -380,35 +404,37 @@ $('#inspector-content').addEventListener('click', event => {
       }
       candidate.devices.splice(candidate.devices.findIndex(device => device.id === deviceId) + 1, 0, copy);
     });
-  } else if (event.target.matches('[data-add-group]') && deviceId) {
+  } else if (button.matches('[data-add-group]') && deviceId) {
     if (countGroups() >= LIMITS.groups) return toast('Group limit reached.');
     change(candidate => { candidate.devices.find(device => device.id === deviceId).groups.push({ id: uid('grp'), name: 'Services', services: [] }); });
-  } else if (event.target.matches('[data-add-vlan]')) {
+  } else if (button.matches('[data-add-vlan]')) {
     if (project.vlans.length >= LIMITS.networks) return toast('VLAN limit reached.');
     change(candidate => { candidate.vlans.push({ id: uid('vlan'), name: 'New VLAN', color: '#34d399' }); });
-  } else if (event.target.matches('[data-remove-vlan]')) {
+  } else if (button.matches('[data-remove-vlan]')) {
     const vlanId = event.target.closest('[data-vlan]').dataset.vlan;
     change(candidate => { candidate.vlans = candidate.vlans.filter(vlan => vlan.id !== vlanId); });
+  } else if (button.matches('[data-edit-connections]')) {
+    openConnections();
   } else {
     const groupElement = event.target.closest('[data-group]');
     if (!groupElement || !deviceId) return;
     const groupId = groupElement.dataset.group;
-    if (event.target.matches('[data-remove-group]')) {
+    if (button.matches('[data-remove-group]')) {
       change(candidate => { const device = candidate.devices.find(item => item.id === deviceId); device.groups = device.groups.filter(group => group.id !== groupId); });
-    } else if (event.target.matches('[data-add-services]')) {
+    } else if (button.matches('[data-add-services]')) {
       openLogoDialog(groupId);
     } else {
       const row = event.target.closest('[data-service]');
       if (!row) return;
       const serviceId = row.dataset.service;
-      const action = ['data-remove-service', 'data-service-up', 'data-service-down'].find(attribute => event.target.hasAttribute(attribute));
+      const action = ['data-remove-service', 'data-service-up', 'data-service-down'].find(attribute => button.hasAttribute(attribute));
       if (!action) return;
       change(candidate => {
         const services = candidate.devices.find(item => item.id === deviceId).groups.find(group => group.id === groupId).services;
         const index = services.findIndex(service => service.id === serviceId);
-        if (event.target.matches('[data-remove-service]')) services.splice(index, 1);
-        else if (event.target.matches('[data-service-up]') && index > 0) services.splice(index - 1, 0, services.splice(index, 1)[0]);
-        else if (event.target.matches('[data-service-down]') && index < services.length - 1) services.splice(index + 1, 0, services.splice(index, 1)[0]);
+        if (button.matches('[data-remove-service]')) services.splice(index, 1);
+        else if (button.matches('[data-service-up]') && index > 0) services.splice(index - 1, 0, services.splice(index, 1)[0]);
+        else if (button.matches('[data-service-down]') && index < services.length - 1) services.splice(index + 1, 0, services.splice(index, 1)[0]);
       });
     }
   }
@@ -524,7 +550,10 @@ function renderConnections() {
   $('#connection-list').innerHTML = project.connections.map(connection => `<div class="connection-row" data-connection="${connection.id}"><span>${escapeHtml(endpoints.find(item => item.id === connection.from)?.name)} → ${escapeHtml(endpoints.find(item => item.id === connection.to)?.name)}</span><input maxlength="120" value="${escapeHtml(connection.label)}" aria-label="Connection label"><button type="button" class="danger">Delete</button></div>`).join('');
 }
 
-$('#edit-connections').addEventListener('click', () => { renderConnections(); $('#connections-dialog').showModal(); });
+function openConnections() {
+  renderConnections();
+  $('#connections-dialog').showModal();
+}
 $('#connection-add').addEventListener('click', () => {
   const from = $('#connection-from').value;
   const to = $('#connection-to').value;
@@ -535,7 +564,7 @@ $('#connection-add').addEventListener('click', () => {
 });
 $('#connection-list').addEventListener('click', event => {
   const row = event.target.closest('[data-connection]');
-  if (row && event.target.matches('button') && change(candidate => { candidate.connections = candidate.connections.filter(connection => connection.id !== row.dataset.connection); })) renderConnections();
+  if (row && event.target.closest('button') && change(candidate => { candidate.connections = candidate.connections.filter(connection => connection.id !== row.dataset.connection); })) renderConnections();
 });
 $('#connection-list').addEventListener('change', event => {
   const row = event.target.closest('[data-connection]');
@@ -571,6 +600,11 @@ $('#undo').addEventListener('click', undo);
 $('#redo').addEventListener('click', redo);
 addEventListener('keydown', event => {
   const editing = event.target.matches('input, select, textarea, [contenteditable=true]');
+  if (event.key === 'Escape' && !editing && !document.querySelector('dialog[open]') && focusMode) {
+    focusMode = false;
+    render();
+    return;
+  }
   if (event.key === 'Escape' && !editing && !document.querySelector('dialog[open]') && inspectorOpen) {
     inspectorOpen = false;
     render();
@@ -607,6 +641,8 @@ function download(blob, name) {
 }
 
 $('#save-json').addEventListener('click', () => download(new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' }), filename('.json')));
+$('#export-menu').addEventListener('click', () => $('#export-dialog').showModal());
+$('#export-dialog').addEventListener('close', () => $('#export-menu').focus());
 $('#export-svg').addEventListener('click', () => {
   try {
     download(new Blob([renderProject(project)], { type: 'image/svg+xml' }), filename('.svg'));
@@ -666,8 +702,14 @@ $('#preview').addEventListener('keydown', event => {
     if (item) { event.preventDefault(); selectDiagramTarget(item); }
   }
 });
-$('#settings').addEventListener('click', () => { selected = null; inspectorOpen = true; render(); });
+$('#settings').addEventListener('click', () => { focusMode = false; selected = null; inspectorOpen = true; render(); });
+$('#focus-canvas').addEventListener('click', () => { focusMode = !focusMode; render(); });
 $('#inspector-close').addEventListener('click', () => { inspectorOpen = false; render(); });
+
+$('#inventory-search').addEventListener('input', event => {
+  inventoryQuery = event.target.value;
+  renderInventory();
+});
 
 addEventListener('storage', event => {
   if (event.key === STORAGE_KEY && hasStorageConflict(event.newValue, lastStored, TAB_ID)) showConflict(event.newValue);

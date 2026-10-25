@@ -19,6 +19,12 @@ export function updateSelection(selection, id, checked) {
   return next;
 }
 
+export function filterInventory(items, query, keys) {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return items;
+  return items.filter(item => keys.some(key => String(item[key] || '').toLowerCase().includes(needle)));
+}
+
 export function pngDimensions(width, height, desiredScale = 3, maxSide = 16_384, maxPixels = 36_000_000) {
   if (![width, height, desiredScale].every(Number.isFinite) || width <= 0 || height <= 0 || desiredScale <= 0) throw new Error('Invalid export dimensions.');
   const scale = Math.min(desiredScale, maxSide / width, maxSide / height, Math.sqrt(maxPixels / (width * height)));
