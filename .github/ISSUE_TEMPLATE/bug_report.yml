@@ -1,0 +1,38 @@
+name: Bug report
+description: Report a reproducible Homelab Atlas problem
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: Before reporting, check the [documentation](https://aiden0rchad.github.io/homelab-atlas/) and remove private lab data. Report vulnerabilities through [private security reporting](https://github.com/aiden0rchad/homelab-atlas/security/advisories/new), not here.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Include the expected and actual result.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      placeholder: "1. Open…\n2. Select…\n3. See…"
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and operating system
+      placeholder: Firefox 144 on Linux
+    validations:
+      required: true
+  - type: textarea
+    id: runtime
+    attributes:
+      label: Runtime details
+      description: Docker/Compose versions or the direct Python command, plus relevant sanitized logs.
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Use only fictional screenshots or a minimal fictional project. Never include credentials, private hosts, domains, or addresses.
