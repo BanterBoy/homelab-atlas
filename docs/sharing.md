@@ -17,7 +17,7 @@ Use **Save project** regularly, especially before updates or before changing the
 
 ## JSON backup and transfer
 
-**Save project** downloads an editable JSON file. To move it to another browser or address, choose **Import** and select that file. Atlas checks the whole file before replacing the current project. You can undo an import during the same page session, but reloading clears the undo history.
+**Save**, announced as **Save project** by screen readers, downloads an editable JSON file. To move it to another browser or address, choose **Import** and select that file. Atlas checks the whole file before replacing the current project. You can undo an import during the same page session, but reloading clears the undo history.
 
 Try the [complete fictional example on GitHub](https://github.com/aiden0rchad/homelab-atlas/blob/main/docs/example.json), or choose **Load example** in the editor.
 
@@ -32,6 +32,8 @@ If another tab changes the saved project, the current tab stops before overwriti
 Try not to edit the same project in several tabs. These choices help you recover from a conflict, but they do not turn Atlas into a collaborative editor.
 
 ## Export formats
+
+Choose **Export**, then select SVG or PNG. Export creates an image; it does not replace the editable JSON downloaded by **Save**.
 
 | Format | Best for | Important behavior |
 |---|---|---|

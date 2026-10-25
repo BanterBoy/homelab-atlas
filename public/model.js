@@ -274,10 +274,11 @@ function cardMetrics(device, width, compact, secondary) {
 }
 
 export function serviceTileGeometry(name, width, height, secondary = false) {
-  const fontSize = width < 90 ? 11 : 13;
+  const compact = height <= 72;
+  const fontSize = compact ? (width < 90 ? 11 : 12) : (width < 90 ? 11 : 13);
   const lineHeight = fontSize + 1;
   const lines = wrapText(name, Math.max(5, Math.floor(width / (fontSize * .55))), 2);
-  const logoSize = width < 90 ? 24 : 28;
+  const logoSize = compact ? 24 : (width < 90 ? 24 : 28);
   const plateSize = logoSize + 6;
   const plateY = 10;
   const logoY = 13;

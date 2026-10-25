@@ -2,6 +2,15 @@
 
 This file lists the notable changes in each Homelab Atlas release.
 
+## [0.2.0] - 2026-10-25
+
+### Changed
+
+- Refined diagram typography, hardware facts, CPU badges, service groups, network cards, and multi-column layout.
+- Reworked the editor with quieter controls, inventory search, focused canvas view, and a mobile inventory drawer.
+- Combined SVG and PNG choices under **Export** while keeping editable JSON under **Save project**.
+- Kept schema-version 1 project files compatible with the updated editor.
+
 ## [0.1.0] - 2026-10-25
 
 ### Added
@@ -14,3 +23,4 @@ This file lists the notable changes in each Homelab Atlas release.
 - Documentation for setup, editing, backups, privacy, troubleshooting, development, and the project format.
 
 [0.1.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.1.0
+[0.2.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.2.0

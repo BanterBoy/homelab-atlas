@@ -25,11 +25,11 @@ Atlas handles the layout for you. Add your servers, services, and network gear, 
 You'll need Docker with Compose v2:
 
 ```sh
-curl -fsSLO https://github.com/aiden0rchad/homelab-atlas/releases/download/v0.1.0/compose.release.yaml
+curl -fsSLO https://github.com/aiden0rchad/homelab-atlas/releases/download/v0.2.0/compose.release.yaml
 docker compose -f compose.release.yaml up -d
 ```
 
-Open `http://localhost:8080`. This uses the `0.1.0` image and only listens on the machine running Docker. Images are available for Linux AMD64 and ARM64.
+Open `http://localhost:8080`. This uses the `0.2.0` image and only listens on the machine running Docker. Images are available for Linux AMD64 and ARM64.
 
 For access from another computer, updates, or running without Docker, see the [setup guide](https://aiden0rchad.github.io/homelab-atlas/getting-started). The [release page](https://github.com/aiden0rchad/homelab-atlas/releases/latest) has the portable ZIP, Compose file, and checksums.
 
@@ -37,7 +37,7 @@ For access from another computer, updates, or running without Docker, see the [s
 
 Start with **Load example** to see how it works, or **Start empty** for your own lab. Add devices, fill in whatever hardware details you want to show, and group the services running on each one. The logo picker is searchable and works offline.
 
-You can add network connections and VLAN labels, choose a theme, and adjust the number of columns and spacing. When you're done, export a PNG or SVG. Use **Save project** to download a JSON copy you can edit later.
+You can add network connections and VLAN labels, choose a theme, and adjust the number of columns and spacing. **Export** downloads a PNG or SVG. Use **Save project** to download a JSON copy you can edit later.
 
 The [editor guide](https://aiden0rchad.github.io/homelab-atlas/editor) covers the controls, and the [networking guide](https://aiden0rchad.github.io/homelab-atlas/networking) explains connections and VLANs.
 

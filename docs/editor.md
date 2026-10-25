@@ -10,12 +10,14 @@ You enter your devices and services, and Atlas lays out the diagram for you. It 
 
 Choose **Add device** in the inventory on the left, then pick a template such as Server, NAS, Hypervisor, Media server, AI server, Raspberry Pi, or Cloud server. The Router, Switch, Wi-Fi, and Internet templates add network nodes instead of device cards.
 
+Use **Search inventory** to filter devices by name or role and network nodes by name or kind. It only changes the visible list. Your selection and project stay intact. On a narrow screen, open or close the inventory with the **Inventory** button below the canvas.
+
 Select a device to edit:
 
 - name, role, and accent color
 - a free-text **Network / VLAN** label
 - a bundled device icon
-- hardware facts, one per line
+- hardware facts, one per line, optionally written as `Label: value`
 - named service groups and their services
 
 The duplicate button copies a device and gives the copy new internal IDs. Use the arrow buttons to reorder devices or services. Deleting a device or network node also deletes its connections.
@@ -26,9 +28,11 @@ Create a service group, then choose **Apps**. You can search the built-in logo c
 
 You can change a service name and set its instance count from 1 through 99. **Add custom service** adds a named tile with the included generic icon. It does not upload or accept custom SVG files.
 
+Groups with one or two services use readable horizontal rows. Groups with three or four services use a compact icon grid, and larger groups use a denser grid. Atlas keeps the service order you set.
+
 ## Appearance
 
-Open **Settings**, or scroll to appearance controls in an inspector, to change:
+Open **Settings** to change:
 
 - project subtitle
 - Navy, Light, or Midnight diagram theme
@@ -41,6 +45,8 @@ The project title is in the top bar. These settings change your diagram. They ar
 ## Preview and layout
 
 Use **Fit page**, **Fit width**, zoom in, or zoom out to adjust the preview. You can select devices and network nodes in the preview with a pointer or keyboard.
+
+**Focus canvas** hides the inventory and inspector. Select a card or press `Escape` to leave focus view. On mobile, opening **Inventory** also leaves focus view so the drawer is visible.
 
 The layout is automatic, so you cannot drag cards into place. Their positions depend on inventory order, column count, content length, and density. If a card is crowded, shorten its text, switch density, reorder devices, or try a different column count.
 

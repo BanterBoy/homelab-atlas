@@ -340,9 +340,10 @@ dialog header button { width: 32px; padding: 0; }
     width: 240px;
     padding: 14px 10px 8px;
     transform: translateX(-100%);
+    visibility: hidden;
     box-shadow: 16px 0 40px #000a;
   }
-  .workspace.drawer-open .rail { transform: translateX(0); }
+  .workspace.drawer-open .rail { transform: translateX(0); visibility: visible; }
   .rail-title { padding-inline: 5px; }
   .drawer-close, .mobile-only { display: inline-flex; }
   .inventory-search { margin-inline: 0; }

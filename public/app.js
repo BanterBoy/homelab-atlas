@@ -313,6 +313,7 @@ function groupElement(group) {
 function selectInventoryItem(id) {
   selected = id;
   inspectorOpen = true;
+  focusMode = false;
   inventoryOpen = false;
   render();
 }
@@ -714,7 +715,7 @@ $('#preview').addEventListener('keydown', event => {
 });
 $('#settings').addEventListener('click', () => { focusMode = false; inventoryOpen = false; selected = null; inspectorOpen = true; render(); });
 $('#focus-canvas').addEventListener('click', () => { focusMode = !focusMode; inventoryOpen = false; render(); });
-$('#inventory-toggle').addEventListener('click', () => { inventoryOpen = !inventoryOpen; render(); });
+$('#inventory-toggle').addEventListener('click', () => { focusMode = false; inventoryOpen = !inventoryOpen; render(); });
 $('#inventory-close').addEventListener('click', () => { inventoryOpen = false; render(); $('#inventory-toggle').focus(); });
 $('#inspector-close').addEventListener('click', () => { inspectorOpen = false; render(); });
 

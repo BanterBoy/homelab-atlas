@@ -129,6 +129,7 @@ test('service tile logos, plates, and one or two label lines never overlap', () 
       assert.ok(geometry.logoY + geometry.logoSize < geometry.textTop);
       assert.ok(geometry.plateY + geometry.plateSize < geometry.textTop);
       assert.ok(geometry.firstBaseline + (geometry.lines.length - 1) * geometry.lineHeight <= height);
+      assert.ok(geometry.firstBaseline + (geometry.lines.length - 1) * geometry.lineHeight + geometry.fontSize * .35 <= height - 2);
     }
   }
 });
@@ -142,12 +143,14 @@ test('every generated service grid keeps logos, plates, badges, and labels separ
       for (const card of layoutProject(project).cards) {
         for (const group of card.groups.filter(item => item.mode === 'grid')) {
           const width = (card.w - 40 - group.padding * 2 - group.gap * (group.columns - 1)) / group.columns;
-          for (const label of ['Cloudflare', 'Postgres', 'Music Assistant']) {
-            const geometry = serviceTileGeometry(label, width, group.itemHeight, card.secondary);
-            assert.ok(11 < geometry.logoY);
-            assert.ok(geometry.logoY + geometry.logoSize < geometry.textTop);
-            assert.ok(geometry.plateY + geometry.plateSize < geometry.textTop);
-            assert.ok(geometry.firstBaseline + (geometry.lines.length - 1) * geometry.lineHeight <= group.itemHeight);
+          for (const count of [1, 99]) {
+            for (const label of ['Cloudflare', 'Postgres', 'Music Assistant', 'Home Assistant']) {
+              const geometry = serviceTileGeometry(label, width, group.itemHeight, card.secondary);
+              assert.ok(11 < geometry.logoY);
+              assert.ok(geometry.logoY + geometry.logoSize < geometry.textTop);
+              assert.ok(geometry.plateY + geometry.plateSize < geometry.textTop);
+              assert.ok(geometry.firstBaseline + (geometry.lines.length - 1) * geometry.lineHeight + geometry.fontSize * .35 <= group.itemHeight - 2, `${density} ${columns}-column ${label} ×${count}`);
+            }
           }
         }
       }
