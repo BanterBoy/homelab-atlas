@@ -11,6 +11,7 @@ export const CUSTOM_LOGO_LIMITS = {
 const ID_RE = /^custom-[a-zA-Z0-9][a-zA-Z0-9_-]{0,56}$/;
 const DATA_RE = /^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/;
 const PNG_SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
+export const PNG_INFLATED_LIMIT = 2_200_000;
 
 const fail = message => { throw new Error(message); };
 
@@ -18,7 +19,7 @@ function decodedLength(base64) {
   return Math.floor(base64.length * 3 / 4) - (base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0);
 }
 
-export function pngInfo(dataUrl) {
+function parsePng(dataUrl, collectImageData = false) {
   if (typeof dataUrl !== 'string' || dataUrl.length > CUSTOM_LOGO_LIMITS.dataUrlChars) fail('Custom logo PNG is too large.');
   const match = DATA_RE.exec(dataUrl);
   if (!match || match[1].length % 4) fail('Custom logo must be a canonical PNG data URL.');
@@ -36,6 +37,7 @@ export function pngInfo(dataUrl) {
   let height;
   let hasImageData = false;
   let ended = false;
+  const imageData = [];
   while (offset + 12 <= bytes.length) {
     const size = view.getUint32(offset);
     const end = offset + 12 + size;
@@ -48,7 +50,10 @@ export function pngInfo(dataUrl) {
       height = view.getUint32(offset + 12);
       if (!width || !height || width > CUSTOM_LOGO_LIMITS.storedSide || height > CUSTOM_LOGO_LIMITS.storedSide) fail('Custom logo PNG dimensions exceed 512px.');
     }
-    if (type === 'IDAT') hasImageData = true;
+    if (type === 'IDAT') {
+      hasImageData = true;
+      if (collectImageData) imageData.push(bytes.subarray(offset + 8, offset + 8 + size));
+    }
     offset = end;
     if (type === 'IEND') {
       if (size || offset !== bytes.length) fail('Custom logo PNG has an invalid terminator.');
@@ -57,7 +62,11 @@ export function pngInfo(dataUrl) {
     }
   }
   if (!ended || width === undefined || !hasImageData) fail('Custom logo PNG is incomplete.');
-  return { width, height, bytes: length };
+  return { info: { width, height, bytes: length }, imageData };
+}
+
+export function pngInfo(dataUrl) {
+  return parsePng(dataUrl).info;
 }
 
 export function validateCustomLogo(logo) {
@@ -83,13 +92,55 @@ export function validateCustomLogos(logos, usedIds = new Set()) {
   return customIds;
 }
 
+export async function verifyPngImageData(dataUrl) {
+  const { imageData } = parsePng(dataUrl, true);
+  if (typeof DecompressionStream !== 'function') throw new Error('Custom logos require a current browser with native PNG decompression support.');
+  let reader;
+  try {
+    reader = new Blob(imageData).stream().pipeThrough(new DecompressionStream('deflate')).getReader();
+    let inflated = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      inflated += value.byteLength;
+      if (inflated > PNG_INFLATED_LIMIT) {
+        await reader.cancel();
+        throw new Error('Custom logo PNG image data exceeds the decoded size limit.');
+      }
+    }
+    if (!inflated) throw new Error('Custom logo PNG image data is empty.');
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Custom logo')) throw error;
+    throw new Error('Custom logo PNG image data is invalid or truncated.');
+  } finally {
+    reader?.releaseLock();
+  }
+}
+
+async function verifyNativeImageDecode(logo) {
+  const image = new Image();
+  try {
+    if (typeof image.decode === 'function') {
+      image.src = logo.dataUrl;
+      await image.decode();
+    } else {
+      await new Promise((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = reject;
+        image.src = logo.dataUrl;
+      });
+    }
+    if (!image.naturalWidth || !image.naturalHeight) throw new Error();
+  } catch {
+    throw new Error(`Custom logo cannot be decoded: ${logo.label}.`);
+  }
+}
+
 export async function verifyCustomLogoDecodes(logos) {
-  await Promise.all(logos.map(logo => new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => image.naturalWidth && image.naturalHeight ? resolve() : reject(new Error(`Custom logo cannot be decoded: ${logo.label}.`));
-    image.onerror = () => reject(new Error(`Custom logo cannot be decoded: ${logo.label}.`));
-    image.src = logo.dataUrl;
-  })));
+  await Promise.all(logos.map(async logo => {
+    await verifyPngImageData(logo.dataUrl);
+    await verifyNativeImageDecode(logo);
+  }));
 }
 
 export function hasExternalSvgUrl(value) {

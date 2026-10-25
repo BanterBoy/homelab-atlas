@@ -1,13 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { deflateSync } from 'node:zlib';
 import { LOGOS, logoById, logoDataUri, logoPlate } from '../public/catalog.js';
-import { CUSTOM_LOGO_LIMITS, hasExternalSvgUrl, pngInfo, svgTextHasUnsafeContent, validateCustomLogo, validateCustomLogos } from '../public/custom-logos.js';
+import { CUSTOM_LOGO_LIMITS, hasExternalSvgUrl, PNG_INFLATED_LIMIT, pngInfo, svgTextHasUnsafeContent, validateCustomLogo, validateCustomLogos, verifyCustomLogoDecodes, verifyPngImageData } from '../public/custom-logos.js';
 import { parseProject, renderProject, sampleProject, validateProject } from '../public/model.js';
 
 const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
 const custom = (id = 'custom-test', overrides = {}) => ({ id, label: 'Test logo', dataUrl: PNG, background: 'none', ...overrides });
 
-function generatedPng({ size = 1, width = 1, height = 1 } = {}) {
+function generatedPng({ size = 1, width = 1, height = 1, idat = new Uint8Array(size) } = {}) {
   const signature = [137, 80, 78, 71, 13, 10, 26, 10];
   const chunk = (type, data) => {
     const bytes = new Uint8Array(12 + data.length);
@@ -20,7 +21,7 @@ function generatedPng({ size = 1, width = 1, height = 1 } = {}) {
   new DataView(ihdr.buffer).setUint32(0, width);
   new DataView(ihdr.buffer).setUint32(4, height);
   ihdr.set([8, 6, 0, 0, 0], 8);
-  const parts = [Uint8Array.from(signature), chunk('IHDR', ihdr), chunk('IDAT', new Uint8Array(size)), chunk('IEND', new Uint8Array())];
+  const parts = [Uint8Array.from(signature), chunk('IHDR', ihdr), chunk('IDAT', idat), chunk('IEND', new Uint8Array())];
   const bytes = new Uint8Array(parts.reduce((total, part) => total + part.length, 0));
   let offset = 0;
   for (const part of parts) { bytes.set(part, offset); offset += part.length; }
@@ -48,6 +49,28 @@ test('custom logo entries and PNG structure validate strictly', () => {
   assert.throws(() => pngInfo(editPng(generatedPng(), (bytes, view) => view.setUint32(bytes.length - 12, 1))), /terminator|truncated/);
   assert.throws(() => pngInfo('data:image/png;base64,@@@@'), /canonical/);
   assert.throws(() => validateCustomLogo(custom('custom-test', { dataUrl: `data:image/png;base64,${'A'.repeat(200_004)}` })), /large/);
+});
+
+test('native PNG image-data validation is streaming and bounded', async () => {
+  const valid = generatedPng({ idat: deflateSync(Uint8Array.of(0, 255, 0, 0, 255)) });
+  await assert.doesNotReject(verifyPngImageData(valid));
+  await assert.rejects(verifyPngImageData(generatedPng({ idat: Uint8Array.of(1, 2, 3) })), /invalid or truncated/);
+  const compressed = deflateSync(Uint8Array.of(0, 1, 2, 3));
+  await assert.rejects(verifyPngImageData(generatedPng({ idat: compressed.subarray(0, compressed.length - 2) })), /invalid or truncated/);
+  const oversized = generatedPng({ idat: deflateSync(new Uint8Array(PNG_INFLATED_LIMIT + 1)) });
+  await assert.rejects(verifyPngImageData(oversized), /decoded size limit/);
+});
+
+test('custom assets require native decompression support but empty projects do not', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'DecompressionStream');
+  Object.defineProperty(globalThis, 'DecompressionStream', { value: undefined, configurable: true });
+  try {
+    await assert.rejects(verifyPngImageData(PNG), /current browser/);
+    await assert.doesNotReject(verifyCustomLogoDecodes([]));
+  } finally {
+    if (descriptor) Object.defineProperty(globalThis, 'DecompressionStream', descriptor);
+    else delete globalThis.DecompressionStream;
+  }
 });
 
 test('SVG upload screening rejects active and external content', () => {
