@@ -98,7 +98,10 @@ test('deleting endpoints cleans dangling connections', () => {
 });
 
 test('wrapping and service tiles contain long labels and count badges', () => {
-  assert.deepEqual(wrapText('A very long service label that cannot fit', 12, 2), ['A very long', 'service lab…']);
+  assert.deepEqual(wrapText('A very long service label that cannot fit', 12, 2), ['A very long', 'service…']);
+  const boundary = wrapText('abcdefg hi', 6, 3);
+  assert.equal(boundary.join('').replaceAll(/\s/g, ''), 'abcdefghi');
+  assert.ok(boundary.every(line => line.length <= 6));
   assert.deepEqual(wrapText('Home Assistant', 12, 2), ['Home', 'Assistant']);
   assert.deepEqual(wrapText('Music Assistant', 12, 2), ['Music', 'Assistant']);
   assert.deepEqual(wrapText('Proxy Manager', 12, 2), ['Proxy', 'Manager']);
@@ -126,6 +129,28 @@ test('service tile logos, plates, and one or two label lines never overlap', () 
       assert.ok(geometry.logoY + geometry.logoSize < geometry.textTop);
       assert.ok(geometry.plateY + geometry.plateSize < geometry.textTop);
       assert.ok(geometry.firstBaseline + (geometry.lines.length - 1) * geometry.lineHeight <= height);
+    }
+  }
+});
+
+test('every generated service grid keeps logos, plates, badges, and labels separate', () => {
+  for (const density of ['comfortable', 'compact']) {
+    for (const columns of [1, 2, 3, 4]) {
+      const project = sampleProject();
+      project.density = density;
+      project.columns = columns;
+      for (const card of layoutProject(project).cards) {
+        for (const group of card.groups.filter(item => item.mode === 'grid')) {
+          const width = (card.w - 40 - group.padding * 2 - group.gap * (group.columns - 1)) / group.columns;
+          for (const label of ['Cloudflare', 'Postgres', 'Music Assistant']) {
+            const geometry = serviceTileGeometry(label, width, group.itemHeight, card.secondary);
+            assert.ok(11 < geometry.logoY);
+            assert.ok(geometry.logoY + geometry.logoSize < geometry.textTop);
+            assert.ok(geometry.plateY + geometry.plateSize < geometry.textTop);
+            assert.ok(geometry.firstBaseline + (geometry.lines.length - 1) * geometry.lineHeight <= group.itemHeight);
+          }
+        }
+      }
     }
   }
 });
@@ -226,9 +251,9 @@ test('masonry cards preserve order, stay in bounds, and never overlap', () => {
   for (const id of ['dev-edge', 'dev-remote']) {
     const card = layout.cards.find(item => item.id === id);
     assert.equal(card.secondary, true);
-    assert.equal(card.groups[0].mode, 'rows');
-    assert.equal(card.groups[0].columns, 2);
-    assert.ok(card.h >= 280 && card.h <= 330);
+    assert.equal(card.groups[0].mode, 'grid');
+    assert.equal(card.groups[0].columns, project.devices.find(device => device.id === id).groups[0].services.length);
+    assert.ok(card.h >= 230 && card.h <= 270);
   }
 });
 
@@ -271,6 +296,24 @@ test('maximum hardware and group labels remain measured and bounded', () => {
   assert.ok(card.contentBottom <= card.y + card.h);
 });
 
+test('CPU vendor badge is reserved only for an unambiguous primary fact', () => {
+  const project = sampleProject();
+  project.devices[0].icon = 'server';
+  project.devices[0].hardware = ['CPU: Intel i5-12500', 'Spare: AMD Ryzen 5'];
+  let layout = layoutProject(project);
+  let card = layout.cards[0];
+  assert.equal(card.hardwareFacts[0].mark, 'intel');
+  assert.equal(card.hardwareFacts[0].markWidth, 54);
+  assert.equal(card.hardwareFacts[1].mark, '');
+  const svg = renderProject(project);
+  assert.match(svg, /width="46" height="24"/);
+
+  project.devices[0].icon = 'intel';
+  layout = layoutProject(project);
+  card = layout.cards[0];
+  assert.equal(card.hardwareFacts[0].mark, '');
+});
+
 test('compact density reduces vertical card geometry without clipping', () => {
   const comfortable = sampleProject();
   const compact = structuredClone(comfortable);
@@ -290,7 +333,7 @@ test('ancillary placement favors the third column without an unbounded tower', (
   assert.equal(extras[0].column, 2);
   assert.ok(extras.some(card => card.column !== 2));
   const bottoms = [0, 1, 2].map(column => Math.max(...layout.cards.filter(card => card.column === column).map(card => card.y + card.h)));
-  assert.ok(bottoms[2] <= Math.min(bottoms[0], bottoms[1]) + 180 + Math.max(...extras.map(card => card.h)) + layout.gap);
+  assert.ok(bottoms[2] <= Math.max(bottoms[0], bottoms[1]) + 160 + Math.max(...extras.map(card => card.h)) + layout.gap);
 });
 
 test('inventory filtering is case-insensitive and does not mutate selection or input', () => {

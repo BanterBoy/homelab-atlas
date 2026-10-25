@@ -16,7 +16,7 @@ export const LIMITS = {
 
 const ID_RE = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/;
 const COLOR_RE = /^#[0-9a-fA-F]{6}$/;
-const FONT = "ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
+const FONT = "'Avenir Next','Segoe UI',Arial,sans-serif";
 const palettes = {
   navy: { bg: '#0b1117', panel: '#101923', card: '#121c26', tile: '#0d151e', line: '#263747', text: '#eff3f8', muted: '#a2b3c6', teal: '#55d6c9' },
   light: { bg: '#edf1f4', panel: '#f7f9fa', card: '#ffffff', tile: '#f2f5f7', line: '#bac6cf', text: '#17212b', muted: '#607282', teal: '#087f79' },
@@ -199,9 +199,9 @@ export function wrapText(value, maxChars, maxLines = 2) {
   let remaining = text;
   while (remaining && lines.length < maxLines) {
     if (remaining.length <= maxChars) { lines.push(remaining); remaining = ''; break; }
-    let cut = remaining.lastIndexOf(' ', maxChars + 1);
+    let cut = remaining.lastIndexOf(' ', maxChars);
     if (cut <= 0) cut = maxChars;
-    lines.push(remaining.slice(0, cut).trim().slice(0, maxChars));
+    lines.push(remaining.slice(0, cut).trim());
     remaining = remaining.slice(cut).trim();
   }
   if (remaining) {
@@ -220,7 +220,8 @@ function nameGeometry(device, width, secondary) {
   return { size, maxChars, lines, lineHeight: Math.round(size * 1.05) };
 }
 
-function hardwareMark(device, fact) {
+function hardwareMark(device, fact, index) {
+  if (index) return '';
   const value = fact.toLowerCase();
   const icon = /\b(amd|ryzen)\b/.test(value) ? 'amd' : /\b(intel|xeon|i[3579](?:[-\s]|\b))/.test(value) ? 'intel' : '';
   return icon && device.icon !== icon ? icon : '';
@@ -231,12 +232,13 @@ function hardwareGeometry(device, fact, index, width, compact) {
   const label = match?.[1] || '';
   const value = match?.[2] || fact;
   const labelWidth = label ? Math.min(124, Math.max(52, label.length * 8 + 12)) : 0;
-  const mark = hardwareMark(device, fact);
-  const available = width - 20 - labelWidth - (mark ? 28 : 0);
+  const mark = hardwareMark(device, fact, index);
+  const markWidth = mark ? 54 : 0;
+  const available = width - 20 - labelWidth - markWidth;
   const chars = Math.max(8, Math.floor(available / (index ? 7.4 : 8)));
   const lines = wrapText(value, chars, 4);
   const lineHeight = compact ? (index ? 19 : 20) : (index ? 21 : 22);
-  return { label, value, labelWidth, mark, chars, lines, lineHeight, size: index ? (compact ? 14 : 15) : (compact ? 15 : 16), height: lines.length * lineHeight + (index ? 5 : 9) };
+  return { label, value, labelWidth, mark, markWidth, chars, lines, lineHeight, size: index ? (compact ? 14 : 15) : (compact ? 15 : 16), height: lines.length * lineHeight + (index ? 5 : 9) };
 }
 
 function groupGeometry(group, width, compact, secondary, index) {
@@ -247,12 +249,12 @@ function groupGeometry(group, width, compact, secondary, index) {
   const headerHeight = nameLines.length * (compact ? 15 : 17) + (compact ? 9 : 11);
   let mode = 'grid';
   let columns = width < 380 ? 3 : 4;
-  let itemHeight = compact ? 72 : 82;
+  let itemHeight = compact ? 72 : 78;
   if (group.services.length <= 2) {
     mode = 'rows'; columns = 1; itemHeight = compact ? 52 : 58;
   } else if (group.services.length <= 4) {
-    if (width < 380) { mode = 'rows'; columns = 2; itemHeight = compact ? 52 : 58; }
-    else { columns = 4; itemHeight = compact ? 68 : 78; }
+    columns = width < 380 ? group.services.length : 4;
+    itemHeight = compact ? 72 : 78;
   }
   const rows = Math.ceil(group.services.length / columns);
   const padding = inset ? 10 : 0;
@@ -262,7 +264,7 @@ function groupGeometry(group, width, compact, secondary, index) {
 
 function cardMetrics(device, width, compact, secondary) {
   const name = nameGeometry(device, width, secondary);
-  const headerHeight = (compact ? (secondary ? 88 : 104) : (secondary ? 98 : 116)) + (name.lines - 1) * name.lineHeight;
+  const headerHeight = (secondary ? (compact ? 85 : 89) : (compact ? 104 : 116)) + (name.lines - 1) * name.lineHeight;
   const hardwareFacts = device.hardware.map((fact, index) => hardwareGeometry(device, fact, index, width - 40, compact));
   const hardwareHeight = hardwareFacts.reduce((sum, fact) => sum + fact.height, 0) + (hardwareFacts.length > 1 ? 14 : hardwareFacts.length ? 6 : 0);
   const groups = device.groups.map((group, index) => groupGeometry(group, width - 40, compact, secondary, index));
@@ -272,21 +274,23 @@ function cardMetrics(device, width, compact, secondary) {
 }
 
 export function serviceTileGeometry(name, width, height, secondary = false) {
-  const fontSize = width < 82 ? 12 : secondary ? 12 : 14;
-  const lineHeight = secondary ? 13 : 14;
-  const lines = wrapText(name, Math.max(6, Math.floor(width / (secondary ? 6 : 7))), 2);
-  const lastBaseline = height - 10;
-  const firstBaseline = lastBaseline - (lines.length - 1) * lineHeight;
-  const logoSize = secondary ? 28 : 32;
-  const plateSize = secondary ? 34 : 36;
-  return { fontSize, lineHeight, lines, firstBaseline, logoY: 8, logoSize, plateY: 5, plateSize, textTop: firstBaseline - fontSize * .8 };
+  const fontSize = width < 90 ? 11 : 13;
+  const lineHeight = fontSize + 1;
+  const lines = wrapText(name, Math.max(5, Math.floor(width / (fontSize * .55))), 2);
+  const logoSize = width < 90 ? 24 : 28;
+  const plateSize = logoSize + 6;
+  const plateY = 10;
+  const logoY = 13;
+  const textTop = plateY + plateSize + 2;
+  const firstBaseline = textTop + fontSize * .8;
+  return { fontSize, lineHeight, lines, firstBaseline, logoY, logoSize, plateY, plateSize, textTop };
 }
 
-export function serviceRowGeometry(name, width, height, compact = false) {
+export function serviceRowGeometry(name, width, height, compact = false, hasCount = false) {
   const logoSize = compact ? 28 : 32;
   const plateSize = logoSize + 6;
   const textX = plateSize + 14;
-  const countWidth = 32;
+  const countWidth = hasCount ? 32 : 0;
   const fontSize = width < 140 ? 12 : 14;
   const lines = wrapText(name, Math.max(6, Math.floor((width - textX - countWidth - 22) / (fontSize * .55))), 2);
   const lineHeight = fontSize + 2;
@@ -351,8 +355,8 @@ export function layoutProject(project) {
     let column = index < columns ? index : columnBottoms.indexOf(Math.min(...columnBottoms));
     if (index >= columns && columns === 3 && secondary) {
       const narrowMetrics = cardMetrics(device, widths[2], compact, true);
-      const otherBottom = Math.min(columnBottoms[0], columnBottoms[1]);
-      if (columnBottoms[2] + narrowMetrics.height <= otherBottom + 180) column = 2;
+      const mainBottom = Math.max(columnBottoms[0], columnBottoms[1]);
+      if (columnBottoms[2] + narrowMetrics.height <= mainBottom + 160) column = 2;
     }
     const metrics = cardMetrics(device, widths[column], compact, secondary);
     const card = { id: device.id, column, x: columnX[column], y: columnBottoms[column], w: widths[column], h: metrics.height, contentBottom: columnBottoms[column] + metrics.contentHeight, ...metrics };
@@ -413,19 +417,19 @@ function renderService(service, x, y, width, height, theme, themeName, secondary
   const geometry = serviceTileGeometry(service.name, width, height, secondary);
   const plate = logoPlate(service.logo, themeName);
   const plateRect = plate ? `<rect x="${center - geometry.plateSize / 2}" y="${y + geometry.plateY}" width="${geometry.plateSize}" height="${geometry.plateSize}" rx="5" fill="${plate}"/>` : '';
-  const name = textElement(service.name, center, y + geometry.firstBaseline, { fill: theme.text, size: geometry.fontSize, weight: 500, anchor: 'middle', maxChars: Math.max(6, Math.floor(width / (secondary ? 6 : 7))), maxLines: 2, lineHeight: geometry.lineHeight });
-  const badge = service.count > 1 ? textElement(`×${service.count}`, x + width - 7, y + 14, { fill: theme.muted, size: 10, weight: 700, anchor: 'end', maxChars: 3 }) : '';
+  const name = textElement(service.name, center, y + geometry.firstBaseline, { fill: theme.text, size: geometry.fontSize, weight: 400, anchor: 'middle', maxChars: Math.max(5, Math.floor(width / (geometry.fontSize * .55))), maxLines: 2, lineHeight: geometry.lineHeight });
+  const badge = service.count > 1 ? textElement(`×${service.count}`, x + width - 6, y + 11, { fill: theme.muted, size: 9, weight: 600, anchor: 'end', maxChars: 3 }) : '';
   return `<g><title>${escapeXml(service.name)}${service.count > 1 ? ` ×${service.count}` : ''}</title><rect x="${x}" y="${y}" width="${width}" height="${height}" rx="6" fill="${theme.tile}" stroke="${theme.line}"/>${plateRect}<image href="${logoDataUri(service.logo)}" x="${center - geometry.logoSize / 2}" y="${y + geometry.logoY}" width="${geometry.logoSize}" height="${geometry.logoSize}" preserveAspectRatio="xMidYMid meet"/>${name}${badge}</g>`;
 }
 
 function renderServiceRow(service, x, y, width, height, theme, themeName, compact) {
-  const geometry = serviceRowGeometry(service.name, width, height, compact);
+  const geometry = serviceRowGeometry(service.name, width, height, compact, service.count > 1);
   const plate = logoPlate(service.logo, themeName);
   const iconY = y + (height - geometry.logoSize) / 2;
   const plateY = y + (height - geometry.plateSize) / 2;
   const plateRect = plate ? `<rect x="${x + 10}" y="${plateY}" width="${geometry.plateSize}" height="${geometry.plateSize}" rx="6" fill="${plate}"/>` : '';
-  const name = textElement(service.name, x + geometry.textX + 10, y + geometry.firstBaseline, { fill: theme.text, size: geometry.fontSize, weight: 550, maxChars: Math.max(6, Math.floor((width - geometry.textX - geometry.countWidth - 22) / (geometry.fontSize * .55))), maxLines: 2, lineHeight: geometry.lineHeight });
-  const badge = service.count > 1 ? textElement(`×${service.count}`, x + width - 12, y + height / 2 + 4, { fill: theme.muted, size: 11, weight: 700, anchor: 'end', maxChars: 3 }) : '';
+  const name = textElement(service.name, x + geometry.textX + 10, y + geometry.firstBaseline, { fill: theme.text, size: geometry.fontSize, weight: 400, maxChars: Math.max(6, Math.floor((width - geometry.textX - geometry.countWidth - 22) / (geometry.fontSize * .55))), maxLines: 2, lineHeight: geometry.lineHeight });
+  const badge = service.count > 1 ? textElement(`×${service.count}`, x + width - 12, y + height / 2 + 4, { fill: theme.muted, size: 11, weight: 600, anchor: 'end', maxChars: 3 }) : '';
   return `<g><title>${escapeXml(service.name)}${service.count > 1 ? ` ×${service.count}` : ''}</title><rect x="${x}" y="${y}" width="${width}" height="${height}" rx="7" fill="${theme.tile}" stroke="${theme.line}"/>${plateRect}<image href="${logoDataUri(service.logo)}" x="${x + 13}" y="${iconY}" width="${geometry.logoSize}" height="${geometry.logoSize}" preserveAspectRatio="xMidYMid meet"/>${name}${badge}</g>`;
 }
 
@@ -434,25 +438,28 @@ function renderCard(device, box, theme, themeName) {
   const innerWidth = box.w - 40;
   const plate = logoPlate(device.icon, themeName);
   const iconPlate = plate ? `<rect x="${box.x + box.w - 72}" y="${box.y + 22}" width="52" height="52" rx="7" fill="${plate}"/>` : '';
-  const roleY = box.y + (box.secondary ? 26 : 29);
-  const nameY = box.y + (box.secondary ? 58 : 74);
+  const roleY = box.y + (box.secondary ? 24 : 29);
+  const nameY = box.y + (box.secondary ? 53 : 74);
   const nameExtra = (box.name.lines - 1) * box.name.lineHeight;
   const headingX = innerX + 14;
-  const role = textElement(device.role.toUpperCase(), headingX, roleY, { fill: device.accent, size: box.secondary ? 10 : 11, weight: 750, maxChars: Math.max(8, Math.floor((box.w - 112) / 7)) });
-  const name = textElement(device.name, headingX, nameY, { fill: theme.text, size: box.name.size, weight: 780, maxChars: box.name.maxChars, maxLines: 2, lineHeight: box.name.lineHeight });
-  const network = textElement(device.network, headingX, box.y + (box.secondary ? 82 : 101) + nameExtra, { fill: theme.muted, size: box.secondary ? 11 : 12, weight: 550, maxChars: Math.max(8, Math.floor((innerWidth - 14) / 7)) });
+  const role = textElement(device.role.toUpperCase(), headingX, roleY, { fill: device.accent, size: box.secondary ? 10 : 11, weight: 600, maxChars: Math.max(8, Math.floor((box.w - 112) / 7)) });
+  const name = textElement(device.name, headingX, nameY, { fill: theme.text, size: box.name.size, weight: 700, maxChars: box.name.maxChars, maxLines: 2, lineHeight: box.name.lineHeight });
+  const network = textElement(device.network, headingX, box.y + (box.secondary ? 75 : 101) + nameExtra, { fill: theme.muted, size: box.secondary ? 11 : 12, weight: 400, maxChars: Math.max(8, Math.floor((innerWidth - 14) / 7)) });
   let y = box.y + box.headerHeight;
   let hardware = '';
   if (device.hardware.length > 1) hardware += `<rect x="${innerX}" y="${y + box.hardwareFacts[0].height}" width="${innerWidth}" height="${box.hardwareHeight - box.hardwareFacts[0].height - 8}" rx="7" fill="${theme.tile}" stroke="${theme.line}"/>`;
   device.hardware.forEach((fact, index) => {
     const geometry = box.hardwareFacts[index];
-    const factX = innerX + (index ? 10 : 0);
+    const factX = innerX + (index ? 10 : geometry.markWidth);
     const baseline = y + geometry.size + (index ? 5 : 0);
     if (geometry.label) {
-      hardware += textElement(`${geometry.label}:`, factX, baseline, { fill: device.accent, size: geometry.size, weight: 700, maxChars: 25 });
-      hardware += textElement(geometry.value, factX + geometry.labelWidth, baseline, { fill: index ? theme.muted : theme.text, size: geometry.size, weight: index ? 500 : 650, maxChars: geometry.chars, maxLines: 4, lineHeight: geometry.lineHeight });
-    } else hardware += textElement(fact, factX, baseline, { fill: index ? theme.muted : theme.text, size: geometry.size, weight: index ? 500 : 650, maxChars: geometry.chars, maxLines: 4, lineHeight: geometry.lineHeight });
-    if (geometry.mark) hardware += `<image href="${logoDataUri(geometry.mark)}" x="${innerX + innerWidth - 24}" y="${y + 2}" width="20" height="20" preserveAspectRatio="xMidYMid meet"/>`;
+      hardware += textElement(`${geometry.label}:`, factX, baseline, { fill: device.accent, size: geometry.size, weight: 600, maxChars: 25 });
+      hardware += textElement(geometry.value, factX + geometry.labelWidth, baseline, { fill: index ? theme.muted : theme.text, size: geometry.size, weight: index ? 400 : 500, maxChars: geometry.chars, maxLines: 4, lineHeight: geometry.lineHeight });
+    } else hardware += textElement(fact, factX, baseline, { fill: index ? theme.muted : theme.text, size: geometry.size, weight: index ? 400 : 500, maxChars: geometry.chars, maxLines: 4, lineHeight: geometry.lineHeight });
+    if (geometry.mark) {
+      const markPlate = logoPlate(geometry.mark, themeName);
+      hardware += `${markPlate ? `<rect x="${innerX}" y="${y}" width="46" height="24" rx="5" fill="${markPlate}"/>` : ''}<image href="${logoDataUri(geometry.mark)}" x="${innerX + 3}" y="${y + 3}" width="40" height="18" preserveAspectRatio="xMidYMid meet"/>`;
+    }
     y += geometry.height;
   });
   if (device.hardware.length) y += device.hardware.length > 1 ? 14 : 6;
@@ -462,8 +469,8 @@ function renderCard(device, box, theme, themeName) {
     const groupWidth = innerWidth - geometry.padding * 2;
     const groupTop = y;
     const inset = geometry.inset ? `<rect x="${innerX}" y="${groupTop}" width="${innerWidth}" height="${geometry.height - (box.compact ? 8 : 12)}" rx="8" fill="${theme.tile}" fill-opacity=".38" stroke="${theme.line}"/>` : '';
-    const groupName = textElement(group.name.toUpperCase(), groupX, y + (box.compact ? 12 : 14), { fill: device.accent, size: box.compact ? 10 : 11, weight: 750, maxChars: geometry.nameChars, maxLines: 2, lineHeight: box.compact ? 15 : 17 });
-    y += geometry.headerHeight + geometry.padding;
+    const groupName = textElement(group.name.toUpperCase(), groupX, y + geometry.padding + (box.compact ? 12 : 14), { fill: device.accent, size: box.compact ? 10 : 11, weight: 600, maxChars: geometry.nameChars, maxLines: 2, lineHeight: box.compact ? 15 : 17 });
+    y += geometry.padding + geometry.headerHeight;
     const tileGap = geometry.gap;
     const tileWidth = (groupWidth - tileGap * (geometry.columns - 1)) / geometry.columns;
     const services = group.services.map((service, index) => {
@@ -508,13 +515,13 @@ export function renderProject(project) {
   const theme = palettes[project.theme];
   const serviceCount = project.devices.reduce((sum, device) => sum + device.groups.reduce((groupSum, group) => groupSum + group.services.length, 0), 0);
   const titleLines = wrapText(project.title, layout.titleMaxChars, 2);
-  const title = textElement(project.title, layout.margin, 103, { fill: theme.text, size: 68, weight: 800, maxChars: layout.titleMaxChars, maxLines: 2, lineHeight: 74 });
+  const title = textElement(project.title, layout.margin, 103, { fill: theme.text, size: 68, weight: 700, maxChars: layout.titleMaxChars, maxLines: 2, lineHeight: 74 });
   const subtitleY = 136 + (titleLines.length - 1) * 74;
   const subtitle = textElement(project.subtitle, layout.margin, subtitleY, { fill: theme.muted, size: 15, weight: 500, maxChars: Math.max(24, Math.floor((layout.width - layout.margin * 2) / 8)), maxLines: 2, lineHeight: 19 });
   const statsY = layout.oneColumnHeader ? subtitleY + 58 : 70;
   const statStart = layout.oneColumnHeader ? layout.margin : layout.width - layout.margin - 360;
   const statWidth = layout.oneColumnHeader ? (layout.width - layout.margin * 2) / 3 : 120;
-  const stats = [[project.devices.length, 'HOSTS'], [serviceCount, 'SERVICES'], [project.vlans.length, 'VLANS']].map(([value, label], index) => `${textElement(String(value).padStart(2, '0'), statStart + index * statWidth, statsY, { fill: index ? theme.text : theme.teal, size: 44, weight: 750, maxChars: 3 })}${textElement(label, statStart + index * statWidth, statsY + 28, { fill: theme.muted, size: 10, weight: 700, maxChars: 10 })}`).join('');
+  const stats = [[project.devices.length, 'HOSTS'], [serviceCount, 'SERVICES'], [project.vlans.length, 'VLANS']].map(([value, label], index) => `${textElement(String(value).padStart(2, '0'), statStart + index * statWidth, statsY, { fill: index ? theme.text : theme.teal, size: 44, weight: 600, maxChars: 3 })}${textElement(label, statStart + index * statWidth, statsY + 28, { fill: theme.muted, size: 10, weight: 600, maxChars: 10 })}`).join('');
   const networks = project.networks.map(network => renderNetwork(network, layout.networks.find(box => box.id === network.id), theme)).join('');
   const vlans = project.vlans.map(vlan => {
     const box = layout.vlans.find(item => item.id === vlan.id);

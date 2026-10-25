@@ -28,9 +28,10 @@ let inspectorOpen = false;
 let history = [];
 let future = [];
 let zoom = 1;
-let fitMode = 'page';
+let fitMode = 'width';
 let inventoryQuery = '';
 let focusMode = false;
+let inventoryOpen = false;
 let saveTimer;
 let lastStored = '';
 let conflictRaw = '';
@@ -179,6 +180,8 @@ function render() {
   $('.inspector').classList.toggle('open', inspectorOpen);
   $('.workspace').classList.toggle('inspector-open', inspectorOpen);
   $('.workspace').classList.toggle('focus-mode', focusMode);
+  $('.workspace').classList.toggle('drawer-open', inventoryOpen);
+  $('#inventory-toggle').setAttribute('aria-expanded', String(inventoryOpen));
   $('#focus-canvas span').textContent = focusMode ? 'Exit focus' : 'Focus canvas';
   $('#focus-canvas').setAttribute('aria-pressed', String(focusMode));
   $('#undo').disabled = !history.length;
@@ -200,8 +203,9 @@ function fitPreview(mode = fitMode) {
   const svg = $('#preview svg');
   const canvas = $('#canvas');
   if (!svg || !canvas.clientWidth || !canvas.clientHeight) return;
-  const availableWidth = Math.max(100, canvas.clientWidth - 72);
-  const availableHeight = Math.max(100, canvas.clientHeight - 112);
+  const style = getComputedStyle(canvas);
+  const availableWidth = Math.max(100, canvas.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight));
+  const availableHeight = Math.max(100, canvas.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom));
   zoom = Math.min(1, availableWidth / svg.viewBox.baseVal.width, mode === 'page' ? availableHeight / svg.viewBox.baseVal.height : 1);
   applyZoom();
 }
@@ -309,6 +313,7 @@ function groupElement(group) {
 function selectInventoryItem(id) {
   selected = id;
   inspectorOpen = true;
+  inventoryOpen = false;
   render();
 }
 
@@ -605,6 +610,11 @@ addEventListener('keydown', event => {
     render();
     return;
   }
+  if (event.key === 'Escape' && !editing && !document.querySelector('dialog[open]') && inventoryOpen) {
+    inventoryOpen = false;
+    render();
+    return;
+  }
   if (event.key === 'Escape' && !editing && !document.querySelector('dialog[open]') && inspectorOpen) {
     inspectorOpen = false;
     render();
@@ -702,8 +712,10 @@ $('#preview').addEventListener('keydown', event => {
     if (item) { event.preventDefault(); selectDiagramTarget(item); }
   }
 });
-$('#settings').addEventListener('click', () => { focusMode = false; selected = null; inspectorOpen = true; render(); });
-$('#focus-canvas').addEventListener('click', () => { focusMode = !focusMode; render(); });
+$('#settings').addEventListener('click', () => { focusMode = false; inventoryOpen = false; selected = null; inspectorOpen = true; render(); });
+$('#focus-canvas').addEventListener('click', () => { focusMode = !focusMode; inventoryOpen = false; render(); });
+$('#inventory-toggle').addEventListener('click', () => { inventoryOpen = !inventoryOpen; render(); });
+$('#inventory-close').addEventListener('click', () => { inventoryOpen = false; render(); $('#inventory-toggle').focus(); });
 $('#inspector-close').addEventListener('click', () => { inspectorOpen = false; render(); });
 
 $('#inventory-search').addEventListener('input', event => {
