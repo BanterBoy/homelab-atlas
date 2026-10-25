@@ -9,6 +9,15 @@
     "bytes": 672
   },
   {
+    "id": "adguard-home-sync",
+    "label": "AdGuard Home Sync",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "adguard-home-sync.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/adguard-home-sync.svg",
+    "bytes": 8969
+  },
+  {
     "id": "amd",
     "label": "AMD",
     "source": "Homarr Dashboard Icons",
@@ -54,6 +63,15 @@
     "bytes": 1121
   },
   {
+    "id": "byparr",
+    "label": "Byparr",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "byparr.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/byparr.svg",
+    "bytes": 4942
+  },
+  {
     "id": "caddy",
     "label": "Caddy",
     "source": "Homarr Dashboard Icons",
@@ -70,6 +88,15 @@
     "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
     "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/calibre-web.svg",
     "bytes": 1047
+  },
+  {
+    "id": "chromium",
+    "label": "Chromium",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "chromium.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/chromium.svg",
+    "bytes": 1810
   },
   {
     "id": "cloudflare",
@@ -158,6 +185,15 @@
     "bytes": 1020
   },
   {
+    "id": "goaccess-light",
+    "label": "GoAccess",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "goaccess-light.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/goaccess-light.svg",
+    "bytes": 1045
+  },
+  {
     "id": "grafana",
     "label": "Grafana",
     "source": "Homarr Dashboard Icons",
@@ -165,6 +201,15 @@
     "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
     "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/grafana.svg",
     "bytes": 4233
+  },
+  {
+    "id": "hermes-agent",
+    "label": "Hermes Agent",
+    "source": "selfh.st Icons",
+    "upstreamFile": "hermes-agent.svg",
+    "commit": "1d65d45a42e6323b54b8096967b1ea4b65321f97",
+    "url": "https://raw.githubusercontent.com/selfhst/icons/1d65d45a42e6323b54b8096967b1ea4b65321f97/svg/hermes-agent.svg",
+    "bytes": 16242
   },
   {
     "id": "homarr",
@@ -253,6 +298,24 @@
     "bytes": 35988
   },
   {
+    "id": "litellm-light",
+    "label": "LiteLLM",
+    "source": "selfh.st Icons",
+    "upstreamFile": "litellm-light.svg",
+    "commit": "1d65d45a42e6323b54b8096967b1ea4b65321f97",
+    "url": "https://raw.githubusercontent.com/selfhst/icons/1d65d45a42e6323b54b8096967b1ea4b65321f97/svg/litellm-light.svg",
+    "bytes": 1396
+  },
+  {
+    "id": "llama-cpp",
+    "label": "llama.cpp",
+    "source": "ggml-org / llama.cpp",
+    "upstreamFile": "llama1-icon-transparent.svg",
+    "commit": "2cfef4d117d67ab1dec002915b48a15d11ee1973",
+    "url": "https://raw.githubusercontent.com/ggml-org/llama.cpp/2cfef4d117d67ab1dec002915b48a15d11ee1973/media/llama1-icon-transparent.svg",
+    "bytes": 2649
+  },
+  {
     "id": "mariadb",
     "label": "MariaDB",
     "source": "Homarr Dashboard Icons",
@@ -260,6 +323,15 @@
     "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
     "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/mariadb.svg",
     "bytes": 2387
+  },
+  {
+    "id": "matter-light",
+    "label": "Matter",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "matter-light.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/matter-light.svg",
+    "bytes": 534
   },
   {
     "id": "mealie",
@@ -476,6 +548,15 @@
     "bytes": 1196
   },
   {
+    "id": "python",
+    "label": "Python",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "python.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/python.svg",
+    "bytes": 1469
+  },
+  {
     "id": "qbittorrent",
     "label": "qBittorrent",
     "source": "Homarr Dashboard Icons",
@@ -593,6 +674,15 @@
     "bytes": 9104
   },
   {
+    "id": "teslamate",
+    "label": "TeslaMate",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "teslamate.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/teslamate.svg",
+    "bytes": 482
+  },
+  {
     "id": "traefik",
     "label": "Traefik",
     "source": "Homarr Dashboard Icons",
@@ -645,6 +735,15 @@
     "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
     "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/uptime-kuma.svg",
     "bytes": 630
+  },
+  {
+    "id": "valkey",
+    "label": "Valkey",
+    "source": "Homarr Dashboard Icons",
+    "upstreamFile": "valkey.svg",
+    "commit": "320c819da84048d5a3066e2578bfa83be9019fdf",
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/320c819da84048d5a3066e2578bfa83be9019fdf/svg/valkey.svg",
+    "bytes": 573
   },
   {
     "id": "vaultwarden",
