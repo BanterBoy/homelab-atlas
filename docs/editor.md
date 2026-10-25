@@ -12,7 +12,7 @@ Choose **Add device** in the inventory on the left, then pick a template such as
 
 Use **Search inventory** to filter devices by name or role and network nodes by name or kind. It only changes the visible list. Your selection and project stay intact. On a narrow screen, open or close the inventory with the **Inventory** button below the canvas.
 
-Select a network node to edit its name, kind, accent, and logos. **Logo** starts on Auto, which follows the node kind. **Secondary logo** can show an optional backup provider in the same node. Both selectors search the bundled local catalog; choosing Auto or None clears the corresponding explicit choice.
+Select a network node to edit its name, kind, accent, and logos. **Logo** starts on Auto, which follows the node kind. **Secondary logo** can show an optional backup provider in the same node. Both selectors search the bundled local catalog, including 27 major US and European provider marks. Search by provider, ISP region, country, or brand alias. Choosing Auto or None clears the corresponding explicit choice, and selected marks stay embedded in SVG and PNG exports.
 
 Select a device to edit:
 

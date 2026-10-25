@@ -2,6 +2,17 @@
 
 This file lists the notable changes in each Homelab Atlas release.
 
+## [0.4.0] - 2026-10-25
+
+### Added
+
+- Added searchable primary and optional secondary logos for network nodes.
+- Added 27 locally bundled marks for major US and European internet providers, including country and brand aliases.
+
+### Changed
+
+- Saved projects now use schema version 3. Schema-version-1 and schema-version-2 imports upgrade while preserving existing content and manual layouts.
+
 ## [0.3.0] - 2026-10-25
 
 ### Added
@@ -36,3 +47,4 @@ This file lists the notable changes in each Homelab Atlas release.
 [0.1.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.1.0
 [0.2.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.2.0
 [0.3.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.3.0
+[0.4.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.4.0

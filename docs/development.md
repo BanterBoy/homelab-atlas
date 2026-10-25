@@ -29,7 +29,7 @@ npm run build:icons
 npm run check:icons
 docker compose config
 docker compose -f compose.release.yaml config
-python3 scripts/release.py v0.3.0 --output dist
+python3 scripts/release.py v0.4.0 --output dist
 ```
 
 `npm test` checks the logo data, runs the Node tests, and runs the Python tests. Release files go into the ignored `dist/` directory, and the release workflow checks their checksums too.

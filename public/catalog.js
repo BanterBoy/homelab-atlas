@@ -9,6 +9,33 @@ const entries = [
   ['goaccess-light','GoAccess','Observability','#65d8fd'],
   ['adguard-home','AdGuard Home','Network','#68bc71'],['pi-hole','Pi-hole','Network','#96060c'],['nginx-proxy-manager','Nginx Proxy Manager','Network','#2a9d8f'],['nginx','nginx','Network','#009639'],['traefik','Traefik','Network','#24a1c1'],['caddy','Caddy','Network','#22d3ee'],['cloudflare','Cloudflare','Network','#f38020'],['tailscale','Tailscale','Network','#94a3b8'],['wireguard','WireGuard','Network','#88171a'],
   ['adguard-home-sync','AdGuard Home Sync','Network','#68bc71'],
+  ['at-t','AT&T','ISP · US','#009fdb',['att','atandt','AT&T Fiber','United States']],
+  ['verizon','Verizon','ISP · US','#e60000',['fios','United States']],
+  ['kpn','KPN','ISP · Europe','#00a95c',['Netherlands','Dutch']],
+  ['orange','Orange','ISP · Europe','#ff7900',['France','Spain','Poland']],
+  ['telekom','Deutsche Telekom','ISP · Europe','#e20074',['Germany','Magenta','Telekom']],
+  ['vodafone','Vodafone','ISP · Europe','#e60000',['Germany','UK','United Kingdom','Spain','Portugal','Ireland']],
+  ['t-mobile','T-Mobile','ISP · US','#e20074',['tmobile','T-Mobile Home Internet','5G','United States']],
+  ['xfinity','Xfinity','ISP · US','#6c00e8',['Comcast','United States']],
+  ['free-isp','Free','ISP · Europe','#cc0000',['Iliad','Freebox','France']],
+  ['bt','BT','ISP · Europe','#6400AA',['British Telecom','United Kingdom','UK']],
+  ['movistar','Movistar','ISP · Europe','#019DF4',['Spain','Telefonica']],
+  ['o2','O2','ISP · Europe','#0050FF',['United Kingdom','UK','Germany','Telefonica']],
+  ['sky','Sky','ISP · Europe','#0072C9',['United Kingdom','UK','Italy','Ireland']],
+  ['sunrise','Sunrise','ISP · Europe','#DA291C',['Switzerland']],
+  ['telenor','Telenor','ISP · Europe','#00C8FF',['Norway','Sweden','Nordic']],
+  ['ziggo','Ziggo','ISP · Europe','#F48C00',['Netherlands','Dutch']],
+  ['frontier','Frontier','ISP · US','#ff0037',['Frontier Fiber','United States']],
+  ['google-fiber','Google Fiber','ISP · US','#1a73e8',['GFiber','United States']],
+  ['bouygues-telecom','Bouygues Telecom','ISP · Europe','#009dcc',['Bbox','France']],
+  ['tim','TIM','ISP · Europe','#004691',['Telecom Italia','Italy']],
+  ['swisscom','Swisscom','ISP · Europe','#001155',['Switzerland']],
+  ['spectrum','Spectrum','ISP · US','#0073d1',['Charter','Charter Spectrum','United States']],
+  ['cox','Cox','ISP · US','#0072ce',['Cox Communications','United States']],
+  ['starlink','Starlink','ISP · US','#111111',['SpaceX','Satellite','US','Europe','Global']],
+  ['virgin-media','Virgin Media','ISP · Europe','#ED1A37',['United Kingdom','UK','Ireland','Virgin']],
+  ['1and1','1&1','ISP · Europe','#003D8F',['1and1','1und1','Germany']],
+  ['telia','Telia','ISP · Europe','#990ae3',['Sweden','Finland','Norway','Nordic','Lithuania','Estonia']],
   ['postgresql','PostgreSQL','Database','#4169e1'],['redis','Redis','Database','#dc382d'],['mariadb','MariaDB','Database','#c0765a'],['mysql','MySQL','Database','#4479a1'],['mongodb','MongoDB','Database','#47a248'],['minio','MinIO','Storage','#c72c48'],
   ['valkey','Valkey','Database','#123678'],
   ['vaultwarden','Vaultwarden','Security','#175ddc'],['authentik','Authentik','Security','#fd4b2d'],['authelia','Authelia','Security','#3f95d2'],['gitea','Gitea','Development','#609926'],['gitlab','GitLab','Development','#fc6d26'],
@@ -23,8 +50,8 @@ const entries = [
 export const LOGOS = entries.map(([id,label,category,color,aliases = []]) => ({id,label,category,color,aliases}));
 export const LOGO_IDS = new Set(LOGOS.map(x => x.id));
 export const logoById = id => LOGOS.find(x => x.id === id) || LOGOS.find(x => x.id === 'generic');
-const LIGHT_PLATES = new Set(['hermes-agent', 'intel', 'ollama', 'open-webui', 'portainer', 'valkey', 'vaultwarden']);
-const DARK_PLATES = new Set(['amd', 'docmost', 'goaccess-light', 'litellm-light', 'matter-light', 'miniflux', 'tailscale']);
+const LIGHT_PLATES = new Set(['hermes-agent', 'intel', 'ollama', 'open-webui', 'portainer', 'valkey', 'vaultwarden', 'kpn', 'xfinity', 'free-isp', 'bt', 'o2', 'sky', 'bouygues-telecom', 'spectrum', 'starlink', 'virgin-media', '1and1']);
+const DARK_PLATES = new Set(['amd', 'docmost', 'goaccess-light', 'litellm-light', 'matter-light', 'miniflux', 'tailscale', 'frontier', 'tim']);
 
 export function logoDataUri(id) {
   return ICON_DATA[id] || (id === 'restic' ? ICON_DATA.backup : ICON_DATA.generic);

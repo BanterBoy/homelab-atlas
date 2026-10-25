@@ -534,6 +534,7 @@ function openLogoDialog(deviceId, groupId, opener) {
   logoDialogState = { mode: 'service', deviceId, groupId, opener };
   logoSelection = new Set();
   $('#logo-search').value = '';
+  $('#logo-search').placeholder = 'Jellyfin, backup, network…';
   $('#logo-dialog-eyebrow').textContent = 'Service catalog';
   $('#logo-dialog-title').textContent = 'Add services';
   for (const id of ['selection-count', 'add-custom', 'add-selected']) $(`#${id}`).hidden = false;
@@ -546,6 +547,7 @@ function openNetworkLogoDialog(networkId, field, opener) {
   logoDialogState = { mode: 'network', networkId, field, opener };
   logoSelection = new Set();
   $('#logo-search').value = '';
+  $('#logo-search').placeholder = 'Provider, country, or network…';
   $('#logo-dialog-eyebrow').textContent = 'Network node';
   $('#logo-dialog-title').textContent = field === 'icon' ? 'Choose network logo' : 'Choose secondary logo';
   for (const id of ['selection-count', 'add-custom', 'add-selected']) $(`#${id}`).hidden = true;
@@ -557,7 +559,9 @@ function openNetworkLogoDialog(networkId, field, opener) {
 function renderLogos() {
   const query = $('#logo-search').value.trim();
   const networkMode = logoDialogState?.mode === 'network';
-  const available = networkMode ? LOGOS : LOGOS.filter(logo => !['server', 'router', 'switch', 'wifi', 'internet'].includes(logo.id));
+  const available = networkMode
+    ? [...LOGOS.filter(logo => logo.category.startsWith('ISP ·')).sort((a, b) => a.label.localeCompare(b.label)), ...LOGOS.filter(logo => !logo.category.startsWith('ISP ·'))]
+    : LOGOS.filter(logo => !['server', 'router', 'switch', 'wifi', 'internet'].includes(logo.id));
   const matches = searchLogos(available, query);
   const grid = $('#logo-grid');
   if (networkMode) {
@@ -611,11 +615,13 @@ $('#add-custom').addEventListener('click', () => {
   })) $('#logo-dialog').close();
 });
 $('#logo-dialog').addEventListener('close', () => {
-  const opener = logoDialogState?.opener;
+  const state = logoDialogState;
+  const opener = state?.opener;
   logoDialogState = null;
   logoSelection = new Set();
   $('#logo-search').value = '';
   if (opener?.isConnected) opener.focus();
+  else if (state?.mode === 'network' && selected === state.networkId) $(`#inspector-content [data-network-logo="${state.field}"]`)?.focus();
 });
 
 $('#add-network').addEventListener('click', () => {

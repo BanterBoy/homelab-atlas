@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { LOGOS, logoDataUri, logoPlate, networkLogoId, searchLogos } from '../public/catalog.js';
 import { ICON_DATA } from '../public/icon-data.js';
 import {
@@ -36,6 +37,19 @@ test('bundled catalog uses real embedded assets and safe generic fallbacks', () 
   assert.notEqual(logoDataUri('jellyfin'), logoDataUri('plex'));
 });
 
+test('provider catalog has 27 distinct embedded and attributed assets', () => {
+  const providers = LOGOS.filter(logo => logo.category.startsWith('ISP ·'));
+  const sources = JSON.parse(readFileSync(new URL('../public/licenses/logo-sources.json', import.meta.url)));
+  assert.equal(providers.length, 27);
+  assert.equal(providers.filter(logo => logo.category === 'ISP · US').length, 9);
+  assert.equal(providers.filter(logo => logo.category === 'ISP · Europe').length, 18);
+  for (const { id } of providers) {
+    assert.ok(ICON_DATA[id], `missing embedded provider asset: ${id}`);
+    assert.notEqual(ICON_DATA[id], ICON_DATA.generic);
+    assert.ok(sources.some(source => source.id === id), `missing provider attribution: ${id}`);
+  }
+});
+
 test('IDs work without crypto.randomUUID', () => {
   const descriptor = Object.getOwnPropertyDescriptor(globalThis.crypto, 'randomUUID');
   Object.defineProperty(globalThis.crypto, 'randomUUID', { value: undefined, configurable: true });
@@ -50,8 +64,8 @@ test('IDs work without crypto.randomUUID', () => {
 });
 
 test('logo plates are limited to monochrome marks that need contrast', () => {
-  for (const id of ['intel', 'ollama', 'open-webui', 'portainer', 'vaultwarden']) assert.equal(logoPlate(id, 'navy'), '#f8fafc');
-  for (const id of ['amd', 'docmost', 'miniflux', 'tailscale']) assert.equal(logoPlate(id, 'light'), '#111827');
+  for (const id of ['intel', 'ollama', 'open-webui', 'portainer', 'vaultwarden', 'kpn', 'xfinity', 'free-isp', 'bt', 'o2', 'sky', 'bouygues-telecom', 'spectrum', 'starlink', 'virgin-media', '1and1']) assert.equal(logoPlate(id, 'navy'), '#f8fafc');
+  for (const id of ['amd', 'docmost', 'miniflux', 'tailscale', 'frontier', 'tim']) assert.equal(logoPlate(id, 'light'), '#111827');
   assert.equal(logoPlate('jellyfin', 'navy'), null);
   assert.equal(logoPlate('amd', 'navy'), null);
   const project = sampleProject();
@@ -159,25 +173,26 @@ test('network logo fallback and normalized alias search are deterministic', () =
   }
   assert.equal(networkLogoId({ kind: 'Router', icon: 'cloudflare' }), 'cloudflare');
   assert.deepEqual(searchLogos(LOGOS, 'qbittorrent').map(logo => logo.id), ['qbittorrent']);
-  const providers = [
-    { id: 'att', label: 'AT&T', category: 'ISP · US', aliases: [] },
-    { id: 'tmobile', label: 'T-Mobile', category: 'ISP · US', aliases: ['Télécom Mobile'] },
-  ];
-  assert.deepEqual(searchLogos(providers, 'att').map(logo => logo.id), ['att']);
-  assert.deepEqual(searchLogos(providers, 'tmobile').map(logo => logo.id), ['tmobile']);
-  assert.deepEqual(searchLogos(providers, 'telecom').map(logo => logo.id), ['tmobile']);
+  const providerIds = query => searchLogos(LOGOS.filter(logo => logo.category.startsWith('ISP ·')), query).map(logo => logo.id).sort();
+  assert.deepEqual(providerIds('att'), ['at-t']);
+  assert.deepEqual(providerIds('tmobile'), ['t-mobile']);
+  assert.deepEqual(providerIds('Comcast'), ['xfinity']);
+  assert.deepEqual(providerIds('UK'), ['bt', 'o2', 'sky', 'virgin-media', 'vodafone']);
+  assert.deepEqual(providerIds('Germany'), ['1and1', 'o2', 'telekom', 'vodafone']);
+  assert.deepEqual(providerIds('France'), ['bouygues-telecom', 'free-isp', 'orange']);
+  assert.deepEqual(providerIds('Telefonica'), ['movistar', 'o2']);
 });
 
 test('network SVG embeds selected primary and secondary marks without touching text', () => {
   const project = sampleProject();
-  project.networks[0].icon = 'tailscale';
-  project.networks[0].secondaryIcon = 'cloudflare';
+  project.networks[0].icon = 'at-t';
+  project.networks[0].secondaryIcon = 't-mobile';
   for (const theme of ['navy', 'light', 'midnight']) {
     project.theme = theme;
     const box = layoutProject(project).networks[0];
     const svg = renderProject(project);
-    assert.ok(svg.includes(`<image href="${logoDataUri('tailscale')}" x="${box.x + 24}" y="${box.y + 18}" width="26" height="26"`));
-    assert.ok(svg.includes(`<image href="${logoDataUri('cloudflare')}" x="${box.x + 24}" y="${box.y + 52}" width="26" height="26"`));
+    assert.ok(svg.includes(`<image href="${logoDataUri('at-t')}" x="${box.x + 24}" y="${box.y + 18}" width="26" height="26"`));
+    assert.ok(svg.includes(`<image href="${logoDataUri('t-mobile')}" x="${box.x + 24}" y="${box.y + 52}" width="26" height="26"`));
     assert.ok(svg.includes(`<text x="${box.x + 72}" y="${box.y + 37}"`));
     assert.ok(box.x + 24 + 26 < box.x + 72);
     assert.ok(box.y + 52 + 26 < box.y + box.h);

@@ -8,6 +8,15 @@ Use **Add network node**, or pick Router, Switch, Wi-Fi, or Internet from **Add 
 
 An optional **Secondary logo** can represent a backup provider in the same node. Atlas stacks the two marks in the network card and keeps both in SVG and PNG exports. Choose **None** to remove the secondary mark. These choices label the diagram only; Atlas does not contact or inspect either provider.
 
+The provider picker includes these locally bundled marks:
+
+| Region | Major providers included |
+|---|---|
+| US | AT&T, Verizon, T-Mobile, Xfinity, Frontier, Google Fiber, Spectrum, Cox, Starlink |
+| Europe | KPN, Orange, Deutsche Telekom, Vodafone, Free, BT, Movistar, O2, Sky, Sunrise, Telenor, Ziggo, Bouygues Telecom, TIM, Swisscom, Virgin Media, 1&1, Telia |
+
+Search by provider name, `ISP`, `US`, `Europe`, country, or a known brand alias such as Comcast or Telefónica. The marks are bundled with Atlas and remain available offline.
+
 ## VLAN chips and device labels
 
 Open **Settings** to add, rename, recolor, or remove VLAN chips. Atlas shows them as a reference row in the diagram.
