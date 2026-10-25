@@ -1,0 +1,14 @@
+.git
+.agent
+.agents
+.codex
+.github
+tests
+scripts
+docs
+node_modules
+*.md
+compose.yaml
+package-lock.json
+__pycache__
+.DS_Store

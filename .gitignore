@@ -1,8 +1,9 @@
-.agent/
 node_modules/
-.DS_Store
+.agent/
+.env
 __pycache__/
 *.pyc
+.DS_Store
+coverage/
 test-results/
 playwright-report/
-.env

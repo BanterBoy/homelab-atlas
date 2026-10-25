@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {sampleProject,parseProject,validateProject,renderProject,layoutProject,removeDevice,removeNetwork,LIMITS} from '../public/model.js';
+import {LOGOS} from '../public/catalog.js';
+
+test('sample validates and renders deterministically in dark and light themes',()=>{const p=sampleProject();assert.equal(validateProject(p),true);assert.equal(renderProject(p),renderProject(p));assert.match(renderProject(p),/fill="#07131f"/);p.theme='light';assert.match(renderProject(p),/fill="#edf4f6"/)});
+test('malicious text is escaped in SVG',()=>{const p=sampleProject();p.title='<script>alert(1)</script>&"';const svg=renderProject(p);assert.doesNotMatch(svg,/<script>/);assert.match(svg,/&lt;script&gt;/);assert.match(svg,/&amp;/)});
+test('bad and oversized imports do not validate',()=>{assert.throws(()=>parseProject('{no'),/valid JSON/);assert.throws(()=>parseProject(' '.repeat(LIMITS.bytes+1)),/larger/);const p=sampleProject();p.schemaVersion=9;assert.throws(()=>parseProject(JSON.stringify(p)),/schema/);p.schemaVersion=1;p.devices[0].icon='data:image/svg+xml,<script>';assert.throws(()=>validateProject(p),/Unknown logo/);const q=sampleProject();q.devices[0].html='<img onerror=alert(1)>';assert.throws(()=>validateProject(q),/structure/)});
+test('catalog is useful and revisions are bounded',()=>{assert.ok(LOGOS.length>=60);const p=sampleProject();p.revision='1';assert.throws(()=>validateProject(p),/revision/)});
+test('IDs and connection references are enforced',()=>{const p=sampleProject();p.devices[1].id=p.devices[0].id;assert.throws(()=>validateProject(p),/duplicate ID/);const q=sampleProject();q.connections[0].to='missing';assert.throws(()=>validateProject(q),/invalid endpoint/)});
+test('deleting endpoints cleans dangling connections',()=>{const p=sampleProject();removeDevice(p,'dev-storage');assert.ok(p.connections.every(x=>x.from!=='dev-storage'&&x.to!=='dev-storage'));removeNetwork(p,'net-switch');assert.ok(p.connections.every(x=>x.from!=='net-switch'&&x.to!=='net-switch'));assert.equal(validateProject(p),true)});
+test('layout contains long names and large service sets',()=>{const p=sampleProject(),d=p.devices[0];d.name='x'.repeat(120);d.groups[0].services=Array.from({length:120},(_,i)=>({id:`bulk-${i}`,logo:'generic',name:'service '.repeat(12),count:99}));const l=layoutProject(p),c=l.cards[0];assert.ok(c.y+c.h<l.height);assert.ok(c.x+c.w<=l.width);assert.doesNotMatch(renderProject(p),/>service service service service/)});
