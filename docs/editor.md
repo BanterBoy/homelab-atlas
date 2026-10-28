@@ -22,7 +22,17 @@ Select a device to edit:
 - hardware facts, one per line, optionally written as `Label: value`
 - named service groups and their services
 
-The duplicate button copies a device and gives the copy new internal IDs. Use the arrow buttons to reorder devices or services. Deleting a device or network node also deletes its connections.
+The duplicate button copies a device and gives the copy new internal IDs without copying discovery bindings. Use the arrow buttons to reorder devices or services. Deleting a device or network node also deletes its connections. Deleting a device, group, or service removes discovery bindings that point to it.
+
+## Discover Docker services
+
+Choose **Discover Docker** in the inventory rail to review an optional collector scan or import a sanitized snapshot. Opening the dialog never scans. Choose **Scan** explicitly, or use **Import snapshot**.
+
+Choose a destination device and service group. Every finding starts unchecked. For each selected finding, choose **Add new service** or link it to a service already on the destination device. A unique exact name match may be suggested, but it is still unchecked. Already-linked findings are disabled, and stopped containers are clearly marked.
+
+Linking keeps all manual service details and layout unchanged. Additions use the discovered name, matching local catalog logo, and replica count. Atlas never adds image names or ports to the diagram. It does not delete services missing from a later scan.
+
+The review summary shows additions, links, new cards/groups, and card-height changes. **Apply selected** is disabled for an empty or invalid review. One application creates one undo step. Canceling, pressing `Escape`, scanning, or importing without applying does not change the project. See [Docker discovery](/discovery) for collector setup and security boundaries.
 
 ## Add service tiles
 

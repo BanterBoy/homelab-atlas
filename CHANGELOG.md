@@ -2,6 +2,19 @@
 
 This file lists the notable changes in each Homelab Atlas release.
 
+## [0.6.0] - 2026-10-27
+
+### Added
+
+- Added explicit Docker discovery through a restricted, authenticated collector or sanitized snapshot import.
+- Added a review dialog for adding services or linking findings to existing services, with nothing selected initially and one-step undo.
+- Added a Go server with embedded editor assets, discovery source proxying, and `healthcheck` and `collect` commands.
+
+### Changed
+
+- Saved projects now use schema version 5 with discovery bindings; schema versions 1 through 4 upgrade without changing existing inventory or manual layout.
+- Container images now use a static Go binary and an optional isolated `discovery` Compose profile.
+
 ## [0.5.0] - 2026-10-25
 
 ### Added
@@ -61,3 +74,4 @@ This file lists the notable changes in each Homelab Atlas release.
 [0.3.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.3.0
 [0.4.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.4.0
 [0.5.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.5.0
+[0.6.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.6.0

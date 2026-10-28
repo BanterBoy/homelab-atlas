@@ -6,13 +6,15 @@ Atlas runs on your own machine, but you still need to think about where you expo
 
 The editor has:
 
-- no accounts or authentication
+- no accounts or editor login
 - no backend project store or database
 - no telemetry, analytics, external fonts, or AI calls
-- no network scanner, credentials, or Docker socket access
+- no automatic scans or background polling
 - a local bundled logo catalog
 
-The Python process only serves the app files. Your project stays in the browser's `localStorage`. Atlas creates JSON or image files only when you choose to download them.
+The Go editor process serves embedded app files and, when configured, proxies fixed discovery-source requests. Your project stays in the browser's `localStorage`. Atlas creates JSON or image files only when you choose to download them. Collector and API tokens stay in server environment variables; an API token entered in the UI is held in memory only.
+
+The normal editor container has no Docker socket. Optional Docker discovery runs as a separate collector with a read-only socket mount and no published port. It calls only Docker's version and container-list endpoints after you choose **Scan**. The returned snapshot excludes container IDs, environment variables, mounts, commands, logs, arbitrary labels, credentials, and backend URLs. See [Docker discovery](/discovery).
 
 ## Documentation is separate
 
@@ -20,7 +22,7 @@ This GitHub Pages site only hosts the documentation. It does not run the editor 
 
 ## Where to run it {#deployment-boundary}
 
-Run the app on localhost or a LAN you trust. Atlas has no login screen, user roles, built-in TLS, or authorization layer. Do not put it directly on the public internet, and never mount the Docker socket into it.
+Run the app on localhost or a LAN you trust. Atlas has no login screen, user roles, or built-in TLS. Its optional bearer token protects only discovery API calls; it is not an account system or general editor access control. Do not put Atlas directly on the public internet, and never mount the Docker socket into the editor service.
 
 If you bind Compose to `0.0.0.0`, anyone who can reach port 8080 can open the editor. Each browser still has its own project storage, but the app itself has no authentication. Keep the default localhost binding unless you need access from a trusted LAN.
 
@@ -32,5 +34,6 @@ Atlas only sees what you type or import. It does not scan for missing details, a
 - device roles or hardware details
 - VLAN and relationship labels
 - service names that reveal sensitive capabilities
+- Docker image, project, service, and container names in discovery snapshots
 
 The documentation screenshots use a fictional sample. See [sharing and backup](/sharing) for details about each file format.

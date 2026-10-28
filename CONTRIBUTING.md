@@ -17,7 +17,10 @@ Run the checks relevant to your change:
 
 ```sh
 npm test
+go test -race ./...
+go vet ./...
 docker compose config
+npm --prefix docs run build
 npm --prefix docs ci
 npm --prefix docs run build
 ```
@@ -30,3 +33,5 @@ npm run check:icons
 ```
 
 Generated `public/icon-data.js` must match the reviewed SVG files. Do not commit `docs/.vitepress/cache/` or `docs/.vitepress/dist/`.
+
+The runtime uses the Go standard library only. Discovery changes must keep the editor process away from the Docker socket, keep collector requests read-only and bounded, and use fictional test fixtures.

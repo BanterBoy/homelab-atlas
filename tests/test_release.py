@@ -15,9 +15,13 @@ class ReleaseTests(unittest.TestCase):
         (root / "public/licenses").mkdir(parents=True)
         files = {
             "package.json": json.dumps({"version": version}),
-            "server.py": "print('atlas')\n",
-            "Dockerfile": "FROM python:3.13-alpine\n",
-            "compose.release.yaml": "services:\n  atlas:\n    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.1.0}\n",
+            "go.mod": "module example.invalid/atlas\n\ngo 1.26\n",
+            "main.go": "package main\nfunc main() {}\n",
+            "server.go": "package main\n",
+            "docker.go": "package main\n",
+            "discovery.go": "package main\n",
+            "Dockerfile": "FROM golang:1.26-alpine\n",
+            "compose.release.yaml": "services:\n  atlas:\n    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.1.0}\n  collector:\n    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.1.0}\n",
             "README.md": "# Atlas\n",
             "LICENSE": "MIT\n",
             "THIRD_PARTY_NOTICES.md": "Notices\n",
@@ -45,6 +49,8 @@ class ReleaseTests(unittest.TestCase):
                 names = set(bundle.namelist())
             self.assertIn("homelab-atlas-0.1.0/public/index.html", names)
             self.assertIn("homelab-atlas-0.1.0/public/licenses/logo.txt", names)
+            self.assertIn("homelab-atlas-0.1.0/go.mod", names)
+            self.assertIn("homelab-atlas-0.1.0/docker.go", names)
             self.assertNotIn("homelab-atlas-0.1.0/.agent/private.json", names)
             self.assertNotIn("homelab-atlas-0.1.0/docs/screenshot.png", names)
 
@@ -68,9 +74,9 @@ class ReleaseTests(unittest.TestCase):
             root = Path(temporary)
             self.fixture(root)
             (root / "compose.release.yaml").write_text(
-                "services:\n  atlas:\n    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.2.0}\n"
+                "services:\n  atlas:\n    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.2.0}\n  collector:\n    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.2.0}\n"
             )
-            with self.assertRaisesRegex(ValueError, "compose.release.yaml image"):
+            with self.assertRaisesRegex(ValueError, "editor and collector images"):
                 release.build(root, "v0.1.0", root / "dist")
 
     def test_symlink_is_rejected(self):

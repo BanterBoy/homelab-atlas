@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "revision": 1,
   "title": "Home Lab",
   "subtitle": "Private infrastructure · Local services · Built to last",
@@ -11,6 +11,9 @@
     "cards": []
   },
   "customLogos": [],
+  "discovery": {
+    "bindings": []
+  },
   "networks": [
     {
       "id": "net-internet",

@@ -1,6 +1,6 @@
 # Development
 
-The app itself uses browser JavaScript and Python's standard library, with no runtime packages to install. Node.js is used for tests, building the logo data, and this documentation site.
+The app uses browser JavaScript and the Go standard library, with no runtime packages to install. Node.js is used for tests, building logo data, and this documentation site. Python is retained for deterministic release packaging tests.
 
 ## Source layout
 
@@ -12,28 +12,36 @@ The app itself uses browser JavaScript and Python's standard library, with no ru
 | `public/state.js` | State, conflict, selection, and PNG-size helpers |
 | `public/catalog.js` | Logo metadata and lookup helpers |
 | `public/custom-logos.js` | Uploaded PNG validation and browser normalization |
+| `public/discovery.js` | Snapshot validation, matching, and atomic merge planning |
 | `public/logos/` | Included SVG logo files |
 | `public/licenses/` | Logo sources and upstream licenses |
-| `server.py` | Restricted static server and `/healthz` endpoint |
+| `main.go` | Embedded assets and the server, `healthcheck`, and `collect` commands |
+| `server.go` | Restricted static server, discovery API, and collector HTTP handler |
+| `docker.go` | Bounded read-only Docker client and sanitized grouping |
+| `discovery.go` | Discovery snapshot and configured-source validation |
 | `scripts/` | Repeatable icon and release artifact tools |
-| `tests/` | Node model/state tests and Python server/release tests |
+| `tests/` | Node model/discovery tests and Python release tests |
 | `docs/` | VitePress documentation and sample files |
 | `compose.release.yaml` | Docker Compose file for the published GHCR image |
 
 ## Checks
 
-Use Node.js 20 or newer for the app tools and Python 3.10 or newer for the server tests:
+Use Go 1.26, Node.js 20 or newer, and Python 3.10 or newer:
 
 ```sh
 npm test
+go test -race ./...
+go vet ./...
 npm run build:icons
 npm run check:icons
 docker compose config
 docker compose -f compose.release.yaml config
-python3 scripts/release.py v0.5.0 --output dist
+python3 scripts/release.py v0.6.0 --output dist
 ```
 
-`npm test` checks the logo data, runs the Node tests, and runs the Python tests. Release files go into the ignored `dist/` directory, and the release workflow checks their checksums too.
+`npm test` checks logo data, runs the Node tests, runs `go test ./...`, and runs the Python release tests. Release files go into the ignored `dist/` directory, and the release workflow checks their checksums too.
+
+Docker and discovery tests use fictional fixtures. The collector must keep its fixed read-only endpoint set, response bounds, timeout, redirect rejection, and secret-safe errors. The editor server must never mount the Docker socket or accept a browser-supplied target URL.
 
 ## Documentation
 

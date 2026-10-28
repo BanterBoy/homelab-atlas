@@ -1,7 +1,7 @@
 import { LOGO_IDS, logoDataUri, logoPlate, networkLogoId } from './catalog.js';
 import { validateCustomLogos } from './custom-logos.js';
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 export const THEMES = ['navy', 'light', 'midnight'];
 export const DENSITIES = ['comfortable', 'compact'];
 export const LIMITS = {
@@ -13,6 +13,7 @@ export const LIMITS = {
   connections: 160,
   text: 120,
   hardware: 12,
+  bindings: 1600,
 };
 
 const ID_RE = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/;
@@ -38,7 +39,7 @@ function services(prefix, items) {
 
 export function sampleProject() {
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     revision: 1,
     title: 'Home Lab',
     subtitle: 'Private infrastructure · Local services · Built to last',
@@ -47,6 +48,7 @@ export function sampleProject() {
     density: 'comfortable',
     layout: { mode: 'auto', cards: [] },
     customLogos: [],
+    discovery: { bindings: [] },
     networks: [
       { id: 'net-internet', name: 'Internet', kind: 'Internet', accent: '#48bfe3', icon: '', secondaryIcon: '' },
       { id: 'net-router', name: 'Core Router', kind: 'Router', accent: '#55d6c9', icon: '', secondaryIcon: '' },
@@ -113,14 +115,15 @@ export function parseProject(text) {
   if (new TextEncoder().encode(text).length > LIMITS.bytes) throw new Error('File is larger than 2 MB.');
   let data;
   try { data = JSON.parse(text); } catch { throw new Error('This file is not valid JSON.'); }
-  if ([1, 2, 3].includes(data?.schemaVersion)) {
+  if ([1, 2, 3, 4].includes(data?.schemaVersion)) {
     const version = data.schemaVersion;
     validateProjectVersion(data, version);
     const migrated = structuredClone(data);
-    migrated.schemaVersion = 4;
+    migrated.schemaVersion = 5;
     if (version === 1) migrated.layout = { mode: 'auto', cards: [] };
     if (version < 3) migrated.networks = migrated.networks.map(network => ({ ...network, icon: '', secondaryIcon: '' }));
-    migrated.customLogos = [];
+    if (version < 4) migrated.customLogos = [];
+    migrated.discovery = { bindings: [] };
     validateProject(migrated);
     return migrated;
   }
@@ -141,7 +144,7 @@ function validateProjectVersion(project, version) {
     if (!object || typeof object !== 'object' || Array.isArray(object) || Object.keys(object).some(key => !allowed.includes(key))) fail(`${label} has an invalid structure.`);
   };
   if (!project || typeof project !== 'object' || Array.isArray(project)) fail('Project must be an object.');
-  const keys = ['schemaVersion', 'revision', 'title', 'subtitle', 'theme', 'columns', 'density', ...(version >= 2 ? ['layout'] : []), ...(version >= 4 ? ['customLogos'] : []), 'networks', 'vlans', 'devices', 'connections'];
+  const keys = ['schemaVersion', 'revision', 'title', 'subtitle', 'theme', 'columns', 'density', ...(version >= 2 ? ['layout'] : []), ...(version >= 4 ? ['customLogos'] : []), ...(version >= 5 ? ['discovery'] : []), 'networks', 'vlans', 'devices', 'connections'];
   exact(project, keys, 'Project');
   if (project.schemaVersion !== version) fail(`Unsupported schema version: ${project.schemaVersion ?? 'missing'}.`);
   string(project.title, 'Title');
@@ -211,6 +214,20 @@ function validateProjectVersion(project, version) {
     }
   }
   if (serviceCount > LIMITS.services || groupCount > LIMITS.groups) fail('Project contains too many services or groups.');
+  if (version >= 5) {
+    exact(project.discovery, ['bindings'], 'Discovery');
+    if (!Array.isArray(project.discovery.bindings) || project.discovery.bindings.length > LIMITS.bindings) fail('Invalid or excessive discovery bindings.');
+    const targets = new Map(project.devices.flatMap(device => device.groups.flatMap(group => group.services.map(service => [service.id, device.id]))));
+    const bindings = new Set();
+    for (const binding of project.discovery.bindings) {
+      exact(binding, ['sourceId', 'key', 'deviceId', 'serviceId'], 'Discovery binding');
+      if (!ID_RE.test(binding.sourceId) || !/^(?:compose|container):[0-9a-f]{64}$/.test(binding.key)) fail('Discovery binding has an invalid source or key.');
+      const identity = `${binding.sourceId}\0${binding.key}`;
+      if (bindings.has(identity)) fail('Discovery binding source and key must be unique.');
+      bindings.add(identity);
+      if (targets.get(binding.serviceId) !== binding.deviceId) fail('Discovery binding has an invalid service target.');
+    }
+  }
   const endpoints = new Set([...project.networks, ...project.devices].map(item => item.id));
   for (const connection of project.connections) {
     exact(connection, ['id', 'from', 'to', 'label'], 'Connection');
@@ -224,6 +241,22 @@ export function removeDevice(project, id) {
   project.devices = project.devices.filter(device => device.id !== id);
   project.connections = project.connections.filter(connection => connection.from !== id && connection.to !== id);
   project.layout.cards = project.layout.cards.filter(card => card.id !== id);
+  project.discovery.bindings = project.discovery.bindings.filter(binding => binding.deviceId !== id);
+}
+
+export function removeGroup(project, deviceId, groupId) {
+  const device = project.devices.find(item => item.id === deviceId);
+  if (!device) return;
+  const removed = new Set(device.groups.find(group => group.id === groupId)?.services.map(service => service.id) || []);
+  device.groups = device.groups.filter(group => group.id !== groupId);
+  project.discovery.bindings = project.discovery.bindings.filter(binding => !removed.has(binding.serviceId));
+}
+
+export function removeService(project, deviceId, groupId, serviceId) {
+  const group = project.devices.find(item => item.id === deviceId)?.groups.find(item => item.id === groupId);
+  if (!group) return;
+  group.services = group.services.filter(service => service.id !== serviceId);
+  project.discovery.bindings = project.discovery.bindings.filter(binding => binding.serviceId !== serviceId);
 }
 
 export function removeNetwork(project, id) {

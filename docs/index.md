@@ -6,7 +6,7 @@ titleTemplate: false
 hero:
   name: Homelab Atlas
   text: Make a diagram of your homelab.
-  tagline: Add your machines and apps, pick the logos, and export a PNG or SVG. Atlas runs in Docker and saves the project in your browser.
+  tagline: Add your machines and apps, optionally review Docker findings, and export a PNG or SVG. Atlas saves the project in your browser.
   image:
     src: /atlas-mark.svg
     alt: Homelab Atlas mark with three stepped teal strokes
@@ -25,7 +25,9 @@ features:
   - title: Add your gear
     details: Add servers, network devices, hardware notes, service groups, VLAN labels, and connections.
   - title: Run it at home
-    details: Atlas runs on your own machine. There are no accounts, telemetry, AI calls, or network scans.
+    details: Atlas runs on your own machine. There are no accounts, telemetry, AI calls, automatic scans, or background polling.
+  - title: Review Docker services
+    details: An optional isolated collector returns sanitized findings. Nothing is selected or added automatically.
   - title: Save and share
     details: Save JSON when you want an editable backup, or export an SVG or PNG when you want an image.
 ---

@@ -10,3 +10,6 @@ coverage/
 test-results/
 playwright-report/
 /dist/
+/atlas
+/homelab-atlas
+*.test

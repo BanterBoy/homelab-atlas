@@ -28,6 +28,7 @@ export default defineConfig({
         text: 'Start here',
         items: [
           { text: 'Getting started', link: '/getting-started' },
+          { text: 'Docker discovery', link: '/discovery' },
           { text: 'Privacy and deployment', link: '/privacy' },
         ],
       },
@@ -51,6 +52,7 @@ export default defineConfig({
           { text: 'Troubleshooting', link: '/troubleshooting' },
           { text: 'Project format', link: '/project-format' },
           { text: 'Releases', link: '/releases/' },
+          { text: 'v0.6.0', link: '/releases/v0.6.0' },
           { text: 'v0.5.0', link: '/releases/v0.5.0' },
           { text: 'v0.4.0', link: '/releases/v0.4.0' },
           { text: 'v0.3.0', link: '/releases/v0.3.0' },

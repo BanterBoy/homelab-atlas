@@ -1,12 +1,12 @@
 # Project format
 
-**Save project** downloads schema-version-4 JSON. Atlas 0.5 and newer can open it. Schema versions 1 through 3 still import after strict validation. Version 1 gains automatic layout, versions 1 and 2 gain empty network-logo fields, and version 3 keeps its network choices. All gain an empty `customLogos` array without changing inventory, manual rectangles, or revision. Older Atlas versions cannot open schema version 4.
+**Save project** downloads schema-version-5 JSON. Atlas 0.6 and newer can open it. Schema versions 1 through 4 still import after strict validation. Version 1 gains automatic layout, versions 1 and 2 gain empty network-logo fields, and versions 1 through 3 gain an empty `customLogos` array. Every older version gains empty discovery bindings without changing inventory, uploaded logos, manual rectangles, or revision. Older Atlas versions cannot open schema version 5.
 
 ## Top-level fields
 
 | Field | Type | Meaning |
 |---|---|---|
-| `schemaVersion` | integer | Must be `4` |
+| `schemaVersion` | integer | Must be `5` |
 | `revision` | integer | Browser conflict/change revision, from 0 through 1,000,000,000 |
 | `title`, `subtitle` | string | Diagram heading text, at most 120 characters each |
 | `theme` | string | `navy`, `light`, or `midnight` |
@@ -14,6 +14,7 @@
 | `density` | string | `comfortable` or `compact` |
 | `layout` | object | Device-card layout mode and saved rectangles |
 | `customLogos` | array | Uploaded PNG assets stored with the project |
+| `discovery` | object | Stable Docker finding-to-service bindings only |
 | `networks` | array | Network node records |
 | `vlans` | array | VLAN chip records |
 | `devices` | array | Device cards, hardware facts, groups, and services |
@@ -32,10 +33,14 @@
 | Layout | `mode`, `cards` |
 | Layout card | `id`, `x`, `y`, `w`, `h` |
 | Custom logo | `id`, `label`, `dataUrl`, `background` |
+| Discovery | `bindings` |
+| Discovery binding | `sourceId`, `key`, `deviceId`, `serviceId` |
 
 Colors use six-digit hexadecimal values such as `#55d6c9`. A device `icon`, service `logo`, or nonempty network logo field must exist in the bundled catalog or `customLogos`. An empty network `icon` selects the automatic kind-based mark; an empty `secondaryIcon` means no secondary mark. A service `count` must be an integer from 1 through 99.
 
 Custom logo IDs start with `custom-` and use the same safe ASCII ID characters, with a total limit of 64 characters. Labels are trimmed, nonempty text up to 120 characters. `background` is `none`, `light`, or `dark`. `dataUrl` is a canonical `data:image/png;base64,...` value. Raw SVG, remote URLs, blob URLs, extra fields, duplicates, and IDs colliding with catalog or project records are rejected.
+
+`discovery.bindings` maps one stable finding identity to one existing service. `sourceId` is a safe ID of at most 64 characters. `key` is `compose:` or `container:` followed by a 64-character lowercase SHA-256 digest. Each `(sourceId, key)` pair is unique. `serviceId` must belong to `deviceId`. Raw inventories, scan times, image names, ports, collector URLs, and tokens are never saved in a project.
 
 ## IDs and references
 
@@ -71,6 +76,7 @@ Coordinates are integer diagram units relative to the upper-left of the device r
 | Original upload | 2,000,000 bytes; 4096px per side; 16,000,000 pixels |
 | Stored custom PNG | 512px per side; 200,000 data-URL characters |
 | Custom data URLs, total | 1,200,000 characters |
+| Discovery bindings | 1,600 |
 
 The group limit applies to each device array and to the whole project. Each object only accepts the keys listed above. Extra fields are rejected rather than preserved.
 
@@ -78,7 +84,7 @@ The group limit applies to each device array and to the whole project. Each obje
 
 ```json
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "revision": 1,
   "title": "Small Lab",
   "subtitle": "Fictional example",
@@ -90,6 +96,9 @@ The group limit applies to each device array and to the whole project. Each obje
     "cards": []
   },
   "customLogos": [],
+  "discovery": {
+    "bindings": []
+  },
   "networks": [],
   "vlans": [],
   "devices": [],

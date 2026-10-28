@@ -14,7 +14,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 TAG_RE = re.compile(r"^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 FILES = (
-    "server.py",
+    "go.mod",
+    "main.go",
+    "server.go",
+    "docker.go",
+    "discovery.go",
     "Dockerfile",
     "compose.release.yaml",
     "README.md",
@@ -34,8 +38,8 @@ def version_for(root: Path, tag: str) -> str:
     expected_image = f"ghcr.io/aiden0rchad/homelab-atlas:${{ATLAS_VERSION:-{version}}}"
     compose = (root / "compose.release.yaml").read_text()
     images = re.findall(r"^\s*image:\s*(\S+)\s*$", compose, re.MULTILINE)
-    if images != [expected_image]:
-        raise ValueError(f"compose.release.yaml image must be {expected_image}")
+    if images != [expected_image, expected_image]:
+        raise ValueError(f"compose.release.yaml editor and collector images must be {expected_image}")
     return version
 
 
