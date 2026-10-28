@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"testing/fstest"
 	"time"
 )
 
@@ -19,31 +20,39 @@ func testAtlasServer(t *testing.T) *atlasServer {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assets, err := loadStaticAssets(public)
+	assets, assetPrefix, err := loadStaticAssets(public)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return &atlasServer{
-		assets: assets, allowedHosts: map[string]bool{"localhost": true, "127.0.0.1": true},
+		assets: assets, assetPrefix: assetPrefix, allowedHosts: map[string]bool{"localhost": true, "127.0.0.1": true},
 		httpClient: &http.Client{Timeout: time.Second, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }},
 	}
 }
 
 func TestStaticCompressionCachingAndHead(t *testing.T) {
 	server := testAtlasServer(t)
-	for _, name := range []string{"app.js", "styles.css"} {
-		t.Run(name, func(t *testing.T) {
-			source, err := fs.ReadFile(embeddedFiles, "public/"+name)
+	for _, item := range []struct {
+		name   string
+		asset  string
+		target string
+	}{
+		{"app.js/root", "app.js", "/app.js"},
+		{"app.js/versioned", "app.js", server.assetPrefix + "app.js"},
+		{"styles.css/root", "styles.css", "/styles.css"},
+		{"styles.css/versioned", "styles.css", server.assetPrefix + "styles.css"},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			source, err := fs.ReadFile(embeddedFiles, "public/"+item.asset)
 			if err != nil {
 				t.Fatal(err)
 			}
-			target := "/" + name
-			gzipped := request(server, http.MethodGet, target, nil, map[string]string{"Accept-Encoding": "gzip"})
+			gzipped := request(server, http.MethodGet, item.target, nil, map[string]string{"Accept-Encoding": "gzip"})
 			if gzipped.Code != http.StatusOK || gzipped.Header().Get("Content-Encoding") != "gzip" || gzipped.Header().Get("Vary") != "Accept-Encoding" || gzipped.Header().Get("Cache-Control") != "no-cache" {
 				t.Fatalf("gzip response: status=%d headers=%v", gzipped.Code, gzipped.Header())
 			}
 			if gzipped.Body.Len() >= len(source) {
-				t.Fatalf("gzip did not reduce %s: raw=%d gzip=%d", name, len(source), gzipped.Body.Len())
+				t.Fatalf("gzip did not reduce %s: raw=%d gzip=%d", item.asset, len(source), gzipped.Body.Len())
 			}
 			reader, err := gzip.NewReader(bytes.NewReader(gzipped.Body.Bytes()))
 			if err != nil {
@@ -57,7 +66,7 @@ func TestStaticCompressionCachingAndHead(t *testing.T) {
 				t.Fatalf("gzip did not decode to source: err=%v", err)
 			}
 
-			identity := request(server, http.MethodGet, target, nil, map[string]string{"Accept-Encoding": "gzip;q=0, identity"})
+			identity := request(server, http.MethodGet, item.target, nil, map[string]string{"Accept-Encoding": "gzip;q=0, identity"})
 			if identity.Header().Get("Content-Encoding") != "" || !bytes.Equal(identity.Body.Bytes(), source) {
 				t.Fatal("q=0 did not select the identity representation")
 			}
@@ -65,17 +74,104 @@ func TestStaticCompressionCachingAndHead(t *testing.T) {
 				t.Fatal("gzip and identity ETags match")
 			}
 
-			conditional := request(server, http.MethodGet, target, nil, map[string]string{
+			conditional := request(server, http.MethodGet, item.target, nil, map[string]string{
 				"Accept-Encoding": "gzip", "If-None-Match": gzipped.Header().Get("ETag"),
 			})
 			if conditional.Code != http.StatusNotModified || conditional.Body.Len() != 0 || conditional.Header().Get("Content-Length") != "" {
 				t.Fatalf("conditional response: status=%d body=%d headers=%v", conditional.Code, conditional.Body.Len(), conditional.Header())
 			}
-			head := request(server, http.MethodHead, target, nil, map[string]string{"Accept-Encoding": "gzip"})
+			head := request(server, http.MethodHead, item.target, nil, map[string]string{"Accept-Encoding": "gzip"})
 			if head.Code != http.StatusOK || head.Body.Len() != 0 || head.Header().Get("Content-Encoding") != "gzip" || head.Header().Get("ETag") != gzipped.Header().Get("ETag") || head.Header().Get("Content-Length") != strconv.Itoa(gzipped.Body.Len()) {
 				t.Fatalf("HEAD response: status=%d body=%d headers=%v", head.Code, head.Body.Len(), head.Header())
 			}
 		})
+	}
+}
+
+func TestVersionedStaticAssets(t *testing.T) {
+	server := testAtlasServer(t)
+	fingerprint := strings.TrimSuffix(strings.TrimPrefix(server.assetPrefix, "/assets/"), "/")
+	if len(fingerprint) != 16 {
+		t.Fatalf("asset prefix %q does not contain a 16-character fingerprint", server.assetPrefix)
+	}
+	if _, err := strconv.ParseUint(fingerprint, 16, 64); err != nil {
+		t.Fatalf("asset fingerprint %q is not hexadecimal", fingerprint)
+	}
+
+	index := request(server, http.MethodGet, "/", nil, nil)
+	body := index.Body.String()
+	if index.Code != http.StatusOK || strings.Count(body, server.assetPrefix) != 2 ||
+		!strings.Contains(body, `href="`+server.assetPrefix+`styles.css"`) ||
+		!strings.Contains(body, `src="`+server.assetPrefix+`app.js"`) ||
+		strings.Contains(body, `href="/styles.css"`) || strings.Contains(body, `src="/app.js"`) {
+		t.Fatalf("index does not reference one versioned asset prefix: status=%d prefix=%q", index.Code, server.assetPrefix)
+	}
+
+	for _, item := range []struct {
+		name        string
+		contentType string
+	}{
+		{"app.js", "text/javascript"},
+		{"styles.css", "text/css"},
+		{"model.js", "text/javascript"},
+	} {
+		source, err := fs.ReadFile(embeddedFiles, "public/"+item.name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		response := request(server, http.MethodGet, server.assetPrefix+item.name, nil, nil)
+		if response.Code != http.StatusOK || !strings.HasPrefix(response.Header().Get("Content-Type"), item.contentType) || !bytes.Equal(response.Body.Bytes(), source) {
+			t.Errorf("versioned %s: status=%d type=%q bytesMatch=%t", item.name, response.Code, response.Header().Get("Content-Type"), bytes.Equal(response.Body.Bytes(), source))
+		}
+	}
+
+	for _, target := range []string{
+		"/assets/0000000000000000/app.js",
+		server.assetPrefix + "../app.js",
+		server.assetPrefix + "%2e%2e/app.js",
+	} {
+		if response := request(server, http.MethodGet, target, nil, nil); response.Code != http.StatusNotFound {
+			t.Errorf("unsafe asset path %q returned %d", target, response.Code)
+		}
+	}
+}
+
+func TestStaticAssetFingerprint(t *testing.T) {
+	public := fstest.MapFS{
+		"app.js":     {Data: []byte("import './model.js';")},
+		"model.js":   {Data: []byte("export default 1;")},
+		"styles.css": {Data: []byte("body {}")},
+		"index.html": {Data: []byte("ignored")},
+	}
+	original, err := staticAssetFingerprint(public)
+	if err != nil {
+		t.Fatal(err)
+	}
+	repeated, err := staticAssetFingerprint(public)
+	if err != nil || repeated != original {
+		t.Fatalf("fingerprint is not deterministic: first=%q second=%q err=%v", original, repeated, err)
+	}
+
+	app := public["app.js"]
+	public["app.js"] = &fstest.MapFile{Data: []byte("import './changed.js';")}
+	changedJS, err := staticAssetFingerprint(public)
+	if err != nil || changedJS == original {
+		t.Fatalf("JavaScript change did not change fingerprint: got=%q err=%v", changedJS, err)
+	}
+	public["app.js"] = app
+
+	styles := public["styles.css"]
+	public["styles.css"] = &fstest.MapFile{Data: []byte("body { color: red; }")}
+	changedCSS, err := staticAssetFingerprint(public)
+	if err != nil || changedCSS == original {
+		t.Fatalf("CSS change did not change fingerprint: got=%q err=%v", changedCSS, err)
+	}
+	public["styles.css"] = styles
+
+	public["index.html"] = &fstest.MapFile{Data: []byte("changed but not an asset")}
+	changedHTML, err := staticAssetFingerprint(public)
+	if err != nil || changedHTML != original {
+		t.Fatalf("non-JS/CSS change affected fingerprint: got=%q want=%q err=%v", changedHTML, original, err)
 	}
 }
 

@@ -19,6 +19,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -30,6 +31,7 @@ var hostnamePattern = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])
 
 type atlasServer struct {
 	assets       map[string]staticAsset
+	assetPrefix  string
 	sources      []discoverySource
 	allowedHosts map[string]bool
 	apiToken     string
@@ -48,7 +50,7 @@ type staticRepresentation struct {
 }
 
 func newAtlasServer(public fs.FS) (*atlasServer, error) {
-	assets, err := loadStaticAssets(public)
+	assets, assetPrefix, err := loadStaticAssets(public)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +75,7 @@ func newAtlasServer(public fs.FS) (*atlasServer, error) {
 		ResponseHeaderTimeout: 8 * time.Second,
 	}
 	return &atlasServer{
-		assets: assets, sources: sources, allowedHosts: allowed, apiToken: token,
+		assets: assets, assetPrefix: assetPrefix, sources: sources, allowedHosts: allowed, apiToken: token,
 		httpClient: &http.Client{
 			Transport:     transport,
 			Timeout:       12 * time.Second,
@@ -82,10 +84,15 @@ func newAtlasServer(public fs.FS) (*atlasServer, error) {
 	}, nil
 }
 
-func loadStaticAssets(public fs.FS) (map[string]staticAsset, error) {
+func loadStaticAssets(public fs.FS) (map[string]staticAsset, string, error) {
+	fingerprint, err := staticAssetFingerprint(public)
+	if err != nil {
+		return nil, "", fmt.Errorf("could not fingerprint embedded assets: %w", err)
+	}
+	assetPrefix := "/assets/" + fingerprint + "/"
 	assets := make(map[string]staticAsset)
 	var writer *gzip.Writer
-	err := fs.WalkDir(public, ".", func(name string, entry fs.DirEntry, walkErr error) error {
+	err = fs.WalkDir(public, ".", func(name string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -95,6 +102,17 @@ func loadStaticAssets(public fs.FS) (map[string]staticAsset, error) {
 		data, err := fs.ReadFile(public, name)
 		if err != nil {
 			return err
+		}
+		if name == "index.html" {
+			for _, replacement := range [][2]string{
+				{`href="/styles.css"`, `href="` + assetPrefix + `styles.css"`},
+				{`src="/app.js"`, `src="` + assetPrefix + `app.js"`},
+			} {
+				if bytes.Count(data, []byte(replacement[0])) != 1 {
+					return fmt.Errorf("index.html must contain exactly one %s", replacement[0])
+				}
+				data = bytes.Replace(data, []byte(replacement[0]), []byte(replacement[1]), 1)
+			}
 		}
 		contentType := mime.TypeByExtension(path.Ext(name))
 		if contentType == "" {
@@ -122,9 +140,37 @@ func loadStaticAssets(public fs.FS) (map[string]staticAsset, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("could not prepare embedded assets: %w", err)
+		return nil, "", fmt.Errorf("could not prepare embedded assets: %w", err)
 	}
-	return assets, nil
+	return assets, assetPrefix, nil
+}
+
+func staticAssetFingerprint(public fs.FS) (string, error) {
+	var names []string
+	if err := fs.WalkDir(public, ".", func(name string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !entry.IsDir() && (path.Ext(name) == ".js" || path.Ext(name) == ".css") {
+			names = append(names, name)
+		}
+		return nil
+	}); err != nil {
+		return "", err
+	}
+	sort.Strings(names)
+	digest := sha256.New()
+	for _, name := range names {
+		data, err := fs.ReadFile(public, name)
+		if err != nil {
+			return "", err
+		}
+		fmt.Fprintf(digest, "%d:%s:%d:", len(name), name, len(data))
+		if _, err := digest.Write(data); err != nil {
+			return "", err
+		}
+	}
+	return fmt.Sprintf("%x", digest.Sum(nil))[:16], nil
 }
 
 func makeRepresentation(data []byte) staticRepresentation {
@@ -208,6 +254,13 @@ func (server *atlasServer) serveStatic(writer http.ResponseWriter, request *http
 		return
 	}
 	name := strings.TrimPrefix(cleaned, "/")
+	if strings.HasPrefix(cleaned, "/assets/") {
+		if server.assetPrefix == "" || !strings.HasPrefix(cleaned, server.assetPrefix) {
+			http.NotFound(writer, request)
+			return
+		}
+		name = strings.TrimPrefix(cleaned, server.assetPrefix)
+	}
 	if name == "" {
 		name = "index.html"
 	}
