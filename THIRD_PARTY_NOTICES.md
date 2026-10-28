@@ -39,3 +39,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## Nmap executable
+
+Homelab Atlas does not include Nmap in its published base image or source ZIP. Its optional local Docker build installs the independent Alpine `nmap` package, and Atlas can invoke a user-installed Nmap executable. Nmap remains under its own [Nmap Public Source License terms](https://nmap.org/npsl/npsl-annotated.html); those terms are separate from Atlas's MIT license.

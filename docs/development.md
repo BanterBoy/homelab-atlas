@@ -25,10 +25,12 @@ The final container includes `LICENSE` and `THIRD_PARTY_NOTICES.md` under `/usr/
 | `docker.go` | Bounded read-only Docker client and sanitized grouping |
 | `discovery.go` | Discovery snapshot and configured-source validation |
 | `nmap.go` | Strict Nmap XML projection, normalization, limits, and identities |
+| `nmap_scan.go` | Validated target/port expansion and bounded Nmap process execution |
 | `scripts/` | Repeatable icon and release artifact tools |
 | `tests/` | Node model/discovery tests and Python release tests |
 | `docs/` | VitePress documentation and sample files |
 | `compose.release.yaml` | Docker Compose file for the published GHCR image |
+| `compose.nmap.yaml` | Opt-in local Nmap build override |
 
 ## Checks
 
@@ -41,8 +43,8 @@ go vet ./...
 npm run build:icons
 npm run check:icons
 docker compose config
-docker compose -f compose.release.yaml config
-python3 scripts/release.py v0.8.0 --output dist
+docker compose -f compose.release.yaml -f compose.nmap.yaml config
+python3 scripts/release.py v0.9.0 --output dist
 ```
 
 `npm test` checks logo data, runs the Node tests, runs `go test ./...`, and runs the Python release tests. Release files go into the ignored `dist/` directory, and the release workflow checks their checksums too.
@@ -56,7 +58,7 @@ Docker and discovery tests use fictional fixtures. The collector must keep its f
 | Hawser | [MIT license](https://github.com/Finsys/hawser/blob/bd1282901f7f33537adaebea33121c1831ef07a5/LICENSE) and [Standard HTTP server](https://github.com/Finsys/hawser/blob/bd1282901f7f33537adaebea33121c1831ef07a5/internal/server/http.go) | Implemented only its `X-Hawser-Token` and Docker-path protocol. MIT permits reuse, but Atlas copied no upstream code and does not vendor the full manager. |
 | Docker/Moby client | [Client source](https://github.com/moby/moby/tree/master/client) and [Apache-2.0 license](https://github.com/moby/moby/blob/master/client/LICENSE) | Not used. It remains useful if Atlas needs a broader Docker SDK; the current two-read standard-library client is smaller. |
 | Ullaakut/nmap | [Pinned MIT wrapper](https://github.com/Ullaakut/nmap/tree/95091f90b599d00827e6d42c609cbe4c3afeb0ac) | Adapted only small host/address/hostname/status/port/state/service XML field projections from `xml.go`. Atlas implements validation, limits, identity, normalization, and merging. No wrapper, scanner execution, broad dependency tree, or Go module dependency is included. |
-| Nmap | [NPSL §3](https://nmap.org/npsl/npsl-annotated.html) and [XML format](https://nmap.org/book/output-formats-xml-output.html) | Atlas recommends user-supplied XML import first and ships no Nmap engine or data files. NPSL §3 distinguishes importing end-user results from copying or distributing Nmap; applicable terms would be checked before any executable integration. |
+| Nmap | [NPSL §3](https://nmap.org/npsl/npsl-annotated.html) and [XML format](https://nmap.org/book/output-formats-xml-output.html) | The published image and source ZIP ship no Nmap engine or data files. An opt-in local Docker build installs Alpine's independent package, and Atlas can invoke a user-installed executable under Nmap's separate terms. |
 
 ## Documentation
 

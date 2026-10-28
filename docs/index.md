@@ -27,7 +27,7 @@ features:
   - title: Run it at home
     details: Atlas runs on your own machine. There are no accounts, telemetry, AI calls, automatic scans, or background polling.
   - title: Review discovery
-    details: Import Nmap XML or use an optional Docker collector. Nothing is selected or added automatically.
+    details: Run an explicit bounded Nmap scan, import Nmap XML, or use an optional Docker collector. Nothing is selected or added automatically.
   - title: Save and share
     details: Save JSON when you want an editable backup, or export an SVG or PNG when you want an image.
 ---

@@ -1,10 +1,11 @@
 services:
   atlas:
-    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.8.0}
+    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.9.0}
     environment:
       ATLAS_ALLOWED_HOSTS: "${ATLAS_ALLOWED_HOSTS:-localhost,127.0.0.1,::1}"
       ATLAS_API_TOKEN: "${ATLAS_API_TOKEN:-}"
       ATLAS_COLLECTOR_TOKEN: "${ATLAS_COLLECTOR_TOKEN:-}"
+      ATLAS_NMAP_ALLOWED_CIDRS: "${ATLAS_NMAP_ALLOWED_CIDRS:-}"
     ports:
       - "${ATLAS_BIND:-127.0.0.1}:8080:8080"
     read_only: true
@@ -20,7 +21,7 @@ services:
     restart: unless-stopped
   collector:
     profiles: ["discovery"]
-    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.8.0}
+    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.9.0}
     command: ["collect", "--listen", ":8081"]
     environment:
       ATLAS_COLLECTOR_TOKEN: "${ATLAS_COLLECTOR_TOKEN:-}"

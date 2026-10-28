@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"strconv"
 	"strings"
 	"testing"
@@ -26,6 +27,7 @@ func testAtlasServer(t *testing.T) *atlasServer {
 	}
 	return &atlasServer{
 		assets: assets, assetPrefix: assetPrefix, allowedHosts: map[string]bool{"localhost": true, "127.0.0.1": true},
+		nmap:       &nmapScanner{allowed: []netip.Prefix{netip.MustParsePrefix("10.0.0.0/8"), netip.MustParsePrefix("192.168.0.0/16")}, run: runNmapProcess},
 		httpClient: &http.Client{Timeout: time.Second, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }},
 	}
 }

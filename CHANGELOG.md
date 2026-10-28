@@ -2,6 +2,17 @@
 
 This file lists the notable changes in each Homelab Atlas release.
 
+## [0.9.0] - 2026-10-28
+
+### Added
+
+- Added explicit bounded IPv4 Nmap TCP scans with private-range defaults, fixed safety limits, Stop support, and the existing unchecked multi-host review.
+- Added opt-in local Docker builds with Nmap while keeping the published image scanner-free.
+
+### Changed
+
+- Nmap XML import and live results now share the same normalized identities, explicit Apply flow, layout protection, bindings, and Undo behavior.
+
 ## [0.8.0] - 2026-10-27
 
 ### Added
@@ -102,3 +113,4 @@ This file lists the notable changes in each Homelab Atlas release.
 [0.6.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.6.0
 [0.7.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.7.0
 [0.8.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.8.0
+[0.9.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.9.0

@@ -1,6 +1,6 @@
 FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS build
 WORKDIR /src
-COPY go.mod main.go server.go docker.go discovery.go nmap.go ./
+COPY go.mod main.go server.go docker.go discovery.go nmap.go nmap_scan.go ./
 COPY public ./public
 ARG TARGETOS TARGETARCH
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w" -o /out/atlas .
@@ -10,7 +10,8 @@ LABEL org.opencontainers.image.source="https://github.com/aiden0rchad/homelab-at
       org.opencontainers.image.title="Homelab Atlas" \
       org.opencontainers.image.description="Local-first visual editor for clear homelab diagrams" \
       org.opencontainers.image.licenses="MIT"
-RUN apk add --no-cache ca-certificates
+ARG ATLAS_WITH_NMAP=false
+RUN case "$ATLAS_WITH_NMAP" in false) apk add --no-cache ca-certificates ;; true) apk add --no-cache ca-certificates nmap ;; *) echo "ATLAS_WITH_NMAP must be true or false" >&2; exit 1 ;; esac
 COPY --from=build /out/atlas /usr/local/bin/atlas
 COPY LICENSE THIRD_PARTY_NOTICES.md /usr/share/licenses/homelab-atlas/
 USER 10001:10001

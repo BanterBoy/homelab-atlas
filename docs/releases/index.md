@@ -1,13 +1,13 @@
 # Releases and packages
 
-**v0.8.0** is the latest release. You can read the [release notes](/releases/v0.8.0) or get the files from the [GitHub release](https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.8.0). Earlier notes remain available. A release is published only after its tests, docs, image, and downloads pass the release workflow.
+**v0.9.0** is the latest release. You can read the [release notes](/releases/v0.9.0) or get the files from the [GitHub release](https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.9.0). Earlier notes remain available. A release is published only after its tests, docs, image, and downloads pass the release workflow.
 
 ## Release assets
 
 | Asset | Platforms | Purpose |
 |---|---|---|
-| `ghcr.io/aiden0rchad/homelab-atlas:0.8.0` | Linux AMD64, ARM64 | Published editor and optional collector image |
-| `homelab-atlas-0.8.0.zip` | Go 1.26+ and a current browser | App source files you can run without Docker |
+| `ghcr.io/aiden0rchad/homelab-atlas:0.9.0` | Linux AMD64, ARM64 | Published scanner-free editor and optional collector image |
+| `homelab-atlas-0.9.0.zip` | Go 1.26+ and a current browser | App source and opt-in local Nmap build recipe |
 | `compose.release.yaml` | Docker Compose v2 | Runs the released image with the standard safety settings |
 | `SHA256SUMS` | Linux/macOS | Integrity checks for the ZIP and Compose file |
 
@@ -35,12 +35,12 @@ Both covered files must report `OK`.
 
 | Tag | Behavior |
 |---|---|
-| `0.8.0` | Exact stable release |
-| `v0.8.0` | Exact stable release, matching the Git tag |
-| `0.8` | Newest stable patch in the 0.8 line |
+| `0.9.0` | Exact stable release |
+| `v0.9.0` | Exact stable release, matching the Git tag |
+| `0.9` | Newest stable patch in the 0.9 line |
 | `latest` | Newest stable release |
 
-The exact version tags keep pointing to the same release. The `0.8` and `latest` tags move when a newer matching release is published. If you need an image reference that cannot move, get the verified manifest digest from the registry or successful release workflow. Replace the colon and tag after the image name with `@` followed by that `sha256:` digest.
+The exact version tags keep pointing to the same release. The `0.9` and `latest` tags move when a newer matching release is published. If you need an image reference that cannot move, get the verified manifest digest from the registry or successful release workflow. Replace the colon and tag after the image name with `@` followed by that `sha256:` digest.
 
 ## Maintainer checklist
 

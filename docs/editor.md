@@ -26,9 +26,9 @@ The duplicate button copies a device and gives the copy new internal IDs without
 
 ## Discover devices
 
-Choose **Discover devices** to review an optional Docker collector, import a sanitized Docker snapshot, or import user-supplied Nmap XML. Opening the dialog never scans. Docker requires an explicit **Scan**; Nmap import runs no scanner or network probe.
+Choose **Discover devices** to review an optional Docker collector, import a sanitized Docker snapshot or Nmap XML, or run a bounded Nmap TCP scan. Opening the dialog never scans. Docker and live Nmap discovery each require their explicit scan button; XML import alone runs no scanner or network probe.
 
-For Nmap, enter a stable **Network name**, choose **Import Nmap XML**, then select a host in multi-host results. The loaded scope, host addresses, names, vendor, scan time, and ports not imported appear in the review. Reuse the same network name for later scans.
+For Nmap, enter a stable **Network name**, then import XML or enter allowed IPv4 targets and choose **Scan network**. Optional custom TCP ports and service identification apply only to a live scan. Select a host in multi-host results. The scope, host addresses, names, vendor, scan time, and ports not imported appear in the review. Reuse the same network name for later scans.
 
 Choose a destination device and service group. Every finding starts unchecked. Docker and Nmap endpoint rows can add a service or link to one already on the destination device. Nmap host rows add a host card or link the host identity to an existing card. Ping-only hosts therefore work without a fake service. Suggestions never check a row automatically.
 

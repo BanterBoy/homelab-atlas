@@ -344,6 +344,14 @@ dialog header button { width: 32px; padding: 0; }
 .discovery-source label { margin: 0; }
 .discovery-nmap-controls { display: grid; grid-template-columns: minmax(180px, 1fr) auto; align-items: end; gap: 8px; margin-top: 10px; }
 .discovery-nmap-controls small { grid-column: 1 / -1; color: var(--muted); }
+.discovery-network-scan { display: grid; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.discovery-network-scan h4 { margin: 0; font-size: 12px; }
+.discovery-network-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.discovery-network-fields label, .discovery-service-toggle { margin: 0; }
+.discovery-service-toggle { display: flex; align-items: center; gap: 8px; }
+.discovery-service-toggle input { width: auto; margin: 0; }
+.discovery-network-actions { display: flex; gap: 8px; }
+.discovery-network-scan small { color: var(--muted); }
 .discovery-host-meta { margin: -5px 2px 10px; color: var(--muted); font-size: 12px; }
 .discovery-status { min-height: 20px; margin: 10px 2px; color: var(--muted); font-size: 12px; }
 .discovery-status.error, .discovery-summary.error { color: #fca5a5; }
@@ -377,6 +385,9 @@ dialog header button { width: 32px; padding: 0; }
 .discovery-target select { width: 100%; }
 .discovery-summary { min-height: 34px; max-height: 72px; overflow: auto; padding: 8px 10px; border-radius: 7px; background: #162221; color: #b9d9d5; font-size: 12px; }
 .discovery-footer-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+@media (max-width: 620px) {
+  .discovery-source-controls, .discovery-nmap-controls, .discovery-network-fields { grid-template-columns: 1fr; }
+}
 .logo-preview { overflow: auto; }
 .upload-preview-surface { display: grid; place-items: center; min-height: 180px; border: 1px solid var(--line); border-radius: 8px; background-color: #c7cecc; background-image: linear-gradient(45deg, #aeb7b4 25%, transparent 25%), linear-gradient(-45deg, #aeb7b4 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #aeb7b4 75%), linear-gradient(-45deg, transparent 75%, #aeb7b4 75%); background-position: 0 0, 0 8px, 8px -8px, -8px 0; background-size: 16px 16px; }
 .upload-preview-surface.preview-light { background: #f8fafc; }

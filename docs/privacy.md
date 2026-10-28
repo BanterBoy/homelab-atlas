@@ -9,14 +9,14 @@ The editor has:
 - no accounts or editor login
 - no backend project store or database
 - no telemetry, analytics, external fonts, or AI calls
-- no automatic scans or background polling
+- no automatic scans or background polling; a bounded network scan runs only after an explicit click
 - a local bundled logo catalog
 
 The Go editor process serves embedded app files and, when configured, proxies fixed discovery-source requests. Your project stays in the browser's `localStorage`. Atlas creates JSON or image files only when you choose to download them. Collector and API tokens stay in server environment variables; an API token entered in the UI is held in memory only.
 
 The normal editor container has no Docker socket. Optional Docker discovery runs as a separate collector with a read-only socket mount and no published port. It calls only Docker's version and container-list endpoints after you choose **Scan**. The returned snapshot excludes container IDs, environment variables, mounts, commands, logs, arbitrary labels, credentials, and backend URLs. See [Docker discovery](/discovery).
 
-Nmap import accepts only a user-selected XML file. Atlas runs no scanner, network probe, URL fetch, or disk read. The full file reaches only your Atlas backend transiently; normalized review discards NSE/script output, raw command arguments, service fingerprints, traces, and unknown fields. Retained hostname, vendor, service, product, and version strings can still be private or contain credential-like text. Applied names and IP address facts remain in project JSON. The existing SVG/PNG privacy filter can hide network literals from image exports.
+Nmap XML import alone executes no scanner or network probe. A live scan runs only after **Scan network**, from the Atlas server's network, against validated IPv4 targets in configured ranges. It uses fixed TCP-only limits, exposes no scan scripts or configuration credentials, and keeps output transient until you explicitly apply reviewed findings. Normalized review discards NSE/script output, raw command arguments, service fingerprints, traces, and unknown fields. Retained hostname, vendor, service, product, and version strings can still be private or contain credential-like text. Applied names and IP address facts remain in project JSON. The existing SVG/PNG privacy filter can hide network literals from image exports.
 
 ## Documentation is separate
 

@@ -1,17 +1,35 @@
 # Discovery
 
-## Import Nmap XML
+## Network scan
 
-Atlas imports a file you generated; it never runs Nmap, probes the network, fetches a URL, or updates the diagram automatically. Nmap recommends XML for programmatic use. A minimal documentation example using an RFC 5737 address is:
+Atlas can run a bounded Nmap TCP scan from the server or container where Atlas runs. It starts only when you choose **Scan network**. Enter numeric IPv4 addresses or CIDRs within the configured ranges, optionally enter up to 1,000 TCP ports, and optionally enable service identification. Blank ports use Nmap's common 100 TCP ports. Live scans support at most 16 target terms, 256 expanded addresses, 120 seconds, and one running scan per server.
+
+The fixed scan uses unprivileged TCP connect mode, no DNS, conservative timing, a 15-second host timeout, and no scripts, OS detection, UDP, raw sockets, caller flags, or credentials. **Stop**, closing the dialog, changing inputs, or changing the project cancels it. Host discovery remains enabled, so a firewall can hide a host. The scan runs from the Atlas server's network, which may differ from the browser's network.
+
+The default allowed ranges are `10.0.0.0/8`, `172.16.0.0/12`, and `192.168.0.0/16`. Administrators can set canonical comma-separated IPv4 prefixes with `ATLAS_NMAP_ALLOWED_CIDRS`. Atlas reports the configured ranges to the editor but does not expose server credentials or configuration secrets.
+
+Install Nmap on the server with its operating-system package manager. The published GHCR image stays scanner-free. From a source checkout, opt into Alpine's Nmap package:
 
 ```sh
-nmap -oX atlas-scan.xml 192.0.2.10
+ATLAS_WITH_NMAP=true docker compose up -d --build
 ```
+
+Put `ATLAS_WITH_NMAP=true` in the existing `.env` to retain the choice on later builds. From an extracted release source ZIP:
+
+```sh
+docker compose -f compose.release.yaml -f compose.nmap.yaml up -d --build
+```
+
+Nmap is independently licensed under the [Nmap Public Source License](https://nmap.org/npsl/npsl-annotated.html). The source ZIP contains only Atlas and the local build recipe, not Nmap binaries or data.
+
+## Import Nmap XML
+
+Import accepts a user-selected file and does not execute a scanner or network probe. It also remains available when Nmap is not installed. Live scans accept IPv4 targets; XML import continues to accept normalized IPv4 and IPv6 results.
 
 In Atlas:
 
 1. Choose **Discover devices**.
-2. Enter a **Network name**, such as `Home network`. Reuse the same name for later scans; it separates overlapping private networks.
+2. Enter a **Network name**, such as `Home network`. Reuse the same name for later imports or scans; it separates overlapping private networks.
 3. Choose **Import Nmap XML** and select the `.xml` file.
 4. Select a scan host and destination card, or choose a new card.
 5. Check the host or endpoints you want, then choose **Apply selected**.
@@ -20,7 +38,7 @@ Every row starts unchecked. A host row adds a host card or links the host identi
 
 Only explicitly up hosts with a valid IP and explicitly open TCP/UDP ports qualify. Filtered, `open|filtered`, closed, unsupported, down, and summarized `extraports` results count as ports not imported. Even a summarized `open` state lacks individual protocol/port identity, so Atlas does not fabricate endpoints from it. Limits are 2 MB, 256 host records, 1,000 normalized findings, 16 addresses and 16 names per host, and 64 XML nesting levels. Eligible output over a limit is rejected instead of silently truncated.
 
-The full XML is sent only to the Atlas backend serving the current editor and held transiently for parsing. Normalized review data discards command arguments, NSE/script output, service fingerprints, traces, and unknown XML fields. Retained hostnames, vendor, service, product, and version text can still contain private or credential-like content; inspect it before applying or sharing. Canceling before Apply changes nothing. Existing names, metadata, connections, and card geometry are never overwritten; card growth that would overlap another card is blocked.
+The full XML or live output is held transiently for parsing. Results are not saved on the server. Normalized review data discards command arguments, NSE/script output, service fingerprints, traces, and unknown XML fields. Retained hostnames, vendor, service, product, and version text can still contain private or credential-like content; inspect it before applying or sharing. Canceling before Apply changes nothing. Existing names, metadata, connections, and card geometry are never overwritten; card growth that would overlap another card is blocked. Existing SVG/PNG privacy filtering applies after findings are explicitly added.
 
 ## Docker discovery
 

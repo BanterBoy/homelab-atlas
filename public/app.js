@@ -874,6 +874,7 @@ function beginDiscoveryRequest(message, clearResults = false) {
   if (clearResults) {
     discoveryState.bundle = null;
     discoveryState.pendingNmapFile = null;
+    discoveryState.pendingNetworkScan = null;
     discoveryState.plan = null;
     discoveryState.snapshot = null;
     discoveryState.choices = new Map();
@@ -907,11 +908,64 @@ function hideDiscoveryAuth() {
 
 function requestDiscoveryUnlock(request) {
   if (!discoveryRequestCurrent(request)) return;
+  discoveryState.unlocking = false;
+  $('#discovery-unlock').disabled = false;
   $('#discovery-source').disabled = true;
   $('#discovery-scan').disabled = true;
   $('#discovery-auth').hidden = false;
   setDiscoveryStatus('Authentication required. Enter the API token and choose Unlock.', true);
   $('#discovery-api-token').focus();
+}
+
+function setNetworkScanning(active) {
+  $('#discovery-network-start').hidden = active;
+  $('#discovery-network-stop').hidden = !active;
+  for (const id of ['discovery-targets', 'discovery-ports', 'discovery-detect-services', 'discovery-nmap-import']) $(`#${id}`).disabled = active;
+}
+
+async function boundedResponseText(response) {
+  const reader = response.body?.getReader();
+  if (!reader) return '';
+  const chunks = []; let size = 0;
+  while (size <= 1000) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.length;
+    chunks.push(value);
+  }
+  if (size > 1000) await reader.cancel();
+  const bytes = new Uint8Array(Math.min(size, 1000)); let offset = 0;
+  for (const chunk of chunks) { const part = chunk.subarray(0, bytes.length - offset); bytes.set(part, offset); offset += part.length; }
+  return new TextDecoder().decode(bytes).trim();
+}
+
+async function loadNmapStatus() {
+  if (!discoveryState) return;
+  discoveryState.statusController?.abort();
+  const state = discoveryState;
+  const controller = new AbortController();
+  state.statusController = controller;
+  try {
+    const response = await discoveryFetch('/api/discovery/nmap/status', { signal: controller.signal });
+    if (response.status === 401) {
+      if (discoveryState === state && $('#discovery-dialog').open) requestDiscoveryUnlock({ state, token: state.requestToken, controller: state.controller });
+      return;
+    }
+    if (!response.ok) throw new Error(`Nmap status could not be loaded (${response.status}).`);
+    const value = await boundedResponseJSON(response);
+    if (!value || Object.keys(value).length !== 4 || typeof value.available !== 'boolean' || !Array.isArray(value.allowedCidrs)
+      || value.allowedCidrs.some(item => typeof item !== 'string') || value.maxHosts !== 256 || value.timeoutSeconds !== 120) throw new Error('The server returned invalid Nmap status.');
+    if (discoveryState !== state || !$('#discovery-dialog').open) return;
+    state.nmapStatus = value;
+    $('#discovery-network-start').disabled = !value.available;
+    $('#discovery-network-help').textContent = value.available
+      ? `Runs from this Atlas server. Allowed ranges: ${value.allowedCidrs.join(', ')}. Up to ${value.maxHosts} hosts and ${value.timeoutSeconds} seconds; firewalls may hide hosts.`
+      : `Nmap is not installed on this Atlas server. XML import and Docker discovery are still available. Allowed ranges: ${value.allowedCidrs.join(', ')}.`;
+  } catch (error) {
+    if (error.name === 'AbortError' || discoveryState !== state) return;
+    $('#discovery-network-start').disabled = true;
+    $('#discovery-network-help').textContent = error.message;
+  }
 }
 
 function fillDiscoverySources(sources, updateStatus = true) {
@@ -1161,6 +1215,61 @@ async function scanDiscoverySource() {
   }
 }
 
+function showNmapBundle(bundle, label) {
+  validateNmapBundle(bundle);
+  discoveryState.bundle = structuredClone(bundle);
+  const hostSelect = $('#discovery-host');
+  hostSelect.replaceChildren(...bundle.snapshots.map((snapshot, index) => new Option(`${snapshot.source.name} · ${snapshot.host.addresses.join(', ')}`, String(index))));
+  $('#discovery-host-field').hidden = bundle.snapshots.length <= 1;
+  if (!bundle.snapshots.length) {
+    $('#discovery-empty').hidden = false;
+    setDiscoveryStatus(`${label}: no usable up hosts. ${quantity(bundle.skippedHosts, 'host')} and ${quantity(bundle.skippedPorts, 'port')} were not imported.`);
+    return;
+  }
+  showDiscoverySnapshot(bundle.snapshots[0], `${label}: ${quantity(bundle.snapshots.length, 'host')}. ${quantity(bundle.skippedHosts, 'host')} and ${quantity(bundle.skippedPorts, 'port')} were not imported.`);
+}
+
+function currentNetworkRequest() {
+  return {
+    scope: $('#discovery-scope').value,
+    targets: $('#discovery-targets').value,
+    ports: $('#discovery-ports').value,
+    detectServices: $('#discovery-detect-services').checked,
+  };
+}
+
+async function scanNmapNetwork(retry = null) {
+  if (!discoveryState || !projectGuardCurrent(discoveryState.guard, project)) return invalidateDiscoveryIfStale();
+  const input = retry || currentNetworkRequest();
+  if (!input.targets.trim()) return setDiscoveryStatus('Enter an IPv4 address or CIDR first.', true);
+  const request = beginDiscoveryRequest('Scanning network from this Atlas server…', true);
+  request.input = structuredClone(input);
+  setNetworkScanning(true);
+  try {
+    const response = await discoveryFetch('/api/discovery/nmap/scan', {
+      method: 'POST', signal: request.controller.signal,
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input),
+    });
+    if (response.status === 401) {
+      discoveryState.pendingNetworkScan = structuredClone(input);
+      setNetworkScanning(false);
+      return requestDiscoveryUnlock(request);
+    }
+    if (!response.ok) throw new Error((await boundedResponseText(response)) || `Network scan failed (${response.status}).`);
+    const bundle = await boundedResponseJSON(response);
+    validateNmapBundle(bundle);
+    if (!discoveryRequestCurrent(request)) return;
+    hideDiscoveryAuth();
+    discoveryState.pendingNetworkScan = null;
+    showNmapBundle(bundle, 'Network scan complete');
+  } catch (error) {
+    if (error.name === 'AbortError' || !discoveryRequestCurrent(request)) return;
+    setDiscoveryStatus(error.message, true);
+  } finally {
+    if (discoveryState === request.state) setNetworkScanning(false);
+  }
+}
+
 async function importNmapXML(file) {
   if (!file || !discoveryState || !projectGuardCurrent(discoveryState.guard, project)) return;
   const scope = $('#discovery-scope').value;
@@ -1174,21 +1283,10 @@ async function importNmapXML(file) {
     if (response.status === 401) return requestDiscoveryUnlock(request);
     if (!response.ok) throw new Error(`Nmap import failed (${response.status}). Check the XML and network name.`);
     const bundle = await boundedResponseJSON(response);
-    validateNmapBundle(bundle);
     if (!discoveryRequestCurrent(request)) return;
     hideDiscoveryAuth();
-    discoveryState.bundle = structuredClone(bundle);
     discoveryState.pendingNmapFile = null;
-    const hostSelect = $('#discovery-host');
-    hostSelect.replaceChildren(...bundle.snapshots.map((snapshot, index) => new Option(`${snapshot.source.name} · ${snapshot.host.addresses.join(', ')}`, String(index))));
-    $('#discovery-host-field').hidden = bundle.snapshots.length <= 1;
-    if (!bundle.snapshots.length) {
-      $('#discovery-empty').hidden = false;
-      setDiscoveryStatus(`No usable up hosts. ${quantity(bundle.skippedHosts, 'host')} and ${quantity(bundle.skippedPorts, 'port')} were not imported.`);
-      loadDiscoverySources(true);
-      return;
-    }
-    showDiscoverySnapshot(bundle.snapshots[0], `Nmap import loaded ${quantity(bundle.snapshots.length, 'host')}. ${quantity(bundle.skippedHosts, 'host')} and ${quantity(bundle.skippedPorts, 'port')} were not imported.`);
+    showNmapBundle(bundle, 'Nmap import loaded');
     loadDiscoverySources(true);
   } catch (error) {
     if (error.name === 'AbortError' || !discoveryRequestCurrent(request)) return;
@@ -1213,7 +1311,7 @@ async function importDiscoverySnapshot(file) {
 
 function openDiscovery(opener) {
   discoveryState?.controller?.abort();
-  discoveryState = { guard: captureProjectGuard(project), opener, sources: [], bundle: null, pendingNmapFile: null, snapshot: null, choices: new Map(), plan: null, controller: null, requestToken: null, stale: false, query: '', page: 0 };
+  discoveryState = { guard: captureProjectGuard(project), opener, sources: [], bundle: null, pendingNmapFile: null, pendingNetworkScan: null, snapshot: null, choices: new Map(), plan: null, controller: null, statusController: null, requestToken: null, stale: false, query: '', page: 0 };
   $('#discovery-results').hidden = true;
   $('#discovery-empty').hidden = false;
   $('#discovery-empty span').textContent = 'Choose Scan, import a snapshot, or import Nmap XML. Opening this dialog never starts a scan.';
@@ -1230,17 +1328,32 @@ function openDiscovery(opener) {
   $('#discovery-file').value = '';
   $('#discovery-nmap-file').value = '';
   $('#discovery-host-field').hidden = true;
+  $('#discovery-network-start').disabled = true;
+  setNetworkScanning(false);
   $('#discovery-dialog').showModal();
   loadDiscoverySources();
+  loadNmapStatus();
 }
 
 function unlockDiscoverySources() {
-  if (!discoveryState || !$('#discovery-dialog').open || !projectGuardCurrent(discoveryState.guard, project)) return;
+  if (!discoveryState || discoveryState.unlocking || !$('#discovery-dialog').open || !projectGuardCurrent(discoveryState.guard, project)) return;
   const token = $('#discovery-api-token').value;
   if (!token) return setDiscoveryStatus('Enter the API token first.', true);
   apiToken = token;
-  const pending = discoveryState.pendingNmapFile;
-  if (pending) importNmapXML(pending); else loadDiscoverySources();
+  const pendingFile = discoveryState.pendingNmapFile;
+  const pendingScan = discoveryState.pendingNetworkScan;
+  discoveryState.unlocking = true;
+  discoveryState.pendingNetworkScan = null;
+  $('#discovery-unlock').disabled = true;
+  hideDiscoveryAuth();
+  let action;
+  if (pendingFile) action = importNmapXML(pendingFile);
+  else if (pendingScan && JSON.stringify(pendingScan) === JSON.stringify(currentNetworkRequest())) action = scanNmapNetwork(pendingScan);
+  else { action = loadDiscoverySources(); loadNmapStatus(); }
+  Promise.resolve(action).finally(() => {
+    if (discoveryState) discoveryState.unlocking = false;
+    $('#discovery-unlock').disabled = false;
+  });
 }
 
 $('#discover-docker').addEventListener('click', event => openDiscovery(event.currentTarget));
@@ -1252,7 +1365,22 @@ $('#discovery-scope').addEventListener('change', () => {
   if (!discoveryState) return;
   beginDiscoveryRequest('Network name changed. Import the XML again to create correctly scoped identities.', true);
 });
+for (const id of ['discovery-targets', 'discovery-ports', 'discovery-detect-services']) $(`#${id}`).addEventListener('input', () => {
+  if (!discoveryState) return;
+  discoveryState.pendingNetworkScan = null;
+  beginDiscoveryRequest('Scan settings changed. Choose Scan network to start.', true);
+  setNetworkScanning(false);
+});
 $('#discovery-scan').addEventListener('click', scanDiscoverySource);
+$('#discovery-network-start').addEventListener('click', () => scanNmapNetwork());
+$('#discovery-network-stop').addEventListener('click', () => {
+  if (!discoveryState) return;
+  discoveryState.controller?.abort();
+  discoveryState.requestToken = Symbol('stopped-scan');
+  discoveryState.pendingNetworkScan = null;
+  setNetworkScanning(false);
+  setDiscoveryStatus('Network scan stopped. No results were loaded.');
+});
 $('#discovery-import').addEventListener('click', () => $('#discovery-file').click());
 $('#discovery-file').addEventListener('change', event => {
   const file = event.target.files[0];
@@ -1318,6 +1446,12 @@ $('#discovery-apply').addEventListener('click', () => {
 });
 $('#discovery-form').addEventListener('submit', event => event.preventDefault());
 document.querySelectorAll('[data-discovery-close]').forEach(button => button.addEventListener('click', () => $('#discovery-dialog').close()));
+$('#discovery-dialog').addEventListener('close', () => {
+  discoveryState?.controller?.abort();
+  discoveryState?.statusController?.abort();
+  if (discoveryState) discoveryState.pendingNetworkScan = null;
+  setNetworkScanning(false);
+});
 $('#discovery-dialog').addEventListener('close', () => {
   const state = discoveryState;
   state?.controller?.abort();

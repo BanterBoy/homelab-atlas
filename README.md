@@ -25,11 +25,11 @@ Atlas lays out your diagram automatically, with optional manual positioning and 
 You'll need Docker with Compose v2:
 
 ```sh
-curl -fsSLO https://github.com/aiden0rchad/homelab-atlas/releases/download/v0.8.0/compose.release.yaml
+curl -fsSLO https://github.com/aiden0rchad/homelab-atlas/releases/download/v0.9.0/compose.release.yaml
 docker compose -f compose.release.yaml up -d
 ```
 
-Open `http://localhost:8080`. This uses the `0.8.0` image and only listens on the machine running Docker. Images are available for Linux AMD64 and ARM64.
+Open `http://localhost:8080`. This uses the `0.9.0` image and only listens on the machine running Docker. Images are available for Linux AMD64 and ARM64.
 
 For access from another computer, updates, or running without Docker, see the [setup guide](https://aiden0rchad.github.io/homelab-atlas/getting-started). The [release page](https://github.com/aiden0rchad/homelab-atlas/releases/latest) has the portable ZIP, Compose file, and checksums.
 
@@ -39,14 +39,14 @@ Start with **Load example** to see how it works, or **Start empty** for your own
 
 You can upload PNG, JPG, WebP, or SVG logos up to 2 MB, preview their contrast background, and reuse them across devices, services, and network nodes. SVG uploads are converted to PNG, and stored images are at most 512px. They stay in project JSON and work offline and in exports. The bundled catalog still includes 27 provider marks. Atlas starts with an automatic layout; **Arrange** lets you move or resize device cards. **Export** previews and downloads a PNG or SVG, with network details hidden by default and optional literal terms for custom names. Use **Save project** to download a JSON copy you can edit later.
 
-**Discover devices** can review Docker findings or import user-supplied Nmap XML. Nmap import runs no scanner or network probes: the file reaches only your Atlas backend transiently, then normalized hosts and open TCP/UDP endpoints enter the existing unchecked review. Each Apply is one undoable change and preserves manual card positions. See the [discovery guide](https://aiden0rchad.github.io/homelab-atlas/discovery).
+**Discover devices** can review Docker findings, import user-supplied Nmap XML, or explicitly run a bounded TCP scan when Nmap is installed on the Atlas server. Results enter the same unchecked review. Each Apply is one undoable change and preserves manual card positions. See the [discovery guide](https://aiden0rchad.github.io/homelab-atlas/discovery).
 
 The [editor guide](https://aiden0rchad.github.io/homelab-atlas/editor) covers the controls, and the [networking guide](https://aiden0rchad.github.io/homelab-atlas/networking) explains connections and VLANs.
 
 ## A few things to know
 
 - **Save a JSON backup.** Autosave lives in your browser, not the container. Clearing browser data, using private browsing, or opening Atlas at a different hostname or port can make your project appear missing. A PNG or SVG can't be imported as an editable project.
-- **Discovery is explicit.** Atlas never scans automatically or polls Docker. The optional collector reads only Docker version and container-list endpoints after you choose **Scan**.
+- **Discovery is explicit.** Atlas never scans automatically or polls Docker. A network scan runs only after **Scan network**; the optional collector reads Docker only after **Scan**.
 - **Connections are logical relationships.** They don't represent individual switch ports, and network cards stay in the automatic header even when you arrange device cards.
 - **There's no login system.** Keep it on localhost or a trusted LAN. Don't expose it directly to the internet.
 - **Export filtering is intentionally narrow.** It hides addresses, URLs, emails, and terms you list from SVG and PNG images. It does not change saved JSON or text baked into uploaded logos.

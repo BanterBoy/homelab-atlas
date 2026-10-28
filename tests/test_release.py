@@ -21,8 +21,11 @@ class ReleaseTests(unittest.TestCase):
             "docker.go": "package main\n",
             "discovery.go": "package main\n",
             "nmap.go": "package main\n",
+            "nmap_scan.go": "package main\n",
             "Dockerfile": "FROM golang:1.26-alpine\n",
+            "compose.yaml": "services: {}\n",
             "compose.release.yaml": "services:\n  atlas:\n    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.1.0}\n  collector:\n    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.1.0}\n",
+            "compose.nmap.yaml": "services:\n  atlas:\n    build: .\n",
             "README.md": "# Atlas\n",
             "LICENSE": "MIT\n",
             "THIRD_PARTY_NOTICES.md": "Notices\n",
@@ -53,6 +56,9 @@ class ReleaseTests(unittest.TestCase):
             self.assertIn("homelab-atlas-0.1.0/go.mod", names)
             self.assertIn("homelab-atlas-0.1.0/docker.go", names)
             self.assertIn("homelab-atlas-0.1.0/nmap.go", names)
+            self.assertIn("homelab-atlas-0.1.0/nmap_scan.go", names)
+            self.assertIn("homelab-atlas-0.1.0/compose.yaml", names)
+            self.assertIn("homelab-atlas-0.1.0/compose.nmap.yaml", names)
             self.assertIn("homelab-atlas-0.1.0/THIRD_PARTY_NOTICES.md", names)
             self.assertNotIn("homelab-atlas-0.1.0/.agent/private.json", names)
             self.assertNotIn("homelab-atlas-0.1.0/docs/screenshot.png", names)

@@ -1,0 +1,7 @@
+services:
+  atlas:
+    image: homelab-atlas-nmap:local
+    build:
+      context: .
+      args:
+        ATLAS_WITH_NMAP: "true"

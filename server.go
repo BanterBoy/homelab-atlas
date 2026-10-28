@@ -36,6 +36,7 @@ type atlasServer struct {
 	allowedHosts map[string]bool
 	apiToken     string
 	httpClient   *http.Client
+	nmap         *nmapScanner
 }
 
 type staticAsset struct {
@@ -58,6 +59,10 @@ func newAtlasServer(public fs.FS) (*atlasServer, error) {
 	if err != nil {
 		return nil, err
 	}
+	nmapScanner, err := newNmapScanner(os.Getenv("ATLAS_NMAP_ALLOWED_CIDRS"))
+	if err != nil {
+		return nil, err
+	}
 	allowed, remote, err := allowedHostSet(os.Getenv("ATLAS_ALLOWED_HOSTS"))
 	if err != nil {
 		return nil, err
@@ -75,7 +80,7 @@ func newAtlasServer(public fs.FS) (*atlasServer, error) {
 		ResponseHeaderTimeout: 8 * time.Second,
 	}
 	return &atlasServer{
-		assets: assets, assetPrefix: assetPrefix, sources: sources, allowedHosts: allowed, apiToken: token,
+		assets: assets, assetPrefix: assetPrefix, sources: sources, allowedHosts: allowed, apiToken: token, nmap: nmapScanner,
 		httpClient: &http.Client{
 			Transport:     transport,
 			Timeout:       12 * time.Second,
@@ -220,6 +225,10 @@ func (server *atlasServer) ServeHTTP(writer http.ResponseWriter, request *http.R
 		server.serveScan(writer, request)
 	case request.URL.Path == "/api/discovery/nmap":
 		server.serveNmapImport(writer, request)
+	case request.URL.Path == "/api/discovery/nmap/status":
+		server.serveNmapStatus(writer, request)
+	case request.URL.Path == "/api/discovery/nmap/scan":
+		server.serveNmapScan(writer, request)
 	default:
 		server.serveStatic(writer, request)
 	}
@@ -448,12 +457,57 @@ func (server *atlasServer) serveNmapImport(writer http.ResponseWriter, request *
 		http.Error(writer, err.Error(), http.StatusBadRequest)
 		return
 	}
-	encoded, err := json.Marshal(bundle)
-	if err != nil || len(encoded)+1 > maxNmapBytes {
-		http.Error(writer, "normalized Nmap results are too large", http.StatusRequestEntityTooLarge)
+	writeNmapBundle(writer, request, bundle)
+}
+
+func (server *atlasServer) serveNmapStatus(writer http.ResponseWriter, request *http.Request) {
+	if !server.authorizeAPI(writer, request) {
 		return
 	}
-	writeBody(writer, request, http.StatusOK, "application/json; charset=utf-8", append(encoded, '\n'))
+	if request.Method != http.MethodGet {
+		methodNotAllowed(writer, http.MethodGet)
+		return
+	}
+	writeJSON(writer, request, http.StatusOK, server.nmap.status())
+}
+
+func (server *atlasServer) serveNmapScan(writer http.ResponseWriter, request *http.Request) {
+	if !server.authorizeAPI(writer, request) {
+		return
+	}
+	if request.Method != http.MethodPost {
+		methodNotAllowed(writer, http.MethodPost)
+		return
+	}
+	if media := strings.TrimSpace(strings.Split(request.Header.Get("Content-Type"), ";")[0]); media != "application/json" {
+		http.Error(writer, "Content-Type must be application/json", http.StatusUnsupportedMediaType)
+		return
+	}
+	input, err := decodeNmapScanInput(request)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+	_ = http.NewResponseController(writer).SetWriteDeadline(time.Now().Add(nmapTimeout + 5*time.Second))
+	bundle, err := server.nmap.scan(request.Context(), input)
+	if err != nil {
+		switch {
+		case errors.Is(err, errNmapBusy):
+			http.Error(writer, err.Error(), http.StatusConflict)
+		case errors.Is(err, context.Canceled):
+			return
+		case errors.Is(err, errNmapOutputLarge):
+			http.Error(writer, err.Error(), http.StatusRequestEntityTooLarge)
+		case strings.Contains(err.Error(), "not installed"):
+			http.Error(writer, err.Error(), http.StatusServiceUnavailable)
+		case strings.Contains(err.Error(), "scan failed") || strings.Contains(err.Error(), "timed out"):
+			http.Error(writer, err.Error(), http.StatusBadGateway)
+		default:
+			http.Error(writer, err.Error(), http.StatusBadRequest)
+		}
+		return
+	}
+	writeNmapBundle(writer, request, bundle)
 }
 
 func (server *atlasServer) fetchSnapshot(ctx context.Context, source discoverySource) (discoverySnapshot, error) {
