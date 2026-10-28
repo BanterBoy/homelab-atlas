@@ -25,11 +25,11 @@ Atlas lays out your diagram automatically, with optional manual positioning and 
 You'll need Docker with Compose v2:
 
 ```sh
-curl -fsSLO https://github.com/aiden0rchad/homelab-atlas/releases/download/v0.6.0/compose.release.yaml
+curl -fsSLO https://github.com/aiden0rchad/homelab-atlas/releases/download/v0.7.0/compose.release.yaml
 docker compose -f compose.release.yaml up -d
 ```
 
-Open `http://localhost:8080`. This uses the `0.6.0` image and only listens on the machine running Docker. Images are available for Linux AMD64 and ARM64.
+Open `http://localhost:8080`. This uses the `0.7.0` image and only listens on the machine running Docker. Images are available for Linux AMD64 and ARM64.
 
 For access from another computer, updates, or running without Docker, see the [setup guide](https://aiden0rchad.github.io/homelab-atlas/getting-started). The [release page](https://github.com/aiden0rchad/homelab-atlas/releases/latest) has the portable ZIP, Compose file, and checksums.
 
@@ -37,9 +37,9 @@ For access from another computer, updates, or running without Docker, see the [s
 
 Start with **Load example** to see how it works, or **Start empty** for your own lab. Add devices, fill in whatever hardware details you want to show, and group the services running on each one. Visual logo pickers are searchable and work offline. Click a device icon or an existing service logo to replace it.
 
-You can upload PNG, JPG, WebP, or SVG logos up to 2 MB, preview their contrast background, and reuse them across devices, services, and network nodes. SVG uploads are converted to PNG, and stored images are at most 512px. They stay in project JSON and work offline and in exports. The bundled catalog still includes 27 provider marks. Atlas starts with an automatic layout; **Arrange** lets you move or resize device cards. **Export** downloads a PNG or SVG. Use **Save project** to download a JSON copy you can edit later.
+You can upload PNG, JPG, WebP, or SVG logos up to 2 MB, preview their contrast background, and reuse them across devices, services, and network nodes. SVG uploads are converted to PNG, and stored images are at most 512px. They stay in project JSON and work offline and in exports. The bundled catalog still includes 27 provider marks. Atlas starts with an automatic layout; **Arrange** lets you move or resize device cards. **Export** previews and downloads a PNG or SVG, with network details hidden by default and optional literal terms for custom names. Use **Save project** to download a JSON copy you can edit later.
 
-**Discover Docker** can scan a configured collector or import a sanitized snapshot. Every finding starts unchecked. You decide whether to add it as a service or link it to an existing service, then apply the whole review as one undoable change. The editor container never receives the Docker socket. See the [discovery guide](https://aiden0rchad.github.io/homelab-atlas/discovery) for the optional Compose profile and remote setup.
+**Discover Docker** can scan a configured collector or import a sanitized snapshot. Every finding starts unchecked. You decide whether to add it as a service or link it to an existing service, then apply the whole review as one undoable change. The editor container never receives the Docker socket. The collector can also read the same two inventory endpoints through a Hawser Standard-mode HTTPS agent. See the [discovery guide](https://aiden0rchad.github.io/homelab-atlas/discovery) for the optional Compose profile and remote setup.
 
 The [editor guide](https://aiden0rchad.github.io/homelab-atlas/editor) covers the controls, and the [networking guide](https://aiden0rchad.github.io/homelab-atlas/networking) explains connections and VLANs.
 
@@ -49,7 +49,7 @@ The [editor guide](https://aiden0rchad.github.io/homelab-atlas/editor) covers th
 - **Discovery is explicit.** Atlas never scans automatically or polls Docker. The optional collector reads only Docker version and container-list endpoints after you choose **Scan**.
 - **Connections are logical relationships.** They don't represent individual switch ports, and network cards stay in the automatic header even when you arrange device cards.
 - **There's no login system.** Keep it on localhost or a trusted LAN. Don't expose it directly to the internet.
-- **Exports include what you typed.** Check names, addresses, and labels before posting a diagram publicly.
+- **Export filtering is intentionally narrow.** It hides addresses, URLs, emails, and terms you list from SVG and PNG images. It does not change saved JSON or text baked into uploaded logos.
 
 More detail is in the [backup guide](https://aiden0rchad.github.io/homelab-atlas/sharing), [privacy page](https://aiden0rchad.github.io/homelab-atlas/privacy), and [troubleshooting guide](https://aiden0rchad.github.io/homelab-atlas/troubleshooting).
 

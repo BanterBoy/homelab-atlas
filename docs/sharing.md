@@ -43,6 +43,8 @@ Choose **Export**, then select SVG or PNG. Export creates an image; it does not 
 
 SVG and PNG files cannot be imported to restore a project. Atlas may reduce a large PNG to stay within browser limits. Use SVG when you need to scale the image without a fixed resolution.
 
+The Export dialog checks **Hide network details** each time it opens. The same previewed filter applies to SVG and PNG, replacing IP addresses, MAC addresses, URLs, and emails with `[hidden]`. **Also hide text** accepts literal custom names, one per line. It is session-only and never changes the project, autosave, JSON, or undo history.
+
 ## Before you post it {#share-intentionally}
 
-Atlas does not hide IP addresses, hostnames, domains, roles, network labels, or service names for you. Check the diagram and JSON, remove anything private, and only share what you mean to share. The included example and documentation screenshots use fictional data.
+Filtering cannot identify every private hostname, domain, role, network label, or service name. Add custom terms and inspect the preview. Text baked into uploaded logos is unchanged, and JSON always contains the full editable project. Only share what you mean to share. The included example and documentation screenshots use fictional data.

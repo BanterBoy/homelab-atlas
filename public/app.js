@@ -3,6 +3,7 @@ import {
   LIMITS, emptyProject, layoutProject, parseProject, removeDevice, removeGroup, removeNetwork, removeService, resetAutoLayout,
   renderProject, sampleProject, setManualCard, uid, validateProject,
 } from './model.js';
+import { createExportSnapshot } from './export.js';
 import { applyProjectChange, filterInventory, hasStorageConflict, pngDimensions, updateSelection } from './state.js';
 import { CUSTOM_LOGO_LIMITS, normalizeLogoUpload, verifyCustomLogoDecodes } from './custom-logos.js';
 import {
@@ -1300,18 +1301,54 @@ function download(blob, name) {
 }
 
 $('#save-json').addEventListener('click', () => download(new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' }), filename('.json')));
-$('#export-menu').addEventListener('click', () => $('#export-dialog').showModal());
-$('#export-dialog').addEventListener('close', () => $('#export-menu').focus());
+const exportOptions = () => ({ hideNetworkDetails: $('#export-hide-network').checked, customTerms: $('#export-custom-terms').value });
+let exportPreviewFrame;
+function updateExportPreview() {
+  exportPreviewFrame = 0;
+  try {
+    $('#export-preview').innerHTML = createExportSnapshot(project, exportOptions()).svg;
+    $('#export-error').textContent = '';
+    $('#export-svg').disabled = false;
+    $('#export-png').disabled = false;
+  } catch (error) {
+    $('#export-preview').replaceChildren();
+    $('#export-error').textContent = error.message;
+    $('#export-svg').disabled = true;
+    $('#export-png').disabled = true;
+  }
+}
+function queueExportPreview() {
+  cancelAnimationFrame(exportPreviewFrame);
+  exportPreviewFrame = requestAnimationFrame(updateExportPreview);
+}
+$('#export-menu').addEventListener('click', () => {
+  $('#export-hide-network').checked = true;
+  $('#export-dialog').showModal();
+  updateExportPreview();
+});
+$('#export-hide-network').addEventListener('change', queueExportPreview);
+$('#export-custom-terms').addEventListener('input', queueExportPreview);
+$('#export-dialog').addEventListener('close', () => {
+  cancelAnimationFrame(exportPreviewFrame);
+  $('#export-menu').focus();
+});
 $('#export-svg').addEventListener('click', () => {
   try {
-    download(new Blob([renderProject(project)], { type: 'image/svg+xml' }), filename('.svg'));
+    const snapshot = createExportSnapshot(project, exportOptions(), '.svg');
+    $('#export-dialog').close();
+    download(new Blob([snapshot.svg], { type: 'image/svg+xml' }), snapshot.filename);
     toast('SVG exported.');
-  } catch (error) { toast(`Export failed: ${error.message}`); }
+  } catch (error) {
+    $('#export-error').textContent = error.message;
+    toast(`Export failed: ${error.message}`);
+  }
 });
 $('#export-png').addEventListener('click', () => {
   try {
+    const snapshot = createExportSnapshot(project, exportOptions(), '.png');
+    $('#export-dialog').close();
     toast('Rendering PNG…', true);
-    const svg = renderProject(project);
+    const svg = snapshot.svg;
     const match = svg.match(/viewBox="0 0 (\d+) (\d+)"/);
     const dimensions = pngDimensions(Number(match[1]), Number(match[2]));
     const image = new Image();
@@ -1326,7 +1363,7 @@ $('#export-png').addEventListener('click', () => {
         canvas.toBlob(blob => {
           try {
             if (!blob) return toast('PNG encoder failed.');
-            download(blob, filename('.png'));
+            download(blob, snapshot.filename);
             toast(dimensions.reduced ? `PNG exported at ${dimensions.width}×${dimensions.height} to stay within browser limits. Use SVG for unlimited scaling.` : `PNG exported at ${dimensions.width}×${dimensions.height}.`);
           } catch (error) { toast(`PNG export failed: ${error.message}`); }
         }, 'image/png');
@@ -1334,7 +1371,10 @@ $('#export-png').addEventListener('click', () => {
     };
     image.onerror = () => toast('PNG rendering failed. Use SVG for this diagram.');
     image.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
-  } catch (error) { toast(`Export failed: ${error.message}`); }
+  } catch (error) {
+    $('#export-error').textContent = error.message;
+    toast(`Export failed: ${error.message}`);
+  }
 });
 
 function setZoom(next) {

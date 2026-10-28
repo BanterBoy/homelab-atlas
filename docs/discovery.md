@@ -63,7 +63,7 @@ docker run --rm \
   -e ATLAS_HOST_ID=nas \
   -e 'ATLAS_HOST_NAME=NAS Docker' \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
-  ghcr.io/aiden0rchad/homelab-atlas:0.6.0 collect \
+  ghcr.io/aiden0rchad/homelab-atlas:0.7.0 collect \
   > ../nas-docker-snapshot.json
 ```
 
@@ -122,6 +122,24 @@ ATLAS_DOCKER_API_KEY=replace-with-a-restricted-portainer-key
 ```
 
 TLS certificates are verified. Plain HTTP Docker backends are accepted only on localhost for testing. The collector calls only `GET /version` and the matching versioned `GET /containers/json?all=1` endpoint. It never proxies browser-supplied URLs and has no Docker write route.
+
+## Hawser Standard mode
+
+Atlas can use a [Hawser](https://github.com/Finsys/hawser) Standard-mode HTTPS agent as the Docker endpoint. Hawser accepts `X-Hawser-Token` and proxies Docker paths; Atlas still calls only `GET /version` and `GET /v…/containers/json?all=1`. Hawser is a broader management agent, so configure and protect it for that wider capability even though Atlas uses only these two inventory reads.
+
+Load the Hawser token into `HAWSER_TOKEN` with your existing secret manager, then run a one-shot collector near Atlas:
+
+```sh
+ATLAS_DOCKER_HOST=https://hawser.example.internal \
+ATLAS_HAWSER_TOKEN="$HAWSER_TOKEN" \
+ATLAS_HOST_ID=nas \
+ATLAS_HOST_NAME="NAS Docker" \
+./atlas collect > ../nas-docker-snapshot.json
+```
+
+This remote-agent path needs no Docker socket mount. TLS certificates are verified; do not disable verification or expose an unauthenticated Docker or Hawser endpoint. `ATLAS_HAWSER_TOKEN` and `ATLAS_DOCKER_API_KEY` are mutually exclusive, and neither credential appears in the snapshot.
+
+Only Hawser Standard mode is compatible. Hawser Edge mode uses an outbound WebSocket protocol that Atlas does not support. The protocol integration is tested with an HTTP/HTTPS fixture at the pinned upstream contract, not a live user agent. Keep literal secrets out of commands and shell history by loading them through your existing environment or secret manager.
 
 ## Remote editor access
 

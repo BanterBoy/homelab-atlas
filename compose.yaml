@@ -25,6 +25,7 @@ services:
     environment:
       ATLAS_COLLECTOR_TOKEN: "${ATLAS_COLLECTOR_TOKEN:-}"
       ATLAS_DOCKER_API_KEY: "${ATLAS_DOCKER_API_KEY:-}"
+      ATLAS_HAWSER_TOKEN: "${ATLAS_HAWSER_TOKEN:-}"
       ATLAS_DOCKER_HOST: "${ATLAS_DOCKER_HOST:-unix:///var/run/docker.sock}"
       ATLAS_HOST_ID: localdocker
       ATLAS_HOST_NAME: Docker

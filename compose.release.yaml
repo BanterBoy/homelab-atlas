@@ -1,6 +1,6 @@
 services:
   atlas:
-    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.6.0}
+    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.7.0}
     environment:
       ATLAS_ALLOWED_HOSTS: "${ATLAS_ALLOWED_HOSTS:-localhost,127.0.0.1,::1}"
       ATLAS_API_TOKEN: "${ATLAS_API_TOKEN:-}"
@@ -20,11 +20,12 @@ services:
     restart: unless-stopped
   collector:
     profiles: ["discovery"]
-    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.6.0}
+    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.7.0}
     command: ["collect", "--listen", ":8081"]
     environment:
       ATLAS_COLLECTOR_TOKEN: "${ATLAS_COLLECTOR_TOKEN:-}"
       ATLAS_DOCKER_API_KEY: "${ATLAS_DOCKER_API_KEY:-}"
+      ATLAS_HAWSER_TOKEN: "${ATLAS_HAWSER_TOKEN:-}"
       ATLAS_DOCKER_HOST: "${ATLAS_DOCKER_HOST:-unix:///var/run/docker.sock}"
       ATLAS_HOST_ID: localdocker
       ATLAS_HOST_NAME: Docker

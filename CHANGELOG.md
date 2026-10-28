@@ -2,6 +2,18 @@
 
 This file lists the notable changes in each Homelab Atlas release.
 
+## [0.7.0] - 2026-10-27
+
+### Added
+
+- Added previewed SVG and PNG privacy filtering for IP addresses, MAC addresses, URLs, emails, and optional literal custom terms.
+- Added Hawser Standard-mode inventory compatibility through the existing restricted Docker collector.
+
+### Changed
+
+- Export filtering is session-only and preserves project JSON, autosave, undo history, uploaded image bytes, card geometry, and canvas dimensions.
+- Hawser and Portainer credentials are mutually exclusive, validated at startup, and never forwarded across redirects.
+
 ## [0.6.0] - 2026-10-27
 
 ### Added
@@ -76,3 +88,4 @@ This file lists the notable changes in each Homelab Atlas release.
 [0.4.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.4.0
 [0.5.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.5.0
 [0.6.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.6.0
+[0.7.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.7.0

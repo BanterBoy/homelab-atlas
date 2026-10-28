@@ -10,6 +10,7 @@ At startup, the Go server prepares reusable gzip representations for compressibl
 |---|---|
 | `public/index.html` | Editor page and dialogs |
 | `public/app.js` | Editor controls, autosave, import, and export |
+| `public/export.js` | Pure image-export filtering and snapshot preparation |
 | `public/model.js` | Project schema, validation, layout, and SVG rendering |
 | `public/state.js` | State, conflict, selection, and PNG-size helpers |
 | `public/catalog.js` | Logo metadata and lookup helpers |
@@ -38,12 +39,21 @@ npm run build:icons
 npm run check:icons
 docker compose config
 docker compose -f compose.release.yaml config
-python3 scripts/release.py v0.6.0 --output dist
+python3 scripts/release.py v0.7.0 --output dist
 ```
 
 `npm test` checks logo data, runs the Node tests, runs `go test ./...`, and runs the Python release tests. Release files go into the ignored `dist/` directory, and the release workflow checks their checksums too.
 
 Docker and discovery tests use fictional fixtures. The collector must keep its fixed read-only endpoint set, response bounds, timeout, redirect rejection, and secret-safe errors. The editor server must never mount the Docker socket or accept a browser-supplied target URL.
+
+## Upstream reuse decisions
+
+| Project | License and evidence | Atlas decision |
+|---|---|---|
+| Hawser | [MIT license](https://github.com/Finsys/hawser/blob/bd1282901f7f33537adaebea33121c1831ef07a5/LICENSE) and [Standard HTTP server](https://github.com/Finsys/hawser/blob/bd1282901f7f33537adaebea33121c1831ef07a5/internal/server/http.go) | Implemented only its `X-Hawser-Token` and Docker-path protocol. MIT permits reuse, but Atlas copied no upstream code and does not vendor the full manager. |
+| Docker/Moby client | [Client source](https://github.com/moby/moby/tree/master/client) and [Apache-2.0 license](https://github.com/moby/moby/blob/master/client/LICENSE) | Not used. It remains useful if Atlas needs a broader Docker SDK; the current two-read standard-library client is smaller. |
+| Ullaakut/nmap | [Pinned MIT wrapper](https://github.com/Ullaakut/nmap/tree/95091f90b599d00827e6d42c609cbe4c3afeb0ac) | Not used. The wrapper shells out to a separately installed Nmap and does not relicense that binary. |
+| Nmap | [Nmap Public Source License](https://nmap.org/npsl/) and [XML format](https://nmap.org/book/output-formats-xml-output.html) | Do not copy or bundle Nmap into MIT Atlas; its license has extra requirements. The recommended next step is planned XML snapshot import with the standard-library parser and the same review/apply flow, not scanning. |
 
 ## Documentation
 

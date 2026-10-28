@@ -97,6 +97,132 @@ func TestDockerCollectionUsesVersionedReadOnlyEndpoints(t *testing.T) {
 	}
 }
 
+func TestHawserStandardCollectionContract(t *testing.T) {
+	const token = "fixture-hawser-token"
+	containers := []byte(`[{"Id":"raw-secret-id","Names":["/demo"],"Image":"demo:1","State":"running","Env":["PASSWORD=secret"],"Labels":{"private":"secret"}}]`)
+	for _, host := range []string{"http://127.0.0.1:2375", "https://hawser.example"} {
+		t.Run(host, func(t *testing.T) {
+			var requests []string
+			transport := &closeTrackingTransport{roundTrip: func(request *http.Request) (*http.Response, error) {
+				requests = append(requests, request.Method+" "+request.URL.RequestURI())
+				if request.Header.Get("X-Hawser-Token") != token || request.Header.Get("X-API-Key") != "" {
+					return testHTTPResponse(http.StatusUnauthorized, nil), nil
+				}
+				switch request.URL.RequestURI() {
+				case "/version":
+					return testHTTPResponse(http.StatusOK, []byte(`{"ApiVersion":"1.47"}`)), nil
+				case "/v1.47/containers/json?all=1":
+					return testHTTPResponse(http.StatusOK, containers), nil
+				default:
+					return testHTTPResponse(http.StatusNotFound, nil), nil
+				}
+			}}
+
+			client, err := newDockerClient(host, "", token)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if configured := client.client.Transport.(*http.Transport).TLSClientConfig; configured != nil && configured.InsecureSkipVerify {
+				t.Fatal("Docker client disabled TLS certificate validation")
+			}
+			client.client.Transport = transport
+			t.Setenv("ATLAS_HOST_ID", "hawser")
+			t.Setenv("ATLAS_HOST_NAME", "Hawser fixture")
+			snapshot, err := client.collect(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.Join(requests, ",") != "GET /version,GET /v1.47/containers/json?all=1" {
+				t.Fatalf("unexpected Hawser requests: %v", requests)
+			}
+			encoded := string(mustJSON(t, snapshot))
+			for _, secret := range []string{token, "raw-secret-id", "PASSWORD=secret", `"private":"secret"`} {
+				if strings.Contains(encoded, secret) {
+					t.Fatalf("Hawser snapshot leaked %q", secret)
+				}
+			}
+			if len(snapshot.Findings) != 1 || snapshot.Findings[0].Name != "demo" {
+				t.Fatalf("unexpected Hawser findings: %#v", snapshot.Findings)
+			}
+			if !transport.closed {
+				t.Fatal("Hawser idle connections were not closed")
+			}
+		})
+	}
+}
+
+func TestHawserCredentialsAndRedirects(t *testing.T) {
+	const token = "expected-token"
+	for name, supplied := range map[string]string{"missing": "", "wrong": "wrong-token"} {
+		t.Run(name, func(t *testing.T) {
+			client, err := newDockerClient("http://127.0.0.1:2375", "", supplied)
+			if err != nil {
+				t.Fatal(err)
+			}
+			client.client.Transport = roundTripFunc(func(request *http.Request) (*http.Response, error) {
+				if request.Header.Get("X-Hawser-Token") != token {
+					return testHTTPResponse(http.StatusUnauthorized, nil), nil
+				}
+				return testHTTPResponse(http.StatusOK, []byte(`{"ApiVersion":"1.47"}`)), nil
+			})
+			var version any
+			if err := client.getJSON(context.Background(), "/version", &version); err == nil || err.Error() != "Docker returned an error" || strings.Contains(err.Error(), token) || (supplied != "" && strings.Contains(err.Error(), supplied)) {
+				t.Fatalf("unsafe authentication error: %v", err)
+			}
+		})
+	}
+
+	for name, credentials := range map[string][2]string{
+		"conflict":        {"portainer", "hawser"},
+		"api key newline": {"bad\nvalue", ""},
+		"token newline":   {"", "bad\rvalue"},
+		"token too long":  {"", strings.Repeat("x", maxDockerCredentialLength+1)},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := newDockerClient("https://docker.example", credentials[0], credentials[1])
+			if err == nil {
+				t.Fatal("invalid credential configuration was accepted")
+			}
+			for _, credential := range credentials {
+				if credential != "" && strings.Contains(err.Error(), credential) {
+					t.Fatalf("credential configuration error was not generic: %v", err)
+				}
+			}
+		})
+	}
+	if _, err := newDockerClient("unix:///var/run/docker.sock", "", token); err == nil {
+		t.Fatal("Hawser token was accepted for a unix socket")
+	}
+
+	for name, credentials := range map[string][2]string{"hawser": {"", token}, "portainer": {"api-key", ""}} {
+		t.Run("redirect "+name, func(t *testing.T) {
+			client, err := newDockerClient("http://127.0.0.1:2375", credentials[0], credentials[1])
+			if err != nil {
+				t.Fatal(err)
+			}
+			calls := 0
+			forwarded := false
+			client.client.Transport = roundTripFunc(func(request *http.Request) (*http.Response, error) {
+				calls++
+				if calls > 1 {
+					forwarded = request.Header.Get("X-Hawser-Token") != "" || request.Header.Get("X-API-Key") != ""
+					return testHTTPResponse(http.StatusOK, []byte(`{}`)), nil
+				}
+				response := testHTTPResponse(http.StatusFound, nil)
+				response.Header.Set("Location", "https://redirect.example/stolen")
+				return response, nil
+			})
+			var value any
+			if err := client.getJSON(context.Background(), "/version", &value); err == nil {
+				t.Fatal("redirect succeeded")
+			}
+			if calls != 1 || forwarded {
+				t.Fatal("Docker credential was forwarded across a redirect")
+			}
+		})
+	}
+}
+
 func TestDockerIdentitySurvivesContainerRecreation(t *testing.T) {
 	first := groupContainers([]dockerContainer{{Names: []string{"/app"}, Image: "app:1", State: "running"}})
 	second := groupContainers([]dockerContainer{{Names: []string{"/app"}, Image: "app:2", State: "running"}})
@@ -148,7 +274,7 @@ func TestDockerRejectsRedirectsBadVersionsAndLargeInventories(t *testing.T) {
 }
 
 func TestDockerTimeoutAndHTTPSRules(t *testing.T) {
-	if _, err := newDockerClient("http://example.com/docker", ""); err == nil {
+	if _, err := newDockerClient("http://example.com/docker", "", ""); err == nil {
 		t.Fatal("remote plaintext Docker URL was accepted")
 	}
 	client := testDockerClient(roundTripFunc(func(request *http.Request) (*http.Response, error) {

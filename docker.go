@@ -24,6 +24,8 @@ import (
 
 var dockerVersionPattern = regexp.MustCompile(`^1\.[0-9]{1,3}$`)
 
+const maxDockerCredentialLength = 4096
+
 type dockerPort struct {
 	PrivatePort int    `json:"PrivatePort"`
 	PublicPort  int    `json:"PublicPort"`
@@ -39,12 +41,21 @@ type dockerContainer struct {
 }
 
 type dockerClient struct {
-	base   *url.URL
-	client *http.Client
-	apiKey string
+	base        *url.URL
+	client      *http.Client
+	apiKey      string
+	hawserToken string
 }
 
-func newDockerClient(rawHost, apiKey string) (*dockerClient, error) {
+func newDockerClient(rawHost, apiKey, hawserToken string) (*dockerClient, error) {
+	if apiKey != "" && hawserToken != "" {
+		return nil, errors.New("configure only one Docker authentication token")
+	}
+	for _, credential := range []string{apiKey, hawserToken} {
+		if len(credential) > maxDockerCredentialLength || strings.ContainsAny(credential, "\r\n") {
+			return nil, errors.New("Docker authentication token is invalid")
+		}
+	}
 	if rawHost == "" {
 		rawHost = "unix:///var/run/docker.sock"
 	}
@@ -56,6 +67,9 @@ func newDockerClient(rawHost, apiKey string) (*dockerClient, error) {
 	var base *url.URL
 	switch parsed.Scheme {
 	case "unix":
+		if hawserToken != "" {
+			return nil, errors.New("Hawser authentication requires an HTTP(S) Docker host")
+		}
 		if parsed.Host != "" || parsed.Path == "" || !path.IsAbs(parsed.Path) || parsed.RawQuery != "" || parsed.Fragment != "" {
 			return nil, errors.New("invalid Docker unix socket")
 		}
@@ -82,7 +96,7 @@ func newDockerClient(rawHost, apiKey string) (*dockerClient, error) {
 			return http.ErrUseLastResponse
 		},
 	}
-	return &dockerClient{base: base, client: client, apiKey: apiKey}, nil
+	return &dockerClient{base: base, client: client, apiKey: apiKey, hawserToken: hawserToken}, nil
 }
 
 func isLoopbackHost(host string) bool {
@@ -109,6 +123,8 @@ func (client *dockerClient) getJSON(ctx context.Context, suffix string, destinat
 	}
 	if client.apiKey != "" {
 		request.Header.Set("X-API-Key", client.apiKey)
+	} else if client.hawserToken != "" {
+		request.Header.Set("X-Hawser-Token", client.hawserToken)
 	}
 	response, err := client.client.Do(request)
 	if err != nil {
@@ -134,7 +150,7 @@ func (client *dockerClient) getJSON(ctx context.Context, suffix string, destinat
 }
 
 func collectDocker(ctx context.Context) (discoverySnapshot, error) {
-	client, err := newDockerClient(os.Getenv("ATLAS_DOCKER_HOST"), os.Getenv("ATLAS_DOCKER_API_KEY"))
+	client, err := newDockerClient(os.Getenv("ATLAS_DOCKER_HOST"), os.Getenv("ATLAS_DOCKER_API_KEY"), os.Getenv("ATLAS_HAWSER_TOKEN"))
 	if err != nil {
 		return discoverySnapshot{}, err
 	}

@@ -28,7 +28,9 @@ If you bind Compose to `0.0.0.0`, anyone who can reach port 8080 can open the ed
 
 ## Before you share {#content-and-sharing}
 
-Atlas only sees what you type or import. It does not scan for missing details, and it does not redact anything you entered. Before sharing JSON, SVG, PNG, or screenshots, check for:
+Atlas only sees what you type or import. The SVG and PNG Export dialog hides IP addresses, MAC addresses, URLs, and emails by default. You can list custom hostnames, domains, or other names as literal terms. The preview shows the filtered result before download.
+
+That filter does not make a diagram anonymous. It does not guess which arbitrary names are private, inspect text baked into uploaded logos, filter screenshots, or change saved JSON. Before sharing any file, still check for:
 
 - addresses, hostnames, and private domains
 - device roles or hardware details

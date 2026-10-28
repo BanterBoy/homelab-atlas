@@ -525,7 +525,7 @@ function textElement(text, x, y, options) {
   return `<text x="${x}" y="${y}" fill="${fill}" font-family="${FONT}" font-size="${size}" font-weight="${weight}" text-anchor="${anchor}" opacity="${opacity}">${title}${spans}</text>`;
 }
 
-function renderNetwork(network, box, theme, themeName, customLogos) {
+function renderNetwork(network, box, theme, themeName, customLogos, interactive) {
   const name = textElement(network.name, box.x + 72, box.y + 37, { fill: theme.text, size: 17, weight: 700, maxChars: Math.max(10, Math.floor((box.w - 88) / 9)) });
   const kind = textElement(network.kind, box.x + 72, box.y + 61, { fill: theme.muted, size: 12, weight: 550, maxChars: Math.max(10, Math.floor((box.w - 88) / 7)), maxLines: 2, lineHeight: 15 });
   const logos = [networkLogoId(network), network.secondaryIcon].filter(Boolean);
@@ -539,7 +539,8 @@ function renderNetwork(network, box, theme, themeName, customLogos) {
     const plate = logoPlate(id, themeName, customLogos);
     return `${plate ? `<rect x="${x - 3}" y="${y - 3}" width="${size + 6}" height="${size + 6}" rx="7" fill="${plate}"/>` : ''}<image href="${logoDataUri(id, customLogos)}" x="${x}" y="${y}" width="${size}" height="${size}" preserveAspectRatio="xMidYMid meet"/>`;
   }).join('');
-  return `<g data-network="${network.id}" role="button" tabindex="0" aria-label="Edit ${escapeXml(network.name)}"><title>${escapeXml(network.name)}</title><rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" rx="10" fill="${theme.card}" stroke="${theme.line}" stroke-opacity=".78"/>${iconBackground}${marks}${name}${kind}</g>`;
+  const editor = interactive ? ` data-network="${network.id}" role="button" tabindex="0" aria-label="Edit ${escapeXml(network.name)}"` : '';
+  return `<g${editor}><title>${escapeXml(network.name)}</title><rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" rx="10" fill="${theme.card}" stroke="${theme.line}" stroke-opacity=".78"/>${iconBackground}${marks}${name}${kind}</g>`;
 }
 
 function renderService(service, x, y, width, height, theme, themeName, secondary, customLogos) {
@@ -563,7 +564,7 @@ function renderServiceRow(service, x, y, width, height, theme, themeName, compac
   return `<g><title>${escapeXml(service.name)}${service.count > 1 ? ` ×${service.count}` : ''}</title><rect x="${x}" y="${y}" width="${width}" height="${height}" rx="7" fill="${theme.tile}" stroke="${theme.line}"/>${plateRect}<image href="${logoDataUri(service.logo, customLogos)}" x="${x + 13}" y="${iconY}" width="${geometry.logoSize}" height="${geometry.logoSize}" preserveAspectRatio="xMidYMid meet"/>${name}${badge}</g>`;
 }
 
-function renderCard(device, box, theme, themeName, customLogos) {
+function renderCard(device, box, theme, themeName, customLogos, interactive) {
   const innerX = box.x + 20;
   const innerWidth = box.w - 40;
   const plate = logoPlate(device.icon, themeName, customLogos);
@@ -583,8 +584,11 @@ function renderCard(device, box, theme, themeName, customLogos) {
     const factX = innerX + (index ? 10 : geometry.markWidth);
     const baseline = y + geometry.size + (index ? 5 : 0);
     if (geometry.label) {
-      hardware += textElement(`${geometry.label}:`, factX, baseline, { fill: device.accent, size: geometry.size, weight: 600, maxChars: 25 });
-      hardware += textElement(geometry.value, factX + geometry.labelWidth, baseline, { fill: index ? theme.muted : theme.text, size: geometry.size, weight: index ? 400 : 500, maxChars: geometry.chars, maxLines: 4, lineHeight: geometry.lineHeight });
+      const separator = fact.indexOf(': ');
+      const label = separator >= 0 ? fact.slice(0, separator) : fact;
+      const value = separator >= 0 ? fact.slice(separator + 2) : '';
+      hardware += textElement(`${label}:`, factX, baseline, { fill: device.accent, size: geometry.size, weight: 600, maxChars: 25 });
+      hardware += textElement(value, factX + geometry.labelWidth, baseline, { fill: index ? theme.muted : theme.text, size: geometry.size, weight: index ? 400 : 500, maxChars: geometry.chars, maxLines: 4, lineHeight: geometry.lineHeight });
     } else hardware += textElement(fact, factX, baseline, { fill: index ? theme.muted : theme.text, size: geometry.size, weight: index ? 400 : 500, maxChars: geometry.chars, maxLines: 4, lineHeight: geometry.lineHeight });
     if (geometry.mark) {
       const markPlate = logoPlate(geometry.mark, themeName);
@@ -611,7 +615,8 @@ function renderCard(device, box, theme, themeName, customLogos) {
     y = groupTop + geometry.height;
     return `<g>${inset}${groupName}${services}</g>`;
   }).join('');
-  return `<g data-device="${device.id}" role="button" tabindex="0" aria-label="Edit ${escapeXml(device.name)}"><title>${escapeXml(device.name)}</title><rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" rx="12" fill="${theme.card}" stroke="${theme.line}"/><rect x="${innerX}" y="${box.y + 22}" width="3" height="58" rx="1.5" fill="${device.accent}"/>${iconPlate}<image href="${logoDataUri(device.icon, customLogos)}" x="${box.x + box.w - 67}" y="${box.y + 27}" width="42" height="42" preserveAspectRatio="xMidYMid meet"/>${role}${name}${network}${hardware}${groups}</g>`;
+  const editor = interactive ? ` data-device="${device.id}" role="button" tabindex="0" aria-label="Edit ${escapeXml(device.name)}"` : '';
+  return `<g${editor}><title>${escapeXml(device.name)}</title><rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" rx="12" fill="${theme.card}" stroke="${theme.line}"/><rect x="${innerX}" y="${box.y + 22}" width="3" height="58" rx="1.5" fill="${device.accent}"/>${iconPlate}<image href="${logoDataUri(device.icon, customLogos)}" x="${box.x + box.w - 67}" y="${box.y + 27}" width="42" height="42" preserveAspectRatio="xMidYMid meet"/>${role}${name}${network}${hardware}${groups}</g>`;
 }
 
 function connectionLines(project, layout, theme) {
@@ -639,28 +644,29 @@ function connectionLines(project, layout, theme) {
   }).join('');
 }
 
-export function renderProject(project) {
+export function renderProject(project, { displayProject = project, interactive = true } = {}) {
   validateProject(project);
   const layout = layoutProject(project);
   const theme = palettes[project.theme];
   const serviceCount = project.devices.reduce((sum, device) => sum + device.groups.reduce((groupSum, group) => groupSum + group.services.length, 0), 0);
   const titleLines = wrapText(project.title, layout.titleMaxChars, 2);
-  const title = textElement(project.title, layout.margin, 103, { fill: theme.text, size: 68, weight: 700, maxChars: layout.titleMaxChars, maxLines: 2, lineHeight: 74 });
+  const title = textElement(displayProject.title, layout.margin, 103, { fill: theme.text, size: 68, weight: 700, maxChars: layout.titleMaxChars, maxLines: 2, lineHeight: 74 });
   const subtitleY = 136 + (titleLines.length - 1) * 74;
-  const subtitle = textElement(project.subtitle, layout.margin, subtitleY, { fill: theme.muted, size: 15, weight: 500, maxChars: Math.max(24, Math.floor((layout.width - layout.margin * 2) / 8)), maxLines: 2, lineHeight: 19 });
+  const subtitle = textElement(displayProject.subtitle, layout.margin, subtitleY, { fill: theme.muted, size: 15, weight: 500, maxChars: Math.max(24, Math.floor((layout.width - layout.margin * 2) / 8)), maxLines: 2, lineHeight: 19 });
   const statsY = layout.oneColumnHeader ? subtitleY + 58 : 70;
   const statStart = layout.oneColumnHeader ? layout.margin : layout.width - layout.margin - 360;
   const statWidth = layout.oneColumnHeader ? (layout.width - layout.margin * 2) / 3 : 120;
   const stats = [[project.devices.length, 'HOSTS'], [serviceCount, 'SERVICES'], [project.vlans.length, 'VLANS']].map(([value, label], index) => `${textElement(String(value).padStart(2, '0'), statStart + index * statWidth, statsY, { fill: index ? theme.text : theme.teal, size: 44, weight: 600, maxChars: 3 })}${textElement(label, statStart + index * statWidth, statsY + 28, { fill: theme.muted, size: 10, weight: 600, maxChars: 10 })}`).join('');
-  const networks = project.networks.map(network => renderNetwork(network, layout.networks.find(box => box.id === network.id), theme, project.theme, project.customLogos)).join('');
-  const vlans = project.vlans.map(vlan => {
+  const networks = displayProject.networks.map(network => renderNetwork(network, layout.networks.find(box => box.id === network.id), theme, project.theme, project.customLogos, interactive)).join('');
+  const vlans = displayProject.vlans.map(vlan => {
     const box = layout.vlans.find(item => item.id === vlan.id);
     const label = textElement(vlan.name, box.x + 20, box.y + 29, { fill: theme.text, size: 13, weight: 650, maxChars: Math.max(8, Math.floor((box.w - 30) / 7)) });
     return `<g><title>${escapeXml(vlan.name)}</title><rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" rx="6" fill="${theme.tile}" stroke="${theme.line}"/><rect x="${box.x + 9}" y="${box.y + 12}" width="3" height="22" rx="1.5" fill="${vlan.color}"/>${label}</g>`;
   }).join('');
-  const cards = layout.cards.map(box => renderCard(project.devices.find(device => device.id === box.id), box, theme, project.theme, project.customLogos)).join('');
-  const names = new Map([...project.networks, ...project.devices].map(item => [item.id, item.name]));
-  const relationships = layout.relationships.map((connection, index) => {
+  const cards = layout.cards.map(box => renderCard(displayProject.devices.find(device => device.id === box.id), box, theme, project.theme, project.customLogos, interactive)).join('');
+  const names = new Map([...displayProject.networks, ...displayProject.devices].map(item => [item.id, item.name]));
+  const relationships = layout.relationships.map((_, index) => {
+    const connection = displayProject.connections[index];
     const column = index % layout.relationshipColumns;
     const row = Math.floor(index / layout.relationshipColumns);
     const columnWidth = (layout.width - layout.margin * 2) / layout.relationshipColumns;
@@ -672,5 +678,5 @@ export function renderProject(project) {
   }).join('');
   const relationshipTitle = layout.relationships.length ? `<text x="${layout.margin}" y="${layout.relationshipsY - 14}" fill="${theme.muted}" font-family="${FONT}" font-size="10" font-weight="700" letter-spacing="1.5">RELATIONSHIPS</text>` : '';
   const footer = `<line x1="${layout.margin}" y1="${layout.footerY}" x2="${layout.width - layout.margin}" y2="${layout.footerY}" stroke="${theme.line}"/><text x="${layout.margin}" y="${layout.footerY + 28}" fill="${theme.muted}" font-family="${FONT}" font-size="10" font-weight="700" letter-spacing="1.5">HOMELAB ATLAS</text><text x="${layout.width - layout.margin}" y="${layout.footerY + 28}" fill="${theme.muted}" font-family="${FONT}" font-size="10" text-anchor="end">Logical links · Service groups</text>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${layout.width}" height="${layout.height}" viewBox="0 0 ${layout.width} ${layout.height}" role="img" aria-label="${escapeXml(project.title)}"><defs><pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="${theme.line}" opacity="0.22"/></pattern><marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7" fill="none" stroke="${theme.muted}" stroke-width="1.2"/></marker></defs><rect width="100%" height="100%" fill="${theme.bg}"/><rect width="100%" height="100%" fill="url(#dots)"/><line x1="${layout.margin}" y1="42" x2="${layout.margin + 38}" y2="42" stroke="${theme.teal}" stroke-width="4" stroke-linecap="round"/><text x="${layout.margin + 52}" y="46" fill="${theme.muted}" font-family="${FONT}" font-size="11" font-weight="700" letter-spacing="2">BUILT AT HOME</text>${title}${subtitle}${stats}${connectionLines(project, layout, theme)}${networks}${vlans}${cards}${relationshipTitle}${relationships}${footer}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${layout.width}" height="${layout.height}" viewBox="0 0 ${layout.width} ${layout.height}" role="img" aria-label="${escapeXml(displayProject.title)}"><defs><pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="${theme.line}" opacity="0.22"/></pattern><marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7" fill="none" stroke="${theme.muted}" stroke-width="1.2"/></marker></defs><rect width="100%" height="100%" fill="${theme.bg}"/><rect width="100%" height="100%" fill="url(#dots)"/><line x1="${layout.margin}" y1="42" x2="${layout.margin + 38}" y2="42" stroke="${theme.teal}" stroke-width="4" stroke-linecap="round"/><text x="${layout.margin + 52}" y="46" fill="${theme.muted}" font-family="${FONT}" font-size="11" font-weight="700" letter-spacing="2">BUILT AT HOME</text>${title}${subtitle}${stats}${connectionLines(project, layout, theme)}${networks}${vlans}${cards}${relationshipTitle}${relationships}${footer}</svg>`;
 }
