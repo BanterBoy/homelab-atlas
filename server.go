@@ -218,6 +218,8 @@ func (server *atlasServer) ServeHTTP(writer http.ResponseWriter, request *http.R
 		server.serveSources(writer, request)
 	case request.URL.Path == "/api/discovery/scan":
 		server.serveScan(writer, request)
+	case request.URL.Path == "/api/discovery/nmap":
+		server.serveNmapImport(writer, request)
 	default:
 		server.serveStatic(writer, request)
 	}
@@ -412,6 +414,46 @@ func (server *atlasServer) serveScan(writer http.ResponseWriter, request *http.R
 		return
 	}
 	writeJSON(writer, request, http.StatusOK, snapshot)
+}
+
+func (server *atlasServer) serveNmapImport(writer http.ResponseWriter, request *http.Request) {
+	if !server.authorizeAPI(writer, request) {
+		return
+	}
+	if request.Method != http.MethodPost {
+		methodNotAllowed(writer, http.MethodPost)
+		return
+	}
+	media, _, err := mime.ParseMediaType(request.Header.Get("Content-Type"))
+	if err != nil || (media != "application/xml" && media != "text/xml") {
+		http.Error(writer, "Content-Type must be application/xml or text/xml", http.StatusUnsupportedMediaType)
+		return
+	}
+	values, ok := request.URL.Query()["scope"]
+	if !ok || len(values) != 1 {
+		http.Error(writer, "a valid network scope is required", http.StatusBadRequest)
+		return
+	}
+	data, err := io.ReadAll(io.LimitReader(request.Body, maxNmapBytes+1))
+	if err != nil {
+		http.Error(writer, "could not read Nmap XML", http.StatusBadRequest)
+		return
+	}
+	if len(data) > maxNmapBytes {
+		http.Error(writer, "Nmap XML is larger than 2 MB", http.StatusRequestEntityTooLarge)
+		return
+	}
+	bundle, err := parseNmapXML(data, values[0])
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+	encoded, err := json.Marshal(bundle)
+	if err != nil || len(encoded)+1 > maxNmapBytes {
+		http.Error(writer, "normalized Nmap results are too large", http.StatusRequestEntityTooLarge)
+		return
+	}
+	writeBody(writer, request, http.StatusOK, "application/json; charset=utf-8", append(encoded, '\n'))
 }
 
 func (server *atlasServer) fetchSnapshot(ctx context.Context, source discoverySource) (discoverySnapshot, error) {

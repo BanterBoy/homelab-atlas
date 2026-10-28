@@ -8,7 +8,7 @@ import { applyProjectChange, filterInventory, hasStorageConflict, pngDimensions,
 import { CUSTOM_LOGO_LIMITS, normalizeLogoUpload, verifyCustomLogoDecodes } from './custom-logos.js';
 import {
   applyDiscoveryPlan, captureProjectGuard, discoveryBinding, discoveryBindingLabel, filterDiscoveryFindings, matchDiscoveryLogo,
-  parseDiscoverySnapshot, planDiscoveryMerge, projectGuardCurrent, suggestDiscoveryService, validateDiscoverySnapshot,
+  parseDiscoverySnapshot, planDiscoveryMerge, projectGuardCurrent, suggestDiscoveryService, validateDiscoverySnapshot, validateNmapBundle,
 } from './discovery.js';
 
 const $ = selector => document.querySelector(selector);
@@ -842,6 +842,25 @@ async function discoveryFetch(url, options = {}) {
   return fetch(url, { ...options, headers });
 }
 
+async function boundedResponseJSON(response) {
+  const declared = Number(response.headers.get('Content-Length'));
+  if (Number.isFinite(declared) && declared > 2_000_000) throw new Error('The discovery response is larger than 2 MB.');
+  const reader = response.body.getReader();
+  const chunks = []; let size = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.length;
+    if (size > 2_000_000) { await reader.cancel(); throw new Error('The discovery response is larger than 2 MB.'); }
+    chunks.push(value);
+  }
+  try {
+    const bytes = new Uint8Array(size); let offset = 0;
+    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
+    return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+  } catch { throw new Error('The server returned invalid discovery data.'); }
+}
+
 function beginDiscoveryRequest(message, clearResults = false) {
   discoveryState.controller?.abort();
   const token = Symbol('discovery-request');
@@ -905,7 +924,7 @@ async function loadDiscoverySources() {
     const response = await discoveryFetch('/api/discovery/sources', { signal: request.controller.signal });
     if (response.status === 401) return requestDiscoveryUnlock(request);
     if (!response.ok) throw new Error(`Collectors could not be loaded (${response.status}).`);
-    const sources = await response.json();
+    const sources = await boundedResponseJSON(response);
     if (!Array.isArray(sources) || sources.length > 16 || sources.some(source => !source || Object.keys(source).length !== 2 || typeof source.id !== 'string' || typeof source.name !== 'string')) throw new Error('The server returned an invalid collector list.');
     if (!discoveryRequestCurrent(request)) return;
     hideDiscoveryAuth();
@@ -968,7 +987,8 @@ function renderDiscoveryFindings() {
   root.replaceChildren(...visible.map(item => {
     const binding = discoveryBinding(project, discoveryState.snapshot.source.id, item.key);
     const choice = discoveryState.choices.get(item.key);
-    if (choice.serviceId === undefined) choice.serviceId = device ? suggestDiscoveryService(item, device) : null;
+    const hostFinding = item.kind === 'host';
+    if (choice.serviceId === undefined) choice.serviceId = hostFinding ? null : device ? suggestDiscoveryService(item, device) : null;
     if (newDevice) choice.serviceId = null;
     if (binding) choice.selected = false;
     const row = document.createElement('article');
@@ -993,9 +1013,9 @@ function renderDiscoveryFindings() {
     const heading = document.createElement('strong');
     heading.textContent = item.name;
     const detail = document.createElement('span');
-    detail.textContent = item.image || 'Image name unavailable';
+    detail.textContent = hostFinding ? 'Host' : item.image || [item.product || item.service || 'Unknown service', `${item.protocol}/${item.port}`].join(' · ');
     const status = document.createElement('small');
-    status.textContent = `${item.count} ${item.count === 1 ? 'container' : 'containers'} · ${item.running} running · ${item.stopped} stopped`;
+    status.textContent = hostFinding ? 'Device identity' : item.count ? `${item.count} ${item.count === 1 ? 'container' : 'containers'} · ${item.running} running · ${item.stopped} stopped` : [item.product, item.version, item.tunnel].filter(Boolean).join(' · ') || 'No product details detected';
     identity.append(heading, detail, status);
     const action = document.createElement('label');
     action.className = 'discovery-target';
@@ -1003,10 +1023,10 @@ function renderDiscoveryFindings() {
     actionLabel.textContent = binding ? `Linked to ${discoveryBindingLabel(project, binding)}` : 'Action';
     const select = document.createElement('select');
     select.setAttribute('aria-label', `Action for ${item.name}`);
-    select.add(new Option('Add new service', '__add'));
+    select.add(new Option(hostFinding ? (device ? 'Link host to this card' : 'Add host card') : 'Add new service', '__add'));
     if (choice.serviceId && serviceLabels.has(choice.serviceId)) select.add(new Option(serviceLabels.get(choice.serviceId), choice.serviceId));
     select.value = choice.serviceId || '__add';
-    select.disabled = Boolean(binding) || newDevice || !device;
+    select.disabled = hostFinding || Boolean(binding) || newDevice || !device;
     const populateOptions = () => {
       if (select.dataset.populated || select.disabled) return;
       const selected = select.value;
@@ -1043,9 +1063,9 @@ function updateDiscoveryPlan() {
     summary.textContent = 'Choose a destination device.';
     return;
   }
-  const hasAdditions = choices.some(choice => choice.serviceId === null);
+  const serviceAdditions = choices.some(choice => choice.serviceId === null && !choice.key.startsWith('nmap-host:'));
   const groupValue = $('#discovery-group').value;
-  if (deviceValue !== '__new' && hasAdditions && !groupValue) {
+  if (deviceValue !== '__new' && serviceAdditions && !groupValue) {
     summary.textContent = 'Choose an existing service group or a new group.';
     return;
   }
@@ -1058,7 +1078,8 @@ function updateDiscoveryPlan() {
       choices,
     });
     discoveryState.plan = plan;
-    const parts = [`${choices.length} selected across all pages`, `${plan.summary.added} added`, `${plan.summary.linked} linked`];
+    const parts = [`${choices.length} selected across all pages`, `${plan.summary.added} services added`, `${plan.summary.linked} services linked`];
+    if (plan.summary.hosts) parts.push(`${plan.summary.hosts} host linked`);
     if (plan.summary.newDevice) parts.push(`new device “${plan.project.devices.at(-1).name}”`);
     if (plan.summary.newGroup) parts.push('new service group');
     for (const height of plan.summary.heightChanges) parts.push(`${height.name} height ${height.from} → ${height.to}`);
@@ -1082,6 +1103,9 @@ function showDiscoverySnapshot(value, message) {
   $('#discovery-results').hidden = false;
   $('#discovery-result-source').textContent = value.source.name;
   $('#discovery-result-time').textContent = `Scanned ${new Date(value.scannedAt).toLocaleString()}`;
+  const nmap = value.format === 'homelab-atlas.nmap-discovery';
+  $('#discovery-host-meta').hidden = !nmap;
+  $('#discovery-host-meta').textContent = nmap ? [`Addresses: ${value.host.addresses.join(', ')}`, value.host.hostnames.length ? `Names: ${value.host.hostnames.join(', ')}` : '', value.host.vendor ? `Vendor: ${value.host.vendor}` : ''].filter(Boolean).join(' · ') : '';
   const device = $('#discovery-device');
   device.replaceChildren(new Option('Choose a device…', ''), new Option(`New device · ${value.source.name}`, '__new'));
   for (const item of project.devices) device.add(new Option(item.name, item.id));
@@ -1105,11 +1129,43 @@ async function scanDiscoverySource() {
     });
     if (response.status === 401) return requestDiscoveryUnlock(request);
     if (!response.ok) throw new Error(`Scan failed (${response.status}).`);
-    const value = await response.json();
+    const value = await boundedResponseJSON(response);
     validateDiscoverySnapshot(value);
     if (value.source.id !== sourceId) throw new Error('The collector returned a different source identity.');
     if (!discoveryRequestCurrent(request)) return;
     showDiscoverySnapshot(value, `Scan complete: ${value.findings.length} findings.`);
+  } catch (error) {
+    if (error.name === 'AbortError' || !discoveryRequestCurrent(request)) return;
+    setDiscoveryStatus(error.message, true);
+  }
+}
+
+async function importNmapXML(file) {
+  if (!file || !discoveryState || !projectGuardCurrent(discoveryState.guard, project)) return;
+  discoveryState.pendingNmapFile = file;
+  const scope = $('#discovery-scope').value;
+  const request = beginDiscoveryRequest('Parsing Nmap XML…', true);
+  try {
+    if (file.size > 2_000_000) throw new Error('Nmap XML is larger than 2 MB.');
+    const response = await discoveryFetch(`/api/discovery/nmap?scope=${encodeURIComponent(scope)}`, {
+      method: 'POST', signal: request.controller.signal, headers: { 'Content-Type': 'application/xml' }, body: file,
+    });
+    if (response.status === 401) return requestDiscoveryUnlock(request);
+    if (!response.ok) throw new Error(`Nmap import failed (${response.status}). Check the XML and network name.`);
+    const bundle = await boundedResponseJSON(response);
+    validateNmapBundle(bundle);
+    if (!discoveryRequestCurrent(request)) return;
+    discoveryState.bundle = structuredClone(bundle);
+    discoveryState.pendingNmapFile = null;
+    const hostSelect = $('#discovery-host');
+    hostSelect.replaceChildren(...bundle.snapshots.map((snapshot, index) => new Option(`${snapshot.source.name} · ${snapshot.host.addresses.join(', ')}`, String(index))));
+    $('#discovery-host-field').hidden = bundle.snapshots.length <= 1;
+    if (!bundle.snapshots.length) {
+      $('#discovery-empty').hidden = false;
+      setDiscoveryStatus(`No usable up hosts. Skipped ${bundle.skippedHosts} hosts and ${bundle.skippedPorts} ports.`);
+      return;
+    }
+    showDiscoverySnapshot(bundle.snapshots[0], `Nmap import loaded ${bundle.snapshots.length} hosts. Skipped ${bundle.skippedHosts} hosts and ${bundle.skippedPorts} non-open or unsupported ports.`);
   } catch (error) {
     if (error.name === 'AbortError' || !discoveryRequestCurrent(request)) return;
     setDiscoveryStatus(error.message, true);
@@ -1132,7 +1188,7 @@ async function importDiscoverySnapshot(file) {
 
 function openDiscovery(opener) {
   discoveryState?.controller?.abort();
-  discoveryState = { guard: captureProjectGuard(project), opener, sources: [], snapshot: null, choices: new Map(), plan: null, controller: null, requestToken: null, stale: false, query: '', page: 0 };
+  discoveryState = { guard: captureProjectGuard(project), opener, sources: [], bundle: null, pendingNmapFile: null, snapshot: null, choices: new Map(), plan: null, controller: null, requestToken: null, stale: false, query: '', page: 0 };
   $('#discovery-results').hidden = true;
   $('#discovery-empty').hidden = false;
   $('#discovery-source').replaceChildren(new Option('Loading sources…', ''));
@@ -1146,6 +1202,8 @@ function openDiscovery(opener) {
   $('#discovery-next').disabled = true;
   $('#discovery-apply').disabled = true;
   $('#discovery-file').value = '';
+  $('#discovery-nmap-file').value = '';
+  $('#discovery-host-field').hidden = true;
   $('#discovery-dialog').showModal();
   loadDiscoverySources();
 }
@@ -1155,16 +1213,37 @@ function unlockDiscoverySources() {
   const token = $('#discovery-api-token').value;
   if (!token) return setDiscoveryStatus('Enter the API token first.', true);
   apiToken = token;
-  loadDiscoverySources();
+  const pending = discoveryState.pendingNmapFile;
+  if (pending) importNmapXML(pending); else loadDiscoverySources();
 }
 
 $('#discover-docker').addEventListener('click', event => openDiscovery(event.currentTarget));
+$('#discovery-source').addEventListener('change', () => {
+  if (!discoveryState) return;
+  discoveryState.bundle = null;
+  beginDiscoveryRequest('Collector changed. Choose Scan to load fresh findings.', true);
+});
+$('#discovery-scope').addEventListener('change', () => {
+  if (!discoveryState) return;
+  discoveryState.bundle = null;
+  beginDiscoveryRequest('Network name changed. Import the XML again to create correctly scoped identities.', true);
+});
 $('#discovery-scan').addEventListener('click', scanDiscoverySource);
 $('#discovery-import').addEventListener('click', () => $('#discovery-file').click());
 $('#discovery-file').addEventListener('change', event => {
   const file = event.target.files[0];
   event.target.value = '';
   importDiscoverySnapshot(file);
+});
+$('#discovery-nmap-import').addEventListener('click', () => $('#discovery-nmap-file').click());
+$('#discovery-nmap-file').addEventListener('change', event => {
+  const file = event.target.files[0];
+  event.target.value = '';
+  importNmapXML(file);
+});
+$('#discovery-host').addEventListener('change', event => {
+  const snapshot = discoveryState?.bundle?.snapshots[Number(event.target.value)];
+  if (snapshot) showDiscoverySnapshot(snapshot, 'Scan host changed. Selections and actions were reset.');
 });
 $('#discovery-unlock').addEventListener('click', unlockDiscoverySources);
 $('#discovery-api-token').addEventListener('keydown', event => {
@@ -1202,8 +1281,15 @@ $('#discovery-apply').addEventListener('click', () => {
   const state = discoveryState;
   if (!state?.plan || !projectGuardCurrent(state.guard, project)) return invalidateDiscoveryIfStale();
   if (change(candidate => applyDiscoveryPlan(candidate, state.plan))) {
-    $('#discovery-dialog').close();
-    toast('Docker discovery changes applied.');
+    if (state.snapshot.format === 'homelab-atlas.nmap-discovery') {
+      state.guard = captureProjectGuard(project);
+      state.stale = false;
+      showDiscoverySnapshot(state.snapshot, 'Nmap discovery changes applied. Review another host or close.');
+      toast('Nmap discovery changes applied.');
+    } else {
+      $('#discovery-dialog').close();
+      toast('Docker discovery changes applied.');
+    }
   }
 });
 $('#discovery-form').addEventListener('submit', event => event.preventDefault());
@@ -1213,6 +1299,7 @@ $('#discovery-dialog').addEventListener('close', () => {
   state?.controller?.abort();
   discoveryState = null;
   $('#discovery-file').value = '';
+  $('#discovery-nmap-file').value = '';
   hideDiscoveryAuth();
   if (state?.opener?.isConnected) state.opener.focus();
 });

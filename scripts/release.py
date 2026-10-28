@@ -19,6 +19,7 @@ FILES = (
     "server.go",
     "docker.go",
     "discovery.go",
+    "nmap.go",
     "Dockerfile",
     "compose.release.yaml",
     "README.md",

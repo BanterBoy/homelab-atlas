@@ -186,6 +186,33 @@ func request(server http.Handler, method, target string, body []byte, headers ma
 	return record
 }
 
+func TestNmapImportAPIContract(t *testing.T) {
+	server := testAtlasServer(t)
+	body := nmapDocument(`<host><status state="up"/><address addr="192.0.2.10" addrtype="ipv4"/></host>`, "1700000000")
+	headers := map[string]string{"X-Atlas-Request": "1", "Content-Type": "application/xml"}
+	response := request(server, http.MethodPost, "/api/discovery/nmap?scope=Home%20network", body, headers)
+	if response.Code != http.StatusOK || response.Header().Get("Cache-Control") != "no-store" || !strings.Contains(response.Body.String(), `"homelab-atlas.nmap-import"`) {
+		t.Fatalf("Nmap response: status=%d headers=%v body=%s", response.Code, response.Header(), response.Body.String())
+	}
+	for _, item := range []struct {
+		name, method, target, contentType string
+		want                              int
+	}{
+		{"method", http.MethodGet, "/api/discovery/nmap?scope=Lab", "application/xml", http.StatusMethodNotAllowed},
+		{"mime", http.MethodPost, "/api/discovery/nmap?scope=Lab", "application/json", http.StatusUnsupportedMediaType},
+		{"scope", http.MethodPost, "/api/discovery/nmap", "application/xml", http.StatusBadRequest},
+	} {
+		itemHeaders := map[string]string{"X-Atlas-Request": "1", "Content-Type": item.contentType}
+		if got := request(server, item.method, item.target, body, itemHeaders); got.Code != item.want {
+			t.Errorf("%s status=%d want=%d", item.name, got.Code, item.want)
+		}
+	}
+	large := bytes.Repeat([]byte("x"), maxNmapBytes+1)
+	if got := request(server, http.MethodPost, "/api/discovery/nmap?scope=Lab", large, headers); got.Code != http.StatusRequestEntityTooLarge || strings.Contains(got.Body.String(), string(body)) {
+		t.Fatalf("oversized response: %d %q", got.Code, got.Body.String())
+	}
+}
+
 func TestStaticServerHealthAssetsAndRestrictions(t *testing.T) {
 	server := testAtlasServer(t)
 	for _, item := range []struct {

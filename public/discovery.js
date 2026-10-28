@@ -2,7 +2,8 @@ import { LOGOS } from './catalog.js';
 import { LIMITS, layoutProject, uid, validateProject } from './model.js';
 
 export const DISCOVERY_LIMITS = { bytes: 2_000_000, findings: 1000, bindings: 1600 };
-const KEY_RE = /^(?:compose|container):[0-9a-f]{64}$/;
+const DOCKER_KEY_RE = /^(?:compose|container):[0-9a-f]{64}$/;
+const NMAP_KEY_RE = /^nmap(?:-host)?:[0-9a-f]{64}$/;
 const ID_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
 const encoder = new TextEncoder();
 
@@ -38,7 +39,24 @@ function validTimestamp(value) {
     && hour <= 23 && minute <= 59 && second <= 59 && offsetHour <= 23 && offsetMinute <= 59;
 }
 
+function validIPv4(value) {
+  return /^(?:0|[1-9]\d{0,2})(?:\.(?:0|[1-9]\d{0,2})){3}$/.test(value) && value.split('.').every(part => Number(part) <= 255);
+}
+
+function validIP(value) {
+  if (validIPv4(value)) return true;
+  if (!value.includes(':') || !/^[0-9a-f:.]+$/.test(value) || (value.match(/::/g) || []).length > 1) return false;
+  const pieces = value.split(':').filter(Boolean);
+  let groups = 0;
+  for (const piece of pieces) {
+    if (piece.includes('.')) { if (!validIPv4(piece)) return false; groups += 2; }
+    else { if (!/^[0-9a-f]{1,4}$/.test(piece)) return false; groups += 1; }
+  }
+  return value.includes('::') ? groups < 8 : groups === 8;
+}
+
 export function validateDiscoverySnapshot(input) {
+  if (input?.format === 'homelab-atlas.nmap-discovery') return validateNmapSnapshot(input);
   exact(input, ['format', 'version', 'source', 'scannedAt', 'findings'], 'Snapshot');
   if (input.format !== 'homelab-atlas.docker-discovery' || input.version !== 1) throw new Error('Unsupported discovery snapshot.');
   exact(input.source, ['id', 'name'], 'Snapshot source');
@@ -51,7 +69,7 @@ export function validateDiscoverySnapshot(input) {
   let total = 0;
   for (const finding of input.findings) {
     exact(finding, ['key', 'name', 'image', 'count', 'running', 'stopped', 'ports', 'composeProject', 'composeService', 'containerNames'], 'Finding');
-    if (typeof finding.key !== 'string' || !KEY_RE.test(finding.key) || keys.has(finding.key)) throw new Error('Finding key is invalid or duplicated.');
+    if (typeof finding.key !== 'string' || !DOCKER_KEY_RE.test(finding.key) || keys.has(finding.key)) throw new Error('Finding key is invalid or duplicated.');
     keys.add(finding.key);
     text(finding.name, 120, 'Finding name', false);
     text(finding.image, 256, 'Finding image');
@@ -68,6 +86,62 @@ export function validateDiscoverySnapshot(input) {
   return true;
 }
 
+function validateNmapSnapshot(input) {
+  exact(input, ['format', 'version', 'source', 'scannedAt', 'host', 'findings'], 'Nmap snapshot');
+  if (input.version !== 1) throw new Error('Unsupported Nmap snapshot.');
+  exact(input.source, ['id', 'name'], 'Snapshot source');
+  if (typeof input.source.id !== 'string' || !/^[0-9a-f]{64}$/.test(input.source.id)) throw new Error('Snapshot source ID is invalid.');
+  text(input.source.name, 120, 'Snapshot source name', false);
+  text(input.scannedAt, 64, 'Scan date', false);
+  if (!validTimestamp(input.scannedAt)) throw new Error('Scan date is invalid.');
+  exact(input.host, ['addresses', 'hostnames', 'mac', 'vendor'], 'Nmap host');
+  if (!Array.isArray(input.host.addresses) || !input.host.addresses.length || input.host.addresses.length > 16
+    || !Array.isArray(input.host.hostnames) || input.host.hostnames.length > 16) throw new Error('Nmap host identity is invalid.');
+  input.host.addresses.forEach(value => {
+    text(value, 64, 'Host address', false);
+    if (!validIP(value)) throw new Error('Host address is invalid.');
+  });
+  if (new Set(input.host.addresses).size !== input.host.addresses.length || new Set(input.host.hostnames).size !== input.host.hostnames.length) throw new Error('Nmap host identity is duplicated.');
+  input.host.hostnames.forEach(value => text(value, 120, 'Hostname', false));
+  text(input.host.mac, 17, 'Host MAC'); text(input.host.vendor, 120, 'Host vendor');
+  if (input.host.mac && !/^(?:[0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(input.host.mac)) throw new Error('Host MAC is invalid.');
+  if (!Array.isArray(input.findings) || !input.findings.length || input.findings.length > DISCOVERY_LIMITS.findings) throw new Error('Nmap findings are invalid.');
+  const keys = new Set(); let hosts = 0;
+  for (const finding of input.findings) {
+    const host = finding?.kind === 'host';
+    exact(finding, host ? ['key', 'name', 'kind'] : ['key', 'name', 'kind', 'protocol', 'port', 'service', 'product', 'version', 'tunnel'], 'Nmap finding');
+    if (typeof finding.key !== 'string' || !NMAP_KEY_RE.test(finding.key) || keys.has(finding.key)) throw new Error('Nmap finding key is invalid or duplicated.');
+    keys.add(finding.key); text(finding.name, 120, 'Finding name', false);
+    if (host) {
+      if (!finding.key.startsWith('nmap-host:')) throw new Error('Host finding key is invalid.');
+      hosts += 1;
+    } else {
+      if (finding.kind !== 'service' || !finding.key.startsWith('nmap:') || !['tcp', 'udp'].includes(finding.protocol)
+        || !Number.isInteger(finding.port) || finding.port < 1 || finding.port > 65535) throw new Error('Endpoint finding is invalid.');
+      for (const field of ['service', 'product', 'version', 'tunnel']) text(finding[field], 120, `Endpoint ${field}`);
+    }
+  }
+  if (hosts !== 1) throw new Error('Nmap snapshot must contain exactly one host finding.');
+  return true;
+}
+
+export function validateNmapBundle(input) {
+  exact(input, ['format', 'version', 'scope', 'scannedAt', 'snapshots', 'skippedHosts', 'skippedPorts'], 'Nmap import');
+  if (input.format !== 'homelab-atlas.nmap-import' || input.version !== 1) throw new Error('Unsupported Nmap import.');
+  text(input.scope, 120, 'Network name', false); text(input.scannedAt, 64, 'Scan date', false);
+  if (input.scope !== input.scope.trim().replace(/\s+/gu, ' ') || /\p{Cc}/u.test(input.scope)) throw new Error('Network name is invalid.');
+  if (!validTimestamp(input.scannedAt) || !Array.isArray(input.snapshots) || input.snapshots.length > 256
+    || ![input.skippedHosts, input.skippedPorts].every(value => Number.isInteger(value) && value >= 0)) throw new Error('Nmap import metadata is invalid.');
+  let findings = 0; const sources = new Set();
+  for (const snapshot of input.snapshots) {
+    validateNmapSnapshot(snapshot);
+    if (snapshot.scannedAt !== input.scannedAt || sources.has(snapshot.source.id)) throw new Error('Nmap import contains inconsistent or duplicate hosts.');
+    sources.add(snapshot.source.id); findings += snapshot.findings.length;
+  }
+  if (findings > DISCOVERY_LIMITS.findings) throw new Error('Nmap import has too many findings.');
+  return true;
+}
+
 export function parseDiscoverySnapshot(source) {
   if (typeof source !== 'string' || encoder.encode(source).length > DISCOVERY_LIMITS.bytes) throw new Error('Snapshot is larger than 2 MB.');
   let value;
@@ -80,7 +154,7 @@ const normalize = value => String(value || '').normalize('NFD').replace(/\p{Diac
 
 export function filterDiscoveryFindings(findings, query) {
   const needle = normalize(query);
-  return findings.filter(finding => !needle || [finding.name, finding.image, finding.composeProject, finding.composeService]
+  return findings.filter(finding => !needle || [finding.name, finding.image, finding.composeProject, finding.composeService, finding.protocol, finding.port, finding.service, finding.product, finding.version, finding.kind]
     .some(value => normalize(value).includes(needle)))
     .sort((left, right) => left.name.localeCompare(right.name, undefined, { sensitivity: 'base' }) || left.key.localeCompare(right.key));
 }
@@ -92,7 +166,7 @@ function imageName(image) {
 
 export function matchDiscoveryLogo(finding, catalog = LOGOS) {
   const aliases = { postgres: 'postgresql', homeassistant: 'home-assistant', pihole: 'pi-hole' };
-  const needles = [finding.composeService, finding.name, imageName(finding.image)].map(normalize).filter(Boolean);
+  const needles = [finding.product, finding.service, finding.composeService, finding.name, imageName(finding.image)].map(normalize).filter(Boolean);
   for (const needle of needles) {
     const alias = aliases[needle];
     if (alias && catalog.some(logo => logo.id === alias)) return alias;
@@ -116,7 +190,7 @@ export function discoveryBinding(project, sourceId, key) {
 export function discoveryBindingLabel(project, binding) {
   const device = project.devices.find(item => item.id === binding?.deviceId);
   const service = device?.groups.flatMap(group => group.services).find(item => item.id === binding?.serviceId);
-  return device && service ? `${device.name} · ${service.name}` : 'Missing target';
+  return device && binding?.serviceId === null ? device.name : device && service ? `${device.name} · ${service.name}` : 'Missing target';
 }
 
 export function captureProjectGuard(project) {
@@ -153,18 +227,20 @@ export function planDiscoveryMerge(project, snapshot, options, idFactory = uid) 
     exact(choice, ['key', 'serviceId'], 'Discovery choice');
     if (!findings.has(choice.key) || choiceKeys.has(choice.key) || bound.has(`${snapshot.source.id}\0${choice.key}`)) throw new Error('A selected finding is invalid or already linked.');
     if (choice.serviceId !== null && typeof choice.serviceId !== 'string') throw new Error('Discovery choice target is invalid.');
+    if (findings.get(choice.key).kind === 'host' && choice.serviceId !== null) throw new Error('A host finding can only link to a device.');
     choiceKeys.add(choice.key);
   }
 
   const target = options.deviceId === null ? null : project.devices.find(device => device.id === options.deviceId);
   if (options.deviceId !== null && !target) throw new Error('Choose a destination device.');
-  const additions = choices.filter(choice => choice.serviceId === null);
-  const links = choices.filter(choice => choice.serviceId !== null);
+  const hostChoices = choices.filter(choice => findings.get(choice.key).kind === 'host');
+  const additions = choices.filter(choice => findings.get(choice.key).kind !== 'host' && choice.serviceId === null);
+  const links = choices.filter(choice => findings.get(choice.key).kind !== 'host' && choice.serviceId !== null);
   if (!target && links.length) throw new Error('A new device cannot link to an existing service.');
   for (const choice of links) {
     if (!target.groups.some(group => group.services.some(service => service.id === choice.serviceId))) throw new Error('A linked service is not on the destination device.');
   }
-  for (const choice of additions) if (findings.get(choice.key).count > 99) throw new Error(`${findings.get(choice.key).name} has more than 99 instances and cannot be added.`);
+  for (const choice of additions) if ((findings.get(choice.key).count ?? 1) > 99) throw new Error(`${findings.get(choice.key).name} has more than 99 instances and cannot be added.`);
 
   let destinationGroup = null;
   if (additions.length && target && options.groupId !== null) {
@@ -186,9 +262,10 @@ export function planDiscoveryMerge(project, snapshot, options, idFactory = uid) 
   let candidateDevice = target && candidate.devices.find(device => device.id === target.id);
   let newDevice = false;
   if (!candidateDevice) {
-    if (!additions.length) throw new Error('A new device needs at least one added service.');
+    if (!additions.length && !hostChoices.length) throw new Error('A new device needs a selected host or service.');
     const name = options.newDeviceName?.trim() || snapshot.source.name;
-    candidateDevice = { id: allocate('dev'), name, role: 'Docker', icon: 'docker', accent: '#2496ed', network: '', hardware: [], groups: [] };
+    const nmap = snapshot.format === 'homelab-atlas.nmap-discovery';
+    candidateDevice = { id: allocate('dev'), name, role: nmap ? 'Network host' : 'Docker', icon: nmap ? 'server' : 'docker', accent: nmap ? '#55d6c9' : '#2496ed', network: '', hardware: nmap ? snapshot.host.addresses.slice(0, LIMITS.hardware) : [], groups: [] };
     candidate.devices.push(candidateDevice);
     newDevice = true;
   }
@@ -207,15 +284,17 @@ export function planDiscoveryMerge(project, snapshot, options, idFactory = uid) 
   for (const choice of choices) {
     const item = findings.get(choice.key);
     let serviceId = choice.serviceId;
-    if (serviceId === null) {
+    if (item.kind === 'host') {
+      serviceId = null;
+    } else if (serviceId === null) {
       serviceId = allocate('svc');
-      candidateGroup.services.push({ id: serviceId, logo: matchDiscoveryLogo(item), name: item.name, count: item.count });
+      candidateGroup.services.push({ id: serviceId, logo: matchDiscoveryLogo(item), name: item.name, count: item.count ?? 1 });
     }
     candidate.discovery.bindings.push({ sourceId: snapshot.source.id, key: item.key, deviceId: candidateDevice.id, serviceId });
   }
 
   const heightChanges = [];
-  if (additions.length) {
+  if (additions.length || newDevice) {
     if (newDevice) {
       candidate.layout = { mode: 'auto', cards: [] };
       const automatic = layoutProject(candidate);
@@ -262,7 +341,7 @@ export function planDiscoveryMerge(project, snapshot, options, idFactory = uid) 
     baseRevision: project.revision,
     baseJSON: JSON.stringify(project),
     project: candidate,
-    summary: { added: additions.length, linked: links.length, newDevice, newGroup, heightChanges },
+    summary: { added: additions.length, linked: links.length, ...(snapshot.format === 'homelab-atlas.nmap-discovery' ? { hosts: hostChoices.length } : {}), newDevice, newGroup, heightChanges },
   };
 }
 

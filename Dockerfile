@@ -1,6 +1,6 @@
 FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS build
 WORKDIR /src
-COPY go.mod main.go server.go docker.go discovery.go ./
+COPY go.mod main.go server.go docker.go discovery.go nmap.go ./
 COPY public ./public
 ARG TARGETOS TARGETARCH
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w" -o /out/atlas .

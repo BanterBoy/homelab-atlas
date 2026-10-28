@@ -2,6 +2,8 @@
 
 JSON is your editable project file. SVG and PNG are images of it.
 
+Atlas 0.8 saves schema version 6. Imports from schema versions 1 through 5 preserve inventory, custom logos, discovery bindings, connections, and manual layout while updating the representation needed for host bindings.
+
 ## Browser autosave
 
 Changes autosave to `localStorage` in the current browser profile. The browser keeps separate storage for each hostname, port, and protocol. Nothing is saved to the Go server or a container volume.

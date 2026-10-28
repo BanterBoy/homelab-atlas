@@ -342,6 +342,9 @@ dialog header button { width: 32px; padding: 0; }
 .discovery-auth { display: grid; grid-template-columns: minmax(180px, 1fr) auto; align-items: end; gap: 4px 8px; margin-top: 8px; }
 .discovery-auth small { grid-column: 1 / -1; color: var(--muted); }
 .discovery-source label { margin: 0; }
+.discovery-nmap-controls { display: grid; grid-template-columns: minmax(180px, 1fr) auto; align-items: end; gap: 8px; margin-top: 10px; }
+.discovery-nmap-controls small { grid-column: 1 / -1; color: var(--muted); }
+.discovery-host-meta { margin: -5px 2px 10px; color: var(--muted); font-size: 12px; }
 .discovery-status { min-height: 20px; margin: 10px 2px; color: var(--muted); font-size: 12px; }
 .discovery-status.error, .discovery-summary.error { color: #fca5a5; }
 .discovery-empty { display: grid; justify-items: center; gap: 5px; padding: 34px 20px; border: 1px dashed #46504f; border-radius: 8px; color: var(--muted); text-align: center; }
@@ -466,7 +469,8 @@ dialog header button { width: 32px; padding: 0; }
   dialog footer { flex-wrap: wrap; }
   .logo-tools { grid-template-columns: 1fr auto; }
   .logo-tools .search { grid-column: 1 / -1; }
-  .discovery-source-controls, .discovery-auth, .discovery-destination, .discovery-finding { grid-template-columns: 1fr; }
+  .discovery-source-controls, .discovery-nmap-controls, .discovery-auth, .discovery-destination, .discovery-finding { grid-template-columns: 1fr; }
+  .discovery-nmap-controls small { grid-column: auto; }
   .discovery-source-controls button, .discovery-auth button { width: 100%; }
   .discovery-auth small { grid-column: auto; }
   .discovery-list-tools { align-items: stretch; flex-direction: column; }

@@ -1,7 +1,7 @@
 import { LOGO_IDS, logoDataUri, logoPlate, networkLogoId } from './catalog.js';
 import { validateCustomLogos } from './custom-logos.js';
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 export const THEMES = ['navy', 'light', 'midnight'];
 export const DENSITIES = ['comfortable', 'compact'];
 export const LIMITS = {
@@ -39,7 +39,7 @@ function services(prefix, items) {
 
 export function sampleProject() {
   return {
-    schemaVersion: 5,
+    schemaVersion: 6,
     revision: 1,
     title: 'Home Lab',
     subtitle: 'Private infrastructure · Local services · Built to last',
@@ -115,15 +115,15 @@ export function parseProject(text) {
   if (new TextEncoder().encode(text).length > LIMITS.bytes) throw new Error('File is larger than 2 MB.');
   let data;
   try { data = JSON.parse(text); } catch { throw new Error('This file is not valid JSON.'); }
-  if ([1, 2, 3, 4].includes(data?.schemaVersion)) {
+  if ([1, 2, 3, 4, 5].includes(data?.schemaVersion)) {
     const version = data.schemaVersion;
     validateProjectVersion(data, version);
     const migrated = structuredClone(data);
-    migrated.schemaVersion = 5;
+    migrated.schemaVersion = 6;
     if (version === 1) migrated.layout = { mode: 'auto', cards: [] };
     if (version < 3) migrated.networks = migrated.networks.map(network => ({ ...network, icon: '', secondaryIcon: '' }));
     if (version < 4) migrated.customLogos = [];
-    migrated.discovery = { bindings: [] };
+    if (version < 5) migrated.discovery = { bindings: [] };
     validateProject(migrated);
     return migrated;
   }
@@ -221,13 +221,18 @@ function validateProjectVersion(project, version) {
     const bindings = new Set();
     for (const binding of project.discovery.bindings) {
       exact(binding, ['sourceId', 'key', 'deviceId', 'serviceId'], 'Discovery binding');
-      if (![binding.sourceId, binding.key, binding.deviceId, binding.serviceId].every(value => typeof value === 'string')
-        || !ID_RE.test(binding.sourceId) || !/^(?:compose|container):[0-9a-f]{64}$/.test(binding.key)
-        || !ID_RE.test(binding.deviceId) || !ID_RE.test(binding.serviceId)) fail('Discovery binding has invalid fields.');
+      const dockerKey = /^(?:compose|container):[0-9a-f]{64}$/.test(binding.key);
+      const hostKey = /^nmap-host:[0-9a-f]{64}$/.test(binding.key);
+      const endpointKey = /^nmap:[0-9a-f]{64}$/.test(binding.key);
+      const validTarget = hostKey ? binding.serviceId === null : typeof binding.serviceId === 'string' && ID_RE.test(binding.serviceId);
+      if (typeof binding.sourceId !== 'string' || typeof binding.key !== 'string' || typeof binding.deviceId !== 'string'
+        || !ID_RE.test(binding.sourceId) || !ID_RE.test(binding.deviceId)
+        || (version === 5 && (!dockerKey || !validTarget))
+        || (version >= 6 && (!(dockerKey || hostKey || endpointKey) || !validTarget))) fail('Discovery binding has invalid fields.');
       const identity = `${binding.sourceId}\0${binding.key}`;
       if (bindings.has(identity)) fail('Discovery binding source and key must be unique.');
       bindings.add(identity);
-      if (targets.get(binding.serviceId) !== binding.deviceId) fail('Discovery binding has an invalid service target.');
+      if (hostKey ? !project.devices.some(device => device.id === binding.deviceId) : targets.get(binding.serviceId) !== binding.deviceId) fail('Discovery binding has an invalid service target.');
     }
   }
   const endpoints = new Set([...project.networks, ...project.devices].map(item => item.id));

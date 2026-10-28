@@ -83,7 +83,7 @@ test('bad and oversized imports are rejected', () => {
   const project = sampleProject();
   project.schemaVersion = 9;
   assert.throws(() => parseProject(JSON.stringify(project)), /schema/);
-  project.schemaVersion = 5;
+  project.schemaVersion = 6;
   project.devices[0].icon = 'data:image/svg+xml,<script>';
   assert.throws(() => validateProject(project), /Unknown logo/);
   const extra = sampleProject();
@@ -131,7 +131,7 @@ test('schema 1 through 4 imports migrate strictly while preserving data', () => 
   const version2Before = structuredClone(version2);
   const migrated2 = parseProject(JSON.stringify(version2));
   assert.deepEqual(version2, version2Before);
-  assert.equal(migrated2.schemaVersion, 5);
+  assert.equal(migrated2.schemaVersion, 6);
   assert.equal(migrated2.revision, version2.revision);
   assert.deepEqual(migrated2.layout, version2.layout);
   assert.ok(migrated2.networks.every(network => network.icon === '' && network.secondaryIcon === ''));
@@ -142,7 +142,7 @@ test('schema 1 through 4 imports migrate strictly while preserving data', () => 
   version1.schemaVersion = 1;
   delete version1.layout;
   const migrated1 = parseProject(JSON.stringify(version1));
-  assert.equal(migrated1.schemaVersion, 5);
+  assert.equal(migrated1.schemaVersion, 6);
   assert.equal(migrated1.revision, version1.revision);
   assert.deepEqual(migrated1.layout, { mode: 'auto', cards: [] });
   assert.ok(migrated1.networks.every(network => network.icon === '' && network.secondaryIcon === ''));
@@ -160,7 +160,7 @@ test('schema 1 through 4 imports migrate strictly while preserving data', () => 
   version3.networks[0].icon = 'cloudflare';
   version3.networks[0].secondaryIcon = 'tailscale';
   const migrated3 = parseProject(JSON.stringify(version3));
-  assert.equal(migrated3.schemaVersion, 5);
+  assert.equal(migrated3.schemaVersion, 6);
   assert.equal(migrated3.networks[0].icon, 'cloudflare');
   assert.equal(migrated3.networks[0].secondaryIcon, 'tailscale');
   assert.deepEqual(migrated3.customLogos, []);
@@ -170,9 +170,20 @@ test('schema 1 through 4 imports migrate strictly while preserving data', () => 
   delete version4.discovery;
   version4.customLogos = [];
   const migrated4 = parseProject(JSON.stringify(version4));
-  assert.equal(migrated4.schemaVersion, 5);
+  assert.equal(migrated4.schemaVersion, 6);
   assert.deepEqual(migrated4.discovery, { bindings: [] });
   assert.deepEqual(migrated4.customLogos, version4.customLogos);
+});
+
+test('schema 5 migrates unchanged except version and still rejects Nmap bindings', () => {
+  const version5 = sampleProject();
+  version5.schemaVersion = 5;
+  const service = version5.devices[0].groups[0].services[0];
+  version5.discovery.bindings.push({ sourceId: 'docker', key: `container:${'a'.repeat(64)}`, deviceId: version5.devices[0].id, serviceId: service.id });
+  const migrated = parseProject(JSON.stringify(version5));
+  assert.deepEqual({ ...migrated, schemaVersion: 5 }, version5);
+  version5.discovery.bindings[0] = { sourceId: 'nmap', key: `nmap-host:${'b'.repeat(64)}`, deviceId: version5.devices[0].id, serviceId: null };
+  assert.throws(() => parseProject(JSON.stringify(version5)), /binding/);
 });
 
 test('legacy project record IDs may match bundled logo IDs', () => {

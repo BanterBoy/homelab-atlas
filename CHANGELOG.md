@@ -2,6 +2,18 @@
 
 This file lists the notable changes in each Homelab Atlas release.
 
+## [0.8.0] - 2026-10-27
+
+### Added
+
+- Added bounded Nmap XML import with multi-host, ping-only host, TCP/UDP endpoint, IPv6, and MAC-stable identity review.
+- Added host cards and device-level discovery bindings without automatic scanning or diagram changes.
+
+### Changed
+
+- Discovery now keeps manual geometry fixed, supports reviewing several imported hosts, and applies each host as one undo step.
+- Saved projects now use schema version 6; schema versions 1 through 5 migrate without changing existing inventory or layout.
+
 ## [0.7.0] - 2026-10-27
 
 ### Added
@@ -89,3 +101,4 @@ This file lists the notable changes in each Homelab Atlas release.
 [0.5.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.5.0
 [0.6.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.6.0
 [0.7.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.7.0
+[0.8.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.8.0

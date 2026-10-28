@@ -1,4 +1,28 @@
-# Docker discovery
+# Discovery
+
+## Import Nmap XML
+
+Atlas imports a file you generated; it never runs Nmap, probes the network, fetches a URL, or updates the diagram automatically. Nmap recommends XML for programmatic use. A minimal documentation example using an RFC 5737 address is:
+
+```sh
+nmap -oX atlas-scan.xml 192.0.2.10
+```
+
+In Atlas:
+
+1. Choose **Discover devices**.
+2. Enter a **Network name**, such as `Home network`. Reuse the same name for later scans; it separates overlapping private networks.
+3. Choose **Import Nmap XML** and select the `.xml` file.
+4. Select a scan host and destination card, or choose a new card.
+5. Check the host or endpoints you want, then choose **Apply selected**.
+
+Every row starts unchecked. A host row adds a host card or links the host identity to an existing card. An endpoint adds or links a service. Ping-only scans still offer the host row. You can apply one host, keep the review open, and move to another host without re-uploading. Each Apply is one undo step.
+
+Only explicitly up hosts with a valid IP and explicitly open TCP/UDP ports qualify. Filtered, `open|filtered`, closed, unsupported, and down results are counted as skipped. Limits are 2 MB, 256 host records, 1,000 normalized findings, 16 addresses and 16 names per host, and 64 XML nesting levels. Eligible output over a limit is rejected instead of silently truncated.
+
+The full XML is sent only to the Atlas backend serving the current editor and held transiently for parsing. Normalized review data discards command arguments, scripts, script output, credentials, fingerprints, traces, and unknown XML fields. Canceling before Apply changes nothing. Existing names, metadata, connections, and card geometry are never overwritten; card growth that would overlap another card is blocked.
+
+## Docker discovery
 
 Docker discovery is optional and explicit. Opening the dialog does not scan. Every finding starts unchecked, and the project changes only after you choose **Apply selected**.
 
@@ -22,7 +46,7 @@ Start the editor and collector profile:
 docker compose --profile discovery up -d
 ```
 
-For the released Compose file, include `-f compose.release.yaml` in that command. Open Atlas, choose **Discover Docker**, select **Docker**, then choose **Scan**.
+For the released Compose file, include `-f compose.release.yaml` in that command. Open Atlas, choose **Discover devices**, select **Docker**, then choose **Scan**.
 
 The editor and collector use the same image but have separate privileges:
 
@@ -63,7 +87,7 @@ docker run --rm \
   -e ATLAS_HOST_ID=nas \
   -e 'ATLAS_HOST_NAME=NAS Docker' \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
-  ghcr.io/aiden0rchad/homelab-atlas:0.7.0 collect \
+  ghcr.io/aiden0rchad/homelab-atlas:0.8.0 collect \
   > ../nas-docker-snapshot.json
 ```
 

@@ -17,7 +17,7 @@
   <aside id="inventory-drawer" class="rail" aria-label="Inventory">
     <div class="rail-title"><div><span class="eyebrow">Project</span><h2>Inventory</h2></div><button id="inventory-close" class="drawer-close" aria-label="Close inventory"><svg aria-hidden="true" viewBox="0 0 20 20"><path d="m5 5 10 10M15 5 5 15"/></svg></button></div>
     <label class="inventory-search"><span class="sr-only">Search inventory</span><svg aria-hidden="true" viewBox="0 0 20 20"><circle cx="9" cy="9" r="5"/><path d="m13 13 4 4"/></svg><input id="inventory-search" type="search" autocomplete="off" placeholder="Search inventory"></label>
-    <button id="discover-docker" class="discover-action"><img src="/logos/docker.svg" alt="">Discover Docker</button>
+    <button id="discover-docker" class="discover-action"><img src="/logos/docker.svg" alt="">Discover devices</button>
     <div class="section-head"><h3>Devices <span id="device-count"></span></h3><button id="add-device" class="compact-action" aria-label="Add device"><svg aria-hidden="true" viewBox="0 0 20 20"><path d="M10 4v12M4 10h12"/></svg>Add</button></div>
     <div id="device-list" class="item-list"></div>
     <div class="section-head"><h3>Network <span id="network-count"></span></h3><button id="add-network" class="compact-action" aria-label="Add network node"><svg aria-hidden="true" viewBox="0 0 20 20"><path d="M10 4v12M4 10h12"/></svg>Add</button></div>
@@ -34,18 +34,21 @@
 <dialog id="network-dialog"><form id="network-form"><header><h2>Network node</h2><button type="button" data-close aria-label="Close"><svg aria-hidden="true" viewBox="0 0 20 20"><path d="m5 5 10 10M15 5 5 15"/></svg></button></header><label>Name<input name="name" maxlength="120" required></label><label>Kind<select name="kind"><option>Internet</option><option>Router</option><option>Switch</option><option>Wi-Fi</option><option>Network</option></select></label><label>Accent<input name="accent" type="color"></label><footer><button type="button" data-close>Cancel</button><button class="primary">Save node</button></footer></form></dialog>
 <dialog id="discovery-dialog">
   <form id="discovery-form">
-    <header><div><span class="eyebrow">Inventory review</span><h2>Discover Docker</h2></div><button type="button" data-discovery-close aria-label="Close"><svg aria-hidden="true" viewBox="0 0 20 20"><path d="m5 5 10 10M15 5 5 15"/></svg></button></header>
+    <header><div><span class="eyebrow">Inventory review</span><h2>Discover devices</h2></div><button type="button" data-discovery-close aria-label="Close"><svg aria-hidden="true" viewBox="0 0 20 20"><path d="m5 5 10 10M15 5 5 15"/></svg></button></header>
     <div class="discovery-body">
-      <p class="help">Scan a configured collector or import a sanitized snapshot. Nothing is added until you select findings and apply them. <a href="https://aiden0rchad.github.io/homelab-atlas/discovery" target="_blank" rel="noopener noreferrer">Setup guide</a></p>
+      <p class="help">Review a Docker collector, saved snapshot, or Nmap XML file. Nmap XML is sent only to this Atlas instance for parsing. Nothing is added until Apply. <a href="https://aiden0rchad.github.io/homelab-atlas/discovery" target="_blank" rel="noopener noreferrer">Setup guide</a></p>
       <section class="discovery-source" aria-labelledby="discovery-source-title">
         <h3 id="discovery-source-title">Source</h3>
         <div class="discovery-source-controls"><label for="discovery-source">Collector<select id="discovery-source"><option value="">Loading sources…</option></select></label><button id="discovery-scan" type="button">Scan</button><button id="discovery-import" type="button">Import snapshot</button><input id="discovery-file" type="file" accept="application/json,.json" hidden></div>
+        <div class="discovery-nmap-controls"><label for="discovery-scope">Network name<input id="discovery-scope" value="Home network" maxlength="120" autocomplete="off"></label><button id="discovery-nmap-import" type="button">Import Nmap XML</button><input id="discovery-nmap-file" type="file" accept="application/xml,text/xml,.xml" hidden><small>Use the same network name for later scans so devices match.</small></div>
         <div id="discovery-auth" class="discovery-auth" hidden><label for="discovery-api-token">API token<input id="discovery-api-token" type="password" autocomplete="off" spellcheck="false"></label><button id="discovery-unlock" type="button">Unlock</button><small>Used only in memory when this server requires authentication.</small></div>
       </section>
       <p id="discovery-status" class="discovery-status" role="status" aria-live="polite"></p>
       <div id="discovery-empty" class="discovery-empty"><strong>No scan loaded</strong><span>Choose Scan or import a snapshot. Opening this dialog never starts a scan.</span></div>
       <section id="discovery-results" hidden>
+        <label id="discovery-host-field" hidden>Scan host<select id="discovery-host"></select></label>
         <div class="discovery-meta"><span id="discovery-result-source"></span><span id="discovery-result-time"></span></div>
+        <p id="discovery-host-meta" class="discovery-host-meta" hidden></p>
         <div class="discovery-destination"><label for="discovery-device">Destination device<select id="discovery-device"><option value="">Choose a device…</option></select></label><label id="discovery-new-device-field" for="discovery-new-device" hidden>New device name<input id="discovery-new-device" maxlength="120"></label><label id="discovery-group-field" for="discovery-group" hidden>Service group<select id="discovery-group"><option value="">Choose a group…</option></select></label><label id="discovery-new-group-field" for="discovery-new-group" hidden>New group name<input id="discovery-new-group" maxlength="120" value="Discovered services"></label></div>
         <div class="discovery-list-head"><h3>Findings</h3><span>Unchecked by default</span></div>
         <div class="discovery-list-tools"><label for="discovery-search">Search findings<input id="discovery-search" type="search" autocomplete="off" placeholder="Name, image, or Compose metadata"></label><div class="discovery-pager"><button id="discovery-previous" type="button">Previous</button><output id="discovery-range" aria-live="polite"></output><button id="discovery-next" type="button">Next</button></div></div>
