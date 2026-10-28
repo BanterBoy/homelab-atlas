@@ -882,6 +882,7 @@ function beginDiscoveryRequest(message, clearResults = false) {
     discoveryState.pendingNmapFile = null;
     discoveryState.pendingNetworkScan = null;
     discoveryState.pendingAuthToken = null;
+    discoveryState.statusBeforeAuth = null;
     discoveryState.plan = null;
     discoveryState.snapshot = null;
     discoveryState.choices = new Map();
@@ -915,10 +916,11 @@ function hideDiscoveryAuth() {
 
 function requestDiscoveryUnlock(request) {
   if (!discoveryRequestCurrent(request)) return;
-  discoveryState.unlocking = false;
-  $('#discovery-unlock').disabled = false;
+  if (discoveryState.snapshot && discoveryState.statusBeforeAuth === null) discoveryState.statusBeforeAuth = $('#discovery-status').textContent;
+  if (!discoveryState.unlocking) $('#discovery-unlock').disabled = false;
   $('#discovery-source').disabled = true;
   $('#discovery-scan').disabled = true;
+  $('#discovery-network-start').disabled = true;
   $('#discovery-auth').hidden = false;
   setDiscoveryStatus('Authentication required. Enter the API token and choose Unlock.', true);
   $('#discovery-api-token').focus();
@@ -971,7 +973,7 @@ async function loadNmapStatus(expectedState = discoveryState) {
   try {
     const response = await discoveryFetch('/api/discovery/nmap/status', { signal: controller.signal }, request.apiToken);
     if (response.status === 401) {
-      if (metadataRequestCurrent(request, 'statusController') && state.requestToken === null) {
+      if (metadataRequestCurrent(request, 'statusController') && state.requestToken === request.actionToken) {
         state.pendingAuthToken = state.requestToken;
         requestDiscoveryUnlock({ state, token: state.requestToken, controller: state.controller });
       }
@@ -1029,7 +1031,7 @@ async function loadDiscoverySources(preserveStatus = false, expectedState = disc
   try {
     const response = await discoveryFetch('/api/discovery/sources', { signal: controller.signal }, request.apiToken);
     if (response.status === 401) {
-      if (metadataRequestCurrent(request, 'sourcesController') && state.requestToken === null) {
+      if (metadataRequestCurrent(request, 'sourcesController') && state.requestToken === request.actionToken) {
         state.pendingAuthToken = state.requestToken;
         requestDiscoveryUnlock({ state, token: state.requestToken, controller: state.controller });
       }
@@ -1054,8 +1056,9 @@ async function loadDiscoverySources(preserveStatus = false, expectedState = disc
 }
 
 async function refreshDiscoveryMetadata(state) {
-  if (!state || discoveryState !== state || !$('#discovery-dialog').open) return;
-  await Promise.all([loadDiscoverySources(true, state), loadNmapStatus(state)]);
+  if (!state || discoveryState !== state || !$('#discovery-dialog').open) return false;
+  const results = await Promise.all([loadDiscoverySources(true, state), loadNmapStatus(state)]);
+  return results.every(Boolean);
 }
 
 function discoveryDestination() {
@@ -1384,7 +1387,7 @@ function openDiscovery(opener) {
   discoveryState?.controller?.abort();
   discoveryState?.sourcesController?.abort();
   discoveryState?.statusController?.abort();
-  discoveryState = { guard: captureProjectGuard(project), opener, sources: [], bundle: null, pendingNmapFile: null, pendingNetworkScan: null, pendingAuthToken: null, snapshot: null, choices: new Map(), plan: null, controller: null, sourcesController: null, statusController: null, activeNetworkToken: null, requestToken: null, stale: false, query: '', page: 0 };
+  discoveryState = { guard: captureProjectGuard(project), opener, sources: [], bundle: null, pendingNmapFile: null, pendingNetworkScan: null, pendingAuthToken: null, statusBeforeAuth: null, snapshot: null, choices: new Map(), plan: null, controller: null, sourcesController: null, statusController: null, activeNetworkToken: null, requestToken: null, stale: false, query: '', page: 0 };
   $('#discovery-results').hidden = true;
   $('#discovery-empty').hidden = false;
   $('#discovery-empty span').textContent = 'Choose Scan network, scan a Docker collector, or import saved results. Opening this dialog never starts a scan.';
@@ -1411,22 +1414,32 @@ function openDiscovery(opener) {
 async function unlockDiscoverySources() {
   if (!discoveryState || discoveryState.unlocking || !$('#discovery-dialog').open || !projectGuardCurrent(discoveryState.guard, project)) return;
   const state = discoveryState;
-  if (state.pendingAuthToken !== state.requestToken) return setDiscoveryStatus('That request changed. Start it again.', true);
   const token = $('#discovery-api-token').value;
   if (!token) return setDiscoveryStatus('Enter the API token first.', true);
   apiToken = token;
-  const pendingFile = state.pendingNmapFile;
-  const pendingScan = state.pendingNetworkScan;
+  const retryCurrent = state.pendingAuthToken === state.requestToken;
+  const pendingFile = retryCurrent ? state.pendingNmapFile : null;
+  const pendingScan = retryCurrent && state.pendingNetworkScan
+    && JSON.stringify(state.pendingNetworkScan) === JSON.stringify(currentNetworkRequest()) ? state.pendingNetworkScan : null;
+  const hadReview = Boolean(state.snapshot);
+  const statusBeforeAuth = state.statusBeforeAuth;
   state.unlocking = true;
   state.pendingAuthToken = null;
+  state.pendingNmapFile = null;
   state.pendingNetworkScan = null;
   $('#discovery-unlock').disabled = true;
   hideDiscoveryAuth();
   try {
     let success = true;
     if (pendingFile) success = await importNmapXML(pendingFile);
-    else if (pendingScan && JSON.stringify(pendingScan) === JSON.stringify(currentNetworkRequest())) success = await scanNmapNetwork(pendingScan);
-    if (success && discoveryState === state) await refreshDiscoveryMetadata(state);
+    else if (pendingScan) success = await scanNmapNetwork(pendingScan);
+    if (success && discoveryState === state) {
+      const ready = await refreshDiscoveryMetadata(state);
+      if (ready && discoveryState === state) {
+        if (!pendingFile && !pendingScan) setDiscoveryStatus(hadReview && statusBeforeAuth ? statusBeforeAuth : 'Discovery is ready.');
+        state.statusBeforeAuth = null;
+      }
+    }
   } finally {
     if (discoveryState === state) {
       state.unlocking = false;
