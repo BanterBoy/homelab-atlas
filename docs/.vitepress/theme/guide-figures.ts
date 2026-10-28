@@ -88,8 +88,8 @@ export const guideFigures = {
     ...dialogStyle,
     marks: [
       { rect: { x: 498, y: 479.421875, width: 878, height: 76.59375 }, circle: [456, 518], target: [498, 518], caption: 'Move between discovered devices. Pending choices stay with each device while this scan remains open.' },
-      { rect: { x: 511, y: 655.40625, width: 421, height: 33 }, circle: [1418, 672], target: [932, 672], caption: 'Review the suggested destination. It is never an automatic merge.' },
-      { rect: { x: 498, y: 799.59375, width: 878, height: 402.140625 }, circle: [456, 1001], target: [498, 1001], caption: 'Everything starts unchecked. Only nginx is manually selected here; bulk controls affect the visible filtered page.' },
+      { rect: { x: 511, y: 655.40625, width: 421, height: 33 }, circle: [456, 672], target: [511, 672], caption: 'Review the suggested destination. It is never an automatic merge.' },
+      { rect: { x: 498, y: 799.59375, width: 878, height: 402.140625 }, circle: [456, 1001], target: [498, 1001], caption: 'Everything starts unchecked. Only nginx is manually selected here; Select all shown checks the visible filtered page; Clear selection clears this device across pages.' },
       { rect: { x: 496, y: 1221.734375, width: 882, height: 85 }, circle: [1418, 1264], target: [1378, 1264], caption: 'Add to diagram affects only the current device and creates one Undo step.', accent: true },
     ],
   },

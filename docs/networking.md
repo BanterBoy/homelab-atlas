@@ -2,7 +2,7 @@
 
 Discovery scans are inventory input, not diagram connections. A live Nmap scan runs from the Atlas server's network only after **Find devices**, then waits in the unchecked review. It does not infer links, VLANs, or topology, and it does not change a network card until you explicitly apply a host or endpoint.
 
-Networking in Atlas is for showing how things relate to each other. Atlas does not inspect or configure your real network.
+Networking in Atlas is for showing how things relate to each other. Connections and VLANs are drawn manually; discovery only supplies inventory.
 
 ## Network nodes
 
