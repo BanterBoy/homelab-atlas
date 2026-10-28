@@ -19,19 +19,13 @@ The fixed scan uses unprivileged TCP connect mode, no DNS, conservative timing, 
 
 The default allowed ranges are `10.0.0.0/8`, `172.16.0.0/12`, and `192.168.0.0/16`. Administrators can set canonical comma-separated IPv4 prefixes with `ATLAS_NMAP_ALLOWED_CIDRS`. Atlas reports the configured ranges to the editor but does not expose server credentials or configuration secrets.
 
-Install Nmap and its service-detection data on the server with its operating-system package manager. A native Go setup must restart Atlas after installation because Nmap availability is resolved at startup. The published GHCR image stays scanner-free. From a source checkout, the opt-in Alpine build installs `nmap`, `nmap-nselibs`, and `nmap-scripts`:
+Install Nmap and its service-detection data on the server with its operating-system package manager. A native Go setup must restart Atlas after installation because Nmap availability is resolved at startup. The published GHCR image stays scanner-free. From the project root of a source checkout or extracted release ZIP, the opt-in Alpine build installs `nmap`, `nmap-nselibs`, and `nmap-scripts`:
 
 ```sh
 ATLAS_WITH_NMAP=true docker compose up -d --build
 ```
 
-Put `ATLAS_WITH_NMAP=true` in the existing `.env` to retain the choice on later builds. From a newly generated source ZIP:
-
-```sh
-docker compose --project-directory . -f deploy/compose.release.yaml -f deploy/compose.nmap.yaml up -d --build
-```
-
-The published v0.9.0 ZIP retains its original root Compose paths.
+Put `ATLAS_WITH_NMAP=true` in `.env` to retain the choice on later builds.
 
 Nmap is independently licensed under the [Nmap Public Source License](https://nmap.org/npsl/npsl-annotated.html). The source ZIP contains only Atlas and the local build recipe, not Nmap binaries or data.
 

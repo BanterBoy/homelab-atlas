@@ -20,7 +20,6 @@ npm test
 go test -race ./...
 go vet ./...
 docker compose config
-npm --prefix docs run build
 npm --prefix docs ci
 npm --prefix docs run build
 ```

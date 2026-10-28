@@ -25,6 +25,7 @@ class ReleaseTests(unittest.TestCase):
             "app/main_test.go": "package main\n",
             "deploy/Dockerfile": "FROM golang:1.26-alpine\n",
             "compose.yaml": "services: {}\n",
+            ".dockerignore": ".git\n.env\n",
             "deploy/compose.release.yaml": "services:\n  atlas:\n    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.1.0}\n  collector:\n    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.1.0}\n",
             "deploy/compose.nmap.yaml": "services:\n  atlas:\n    build: .\n",
             "README.md": "# Atlas\n",
@@ -62,6 +63,7 @@ class ReleaseTests(unittest.TestCase):
             self.assertIn("homelab-atlas-0.1.0/app/nmap_scan.go", names)
             self.assertIn("homelab-atlas-0.1.0/deploy/Dockerfile", names)
             self.assertIn("homelab-atlas-0.1.0/compose.yaml", names)
+            self.assertIn("homelab-atlas-0.1.0/.dockerignore", names)
             self.assertIn("homelab-atlas-0.1.0/deploy/compose.nmap.yaml", names)
             self.assertIn("homelab-atlas-0.1.0/docs/THIRD_PARTY_NOTICES.md", names)
             self.assertIn("homelab-atlas-0.1.0/.github/CONTRIBUTING.md", names)

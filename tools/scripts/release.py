@@ -23,6 +23,7 @@ FILES = (
     "app/nmap_scan.go",
     "deploy/Dockerfile",
     "compose.yaml",
+    ".dockerignore",
     "deploy/compose.release.yaml",
     "deploy/compose.nmap.yaml",
     "README.md",

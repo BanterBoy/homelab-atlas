@@ -10,7 +10,7 @@ A manual diagram needs only a running Atlas server and a current browser. There 
 
 ### Why is Nmap unavailable in the released image? {#nmap-unavailable}
 
-The published GHCR image is intentionally scanner-free. From a source checkout, put `ATLAS_WITH_NMAP=true` in `.env`, then run `docker compose up -d --build`. From a newly generated source ZIP, run `docker compose --project-directory . -f deploy/compose.release.yaml -f deploy/compose.nmap.yaml up -d --build`. The published v0.9.0 ZIP retains its original root Compose paths. For a native install, install Nmap and its detection data with the operating-system package manager, then restart Atlas. See [Network scan](/discovery#network-scan).
+The published GHCR image is intentionally scanner-free. From the project root of a source checkout or extracted release ZIP, run `ATLAS_WITH_NMAP=true docker compose up -d --build`. Put `ATLAS_WITH_NMAP=true` in `.env` to retain the choice on later builds. For a native install, install Nmap and its detection data with the operating-system package manager, then restart Atlas. See [Network scan](/discovery#network-scan).
 
 ### Why is my project empty after changing the URL or updating Atlas?
 
