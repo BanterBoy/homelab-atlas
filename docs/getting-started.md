@@ -9,6 +9,8 @@ Homelab Atlas runs in your browser and is served from your own machine. The publ
 
 You only need Git if you're building from source. Running without Docker requires Go 1.26 or newer. Node.js is only needed for tests, logo maintenance, and work on these docs. Python is used only by the release-file tests.
 
+Manual diagrams need only Atlas and a browser. Discovery is optional and has separate requirements for Docker, live Nmap, and XML import. See the [discovery requirements](/discovery#requirements-by-method) or the [FAQ](/faq).
+
 ## Install the released image
 
 Download the release Compose file, then start the container:
@@ -125,6 +127,6 @@ Generate the API token with `openssl rand -hex 32`. Replace `atlas.lan` with the
 4. Add a service group and local logo tiles.
 5. Choose **Save project** before sharing or changing origins.
 
-The [editor guide](/editor) covers the controls. The [privacy and deployment page](/privacy) explains what stays in the browser and why Atlas should stay off the public internet.
+The [annotated editor overview](/editor#editor-guide) covers the controls. The [privacy and deployment page](/privacy) explains what stays in the browser and why Atlas should stay off the public internet. For setup or discovery failures, check the [FAQ](/faq).
 
 To enable the optional Docker collector, continue with [Docker discovery](/discovery).

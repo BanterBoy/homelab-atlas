@@ -11,7 +11,7 @@ A self-hosted app for making homelab diagrams.
 [![Package](https://img.shields.io/badge/GHCR-homelab--atlas-55d6c9?logo=github)](https://github.com/users/aiden0rchad/packages/container/package/homelab-atlas)
 [![License: MIT](https://img.shields.io/badge/license-MIT-55d6c9.svg)](LICENSE)
 
-[Documentation](https://aiden0rchad.github.io/homelab-atlas/) · [Releases](https://github.com/aiden0rchad/homelab-atlas/releases) · [Docker images](https://github.com/users/aiden0rchad/packages/container/package/homelab-atlas)
+[Documentation](https://aiden0rchad.github.io/homelab-atlas/) · [FAQ](https://aiden0rchad.github.io/homelab-atlas/faq) · [Releases](https://github.com/aiden0rchad/homelab-atlas/releases) · [Docker images](https://github.com/users/aiden0rchad/packages/container/package/homelab-atlas)
 </div>
 
 I posted a diagram of my homelab on Reddit and someone asked how they could make one too. That's where this project started. I wanted a way to add machines and apps, get the logos in, and update the diagram as things changed.

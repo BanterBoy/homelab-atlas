@@ -1,5 +1,16 @@
 # Discovery
 
+Discovery is optional. Atlas needs no account or AI service, and manual diagrams work without a scanner or Docker socket.
+
+## Requirements by method
+
+| Method | Requirements |
+|---|---|
+| Manual diagram | Running Atlas and a browser. No scanner or Docker socket. |
+| Docker | Optional collector with access to the intended Docker daemon, matching collector token of at least 32 characters, and a server-configured source. Snapshot import needs no live daemon. The collector lists that daemon, not every LAN host. |
+| Live Nmap | Nmap and its detection data on the Atlas server, plus the opt-in source build. The server or container needs IPv4 route and firewall reachability, and targets must be inside configured CIDRs. The fixed TCP-connect scan needs no root, privileged container, or extra capability. |
+| Nmap XML | A complete supported XML file selected by the user. Atlas needs no installed scanner. Explicitly open TCP/UDP and IPv4/IPv6 results use the same review. |
+
 ## Network scan
 
 Atlas can run a bounded Nmap TCP scan from the server or container where Atlas runs. It starts only when you choose **Scan network**. Enter numeric IPv4 addresses or CIDRs within the configured ranges, optionally enter up to 1,000 TCP ports, and optionally enable service identification. Blank ports use Nmap's common 100 TCP ports. Live scans support at most 16 target terms, 256 expanded addresses, 120 seconds, and one running scan per server.
@@ -22,6 +33,17 @@ docker compose -f compose.release.yaml -f compose.nmap.yaml up -d --build
 
 Nmap is independently licensed under the [Nmap Public Source License](https://nmap.org/npsl/npsl-annotated.html). The source ZIP contains only Atlas and the local build recipe, not Nmap binaries or data.
 
+Use the scan form in this order:
+
+1. Enter a stable network name.
+2. Enter allowed IPv4 targets and optional TCP ports.
+3. Enable service identification only when its slower probes are useful.
+4. Choose **Scan network**, then review the candidates before applying anything.
+
+<GuideFigure name="network-scan" />
+
+These Atlas v0.9.0 screenshots use fictional names and addresses. The example target shown above was filled in but never scanned.
+
 ## Import Nmap XML
 
 Import accepts a user-selected file and does not execute a scanner or network probe. It also remains available when Nmap is not installed. Live scans accept IPv4 targets; XML import continues to accept normalized IPv4 and IPv6 results.
@@ -35,6 +57,10 @@ In Atlas:
 5. Check the host or endpoints you want, then choose **Apply selected**.
 
 Every row starts unchecked. A host row adds a host card or links the host identity to an existing card. An endpoint adds or links a service. Ping-only scans still offer the host row. You can apply one host, keep the review open, and move to another host without re-uploading. Each Apply is one undo step. MAC identity survives an IP change; without a MAC, an IP change creates a new identity. A scan changing between MAC-present and MAC-absent can also appear new, so review and link it explicitly.
+
+<GuideFigure name="discovery-review" />
+
+This review came from imported Nmap XML. Its UDP row is not live-scan output; live scans are TCP-only.
 
 Only explicitly up hosts with a valid IP and explicitly open TCP/UDP ports qualify. Filtered, `open|filtered`, closed, unsupported, down, and summarized `extraports` results count as ports not imported. Even a summarized `open` state lacks individual protocol/port identity, so Atlas does not fabricate endpoints from it. Limits are 2 MB, 256 host records, 1,000 normalized findings, 16 addresses and 16 names per host, and 64 XML nesting levels. Eligible output over a limit is rejected instead of silently truncated.
 
@@ -90,6 +116,8 @@ An exact unique service-name match is suggested as a link, but the finding remai
 Findings are sorted by name and shown 50 at a time. Search checks names, image references, and Compose project/service metadata. Selections and actions persist while searching or changing pages; changing the destination clears them across the full result set.
 
 Applying a review is one undoable change. Existing card positions and widths stay fixed. If an added service needs card height that would collide with another card, Atlas asks you to make room or use a new card. A new card is placed below existing cards.
+
+<GuideFigure name="docker-review" />
 
 ## Import a snapshot
 
@@ -188,3 +216,5 @@ Only Hawser Standard mode is compatible. Hawser Edge mode uses an outbound WebSo
 Discovery API requests validate the request host and origin. The default host allowlist is `localhost,127.0.0.1,::1`. If the browser uses another hostname or IP, set `ATLAS_ALLOWED_HOSTS` to the exact comma-separated hostnames and set `ATLAS_API_TOKEN` to a separate random value of at least 32 characters.
 
 After a `401`, enter the API token in the masked field and choose **Unlock**. A still-current Nmap scan or XML import retries once; changed or canceled work does not restart. Collector and Nmap availability then refresh without clearing a valid review. The token stays in memory only; it is not written to the project or browser storage. Snapshot import remains available without backend authentication. See [Getting started](/getting-started#trusted-lan-access) for an example.
+
+For common availability, token, reachability, and review problems, see the [FAQ](/faq) and [troubleshooting guide](/troubleshooting).

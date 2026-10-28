@@ -73,6 +73,10 @@ npm --prefix docs run preview
 
 The configured base path is `/homelab-atlas/`, even when you run the docs locally. The dev server prints the full local URL. Use that URL when checking links and images.
 
+### Guide screenshots
+
+Annotated guide screenshots live in `docs/public/guides/`; their crops, marks, arrows, and captions live in `docs/.vitepress/theme/guide-figures.ts`. Capture only fictional data at a disposable origin—never a user lab, credentials, or private addresses. When the UI changes, update the source image dimensions, crop, and marks together. No separate capture toolchain is required.
+
 ## Adding or updating logos
 
 1. Use a legitimate, pinned SVG source with a license that allows it to be included.

@@ -54,7 +54,27 @@
 .flow strong { display: block; margin-bottom: 5px; color: var(--vp-c-brand-1) }
 .support { margin-top: 32px; border: 1px solid var(--vp-c-divider); border-radius: 10px; background: linear-gradient(135deg, rgb(85 214 201 / 12%), var(--vp-c-bg-elv)); padding: 18px }
 
+.guide-figure { margin: 2rem 0; border: 1px solid var(--vp-c-divider); border-radius: 12px; background: var(--vp-c-bg-elv); overflow: hidden }
+.guide-figure__header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .7rem .9rem; border-bottom: 1px solid var(--vp-c-divider) }
+.guide-figure__header button { flex: none; border: 1px solid var(--vp-c-divider); border-radius: 7px; background: var(--vp-c-bg-soft); color: var(--vp-c-text-1); padding: .35rem .65rem; font: inherit; font-size: .82rem; cursor: pointer }
+.guide-figure__scroller { max-width: 100%; overflow: hidden; background: #071018 }
+.guide-figure__scroller.is-expanded { overflow-x: auto; overscroll-behavior-x: contain }
+.guide-figure__svg { display: block; width: 100%; height: auto }
+.guide-figure__scroller.is-expanded .guide-figure__svg { width: var(--guide-natural-width); max-width: none }
+.guide-figure__surface { fill: #071018 }
+.guide-figure__mark { fill: rgb(85 214 201 / 8%); stroke: #55d6c9; stroke-width: 5; vector-effect: non-scaling-stroke }
+.guide-figure__arrow { stroke: #55d6c9; stroke-width: 5; vector-effect: non-scaling-stroke }
+.guide-figure marker path { fill: #55d6c9 }
+.guide-figure__number { fill: #071018; stroke: #55d6c9; stroke-width: 5; vector-effect: non-scaling-stroke }
+.guide-figure__number-text { fill: #fff; font: 700 22px ui-sans-serif, system-ui, sans-serif; text-anchor: middle; dominant-baseline: central }
+.guide-figure .is-accent .guide-figure__mark, .guide-figure .is-accent .guide-figure__number { stroke: #f5b942 }
+.guide-figure .is-accent .guide-figure__arrow { stroke: #f5b942 }
+.guide-figure__captions { margin: 0 !important; padding: 1rem 1.1rem 1rem 3.2rem !important }
+.guide-figure__captions li { margin: 0 0 .55rem; padding-left: .25rem }
+.guide-figure__captions li:last-child { margin-bottom: 0 }
+
 @media (max-width: 720px) {
   .flow { grid-template-columns: 1fr }
   .vp-doc table { display: block; overflow-x: auto }
+  .guide-figure__header { align-items: flex-start; flex-direction: column }
 }

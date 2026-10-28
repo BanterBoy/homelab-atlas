@@ -2,6 +2,8 @@
 
 You enter your devices and services, and Atlas starts with an automatic layout. You can arrange device cards yourself when you need a specific composition.
 
+<GuideFigure name="editor" />
+
 ## Start from a sample or empty project
 
 **Load example** replaces the current project with the included fictional sample. **Start empty** gives you a blank project. Atlas asks before doing either one, and you can undo it until you reload the page.
@@ -39,6 +41,8 @@ The review summary shows additions, links, new cards/groups, and card-height cha
 ## Add service tiles
 
 Create a service group, then choose **Apps**. You can search the logo catalog and select more than one service. Selections stay checked across searches. Click the logo beside an existing service to replace it without changing its name, count, ID, or position.
+
+<GuideFigure name="service-logos" />
 
 Choose **Upload logo** in any picker to add a PNG, JPG, WebP, or SVG file up to 2 MB. Check the preview, edit its name, and choose a transparent, light, or dark background. SVG is converted to PNG, and stored images are at most 512px. Uploaded logos appear first under **Uploaded** and can be reused throughout the project. In the multi-service picker, uploaded drafts are only saved when selected services are added. Cancel leaves the project unchanged.
 

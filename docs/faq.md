@@ -1,0 +1,85 @@
+# FAQ
+
+Short answers to common setup and discovery problems. See [Troubleshooting](/troubleshooting) for a symptom checklist.
+
+## Getting started
+
+### What do I need to draw manually or use discovery?
+
+A manual diagram needs only a running Atlas server and a current browser. There is no account or AI service, and discovery is optional. Docker, live Nmap, and XML import have different prerequisites in the [requirements table](/discovery#requirements-by-method).
+
+### Why is Nmap unavailable in the released image? {#nmap-unavailable}
+
+The published GHCR image is intentionally scanner-free. From a source checkout, put `ATLAS_WITH_NMAP=true` in `.env`, then run `docker compose up -d --build`. From an extracted release source ZIP, run `docker compose -f compose.release.yaml -f compose.nmap.yaml up -d --build`. For a native install, install Nmap and its detection data with the operating-system package manager, then restart Atlas. See [Network scan](/discovery#network-scan).
+
+### Why is my project empty after changing the URL or updating Atlas?
+
+Autosave belongs to the browser origin: protocol, hostname, and port. Use the same browser profile and origin, or import a JSON backup. Atlas does not synchronize projects through a container volume. See [trusted LAN access](/getting-started#trusted-lan-access) and [sharing and backup](/sharing).
+
+### Why can’t I find or upload a custom logo?
+
+Search filters the current catalog; clear it to see every tile. Uploads must be PNG, JPG, WebP, or safe SVG, at most 2 MB, 4096px per side, and 16 million pixels. Atlas converts them to PNG at up to 512px. See [Add service tiles](/editor#add-service-tiles) and [Troubleshooting](/troubleshooting).
+
+### Why was my project import rejected?
+
+The whole file must pass schema and reference validation before Atlas replaces the open project. Check its size, schema version, IDs, logos, connections, and discovery bindings. The current project stays unchanged after rejection. See [Import validation details](/troubleshooting#import-validation-details).
+
+## Discovery
+
+### Why are no Docker collectors listed? {#no-docker-collectors}
+
+Set `ATLAS_COLLECTOR_TOKEN` to the same value of at least 32 characters for the configured local collector, then start the discovery profile with `docker compose --profile discovery up -d` and check its logs. Include `-f compose.release.yaml` for the released Compose file. An explicit `ATLAS_DISCOVERY_SOURCES` file overrides the local source. Follow [Local Compose setup](/discovery#local-compose-setup).
+
+### What can Docker discovery see?
+
+Only inventory from the Docker daemon configured for that collector—not every LAN host, Kubernetes, or Podman automatically. A remote collector or [Hawser Standard mode](/discovery#hawser-standard-mode) can point at another daemon. Hawser Edge is not supported, and Atlas never needs an exposed unauthenticated Docker API.
+
+### Are the API and collector tokens interchangeable? {#api-vs-collector-token}
+
+No. `ATLAS_API_TOKEN` unlocks the editor server's discovery API. `ATLAS_COLLECTOR_TOKEN` authenticates a collector source. Keep both out of documentation and screenshots. For a remote editor hostname, add it to `ATLAS_ALLOWED_HOSTS` and configure a separate API token of at least 32 characters; the UI keeps that token in memory only. See [Remote editor access](/discovery#remote-editor-access).
+
+### What do 401, 403, and 502 mean?
+
+- `401`: enter the server's separate `ATLAS_API_TOKEN` and choose **Unlock**.
+- `403`: add the exact browser hostname or IP to `ATLAS_ALLOWED_HOSTS`; a non-loopback host also requires an API token of at least 32 characters.
+- `502`: check collector reachability, token agreement, TLS, fixed source URL, socket access, and collector logs.
+
+See the [troubleshooting table](/troubleshooting).
+
+### Why does a scan find no host or no services? {#no-scan-results}
+
+The scan runs from the Atlas server or container, not the browser. Check its route, VLAN and firewall path, the host's listening address, and published ports. Nmap host discovery stays enabled; Atlas does not force `-Pn`. Docker Desktop networking can differ from a native host. Nmap sees reachable open ports, but it cannot enumerate apps hidden behind a reverse proxy the way Docker inventory can. Do not disable a firewall or expose the Docker API to fix this.
+
+### Which ports and protocols can a live scan use?
+
+Blank ports means Nmap's common 100 TCP ports. Custom ports and ranges may expand to at most 1,000 TCP ports. Only explicitly open results are offered; service identification is slower and imperfect, and an open port is not proof of a particular app. Live scanning has no UDP, IPv6, OS detection, custom scripts, or caller flags. Imported XML can contain explicitly open TCP/UDP and IPv4/IPv6 results.
+
+### Why was my network target rejected?
+
+Use a numeric IPv4 address or canonical IPv4 CIDR—not a hostname or URL—inside `ATLAS_NMAP_ALLOWED_CIDRS`. Defaults are the RFC 1918 ranges. A scan accepts at most 16 terms and 256 expanded addresses. See [Network scan](/discovery#network-scan).
+
+### Why are hosts or endpoints missing after a slow scan?
+
+One scan may run at a time, with 120 seconds total, 15 seconds per ordinary host, or 45 seconds per host with service identification. A timeout can omit a host and its endpoints. Narrow the targets or ports, or import separately produced complete XML. Atlas does not promise partial results or retry with a broader brute-force scan.
+
+### Why did a device appear again after its address changed?
+
+Reuse a stable network name. Atlas prefers MAC identity, then falls back to IP; an address change without a MAC, or a change in MAC availability, can look new. Review it and choose an explicit Link. Missing results never delete old cards or services.
+
+### Why is Apply disabled or asking me to make room? {#apply-disabled}
+
+Check at least one row, then select the required destination and service group for service additions. Changing the destination clears selections. Additions may need card height; if growth would collide, move a card or use a new card. New cards go below existing cards, while existing positions and widths stay fixed and allowed height growth appears in the preview. Each Apply is one session-only Undo.
+
+### Can discovery build cabling, VLANs, or switch ports automatically?
+
+No. Discovery offers hosts and services for review. Logical connections, VLAN labels, and topology are manually authored in the [networking editor](/networking); Atlas does not infer physical switch ports or cabling.
+
+## Layout and saving
+
+### Why did Undo stop working after a reload?
+
+Undo history lasts only for the current page session. Save project JSON for durable editing and backup. Applying one discovery review creates one undo step, but reloading clears it.
+
+### Does private export remove every secret? {#private-export-limits}
+
+No. Image filtering hides recognized addresses, URLs, emails, and literal custom terms. Add private hostnames explicitly. Text baked into uploaded logos is unchanged, and editable JSON always retains the full facts. Inspect the preview and keep JSON private; see [Exporting](/exporting).

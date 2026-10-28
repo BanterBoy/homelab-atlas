@@ -2,6 +2,8 @@
 
 Choose **Export** to preview and download SVG or PNG. Use **Save project** for editable JSON.
 
+<GuideFigure name="private-export" />
+
 | Format | Best for | Behavior |
 |---|---|---|
 | JSON | Backup and later editing | Includes inventory, layout, and uploaded logo PNGs |

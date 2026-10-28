@@ -2,6 +2,8 @@
 
 Find the symptom that matches what you're seeing. Browser developer tools and `docker compose logs` can help, but remove private details before sharing any output.
 
+Start with the [FAQ](/faq) for setup, discovery, layout, and saving explanations. The table below is the shorter symptom checklist.
+
 | Symptom | Action |
 |---|---|
 | Project is empty at another URL | Use the same browser profile, hostname, port, and protocol. If you changed the address, import a saved JSON backup. |

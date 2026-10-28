@@ -20,6 +20,7 @@ export default defineConfig({
     siteTitle: 'Homelab Atlas Docs',
     nav: [
       { text: 'Install', link: '/getting-started' },
+      { text: 'FAQ', link: '/faq' },
       { text: 'Releases', link: '/releases/' },
       { text: 'GitHub', link: 'https://github.com/aiden0rchad/homelab-atlas' },
     ],
@@ -49,6 +50,7 @@ export default defineConfig({
       {
         text: 'Reference',
         items: [
+          { text: 'FAQ', link: '/faq' },
           { text: 'Troubleshooting', link: '/troubleshooting' },
           { text: 'Project format', link: '/project-format' },
           { text: 'Releases', link: '/releases/' },
