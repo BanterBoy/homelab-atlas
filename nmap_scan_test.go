@@ -5,6 +5,8 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -188,4 +190,76 @@ func TestNmapTimeoutCancelsRunnerAndReleasesSlot(t *testing.T) {
 		t.Fatal("timed-out scan did not release slot")
 	}
 	scanner.release()
+}
+
+func nmapProcessScript(t *testing.T, body string) string {
+	t.Helper()
+	root := ".agent/nmap-live-qa"
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	directory, err := os.MkdirTemp(root, "process-test-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(directory) })
+	path := filepath.Join(directory, "nmap-helper")
+	if err := os.WriteFile(path, []byte("#!/bin/sh\n"+body+"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func TestNmapRealProcessOverflowIs413AndReleasesSlot(t *testing.T) {
+	server := testAtlasServer(t)
+	server.nmap.path = nmapProcessScript(t, "exec head -c 2097153 /dev/zero")
+	server.nmap.run = runNmapProcess
+	headers := map[string]string{"X-Atlas-Request": "1", "Content-Type": "application/json"}
+	body := []byte(`{"scope":"Lab","targets":"192.168.1.2","ports":"","detectServices":false}`)
+	response := request(server, http.MethodPost, "/api/discovery/nmap/scan", body, headers)
+	if response.Code != http.StatusRequestEntityTooLarge || !strings.Contains(response.Body.String(), "larger than 2 MB") {
+		t.Fatalf("overflow status=%d body=%q", response.Code, response.Body.String())
+	}
+	if !server.nmap.acquire() {
+		t.Fatal("overflow did not release scan slot")
+	}
+	server.nmap.release()
+}
+
+func TestNmapRealProcessCancelAndTimeoutReleaseSlot(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		timeout time.Duration
+		cancel  bool
+	}{
+		{name: "cancel", cancel: true},
+		{name: "timeout", timeout: 30 * time.Millisecond},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			scanner := testNmapScanner(t, runNmapProcess)
+			scanner.path = nmapProcessScript(t, "exec sleep 30")
+			scanner.timeout = test.timeout
+			ctx, cancel := context.WithCancel(context.Background())
+			if test.cancel {
+				time.AfterFunc(30*time.Millisecond, cancel)
+			} else {
+				defer cancel()
+			}
+			start := time.Now()
+			_, err := scanner.scan(ctx, nmapScanInput{Scope: "Lab", Targets: "192.168.1.2"})
+			if test.cancel && !errors.Is(err, context.Canceled) {
+				t.Fatalf("cancel err=%v", err)
+			}
+			if !test.cancel && (err == nil || !strings.Contains(err.Error(), "timed out")) {
+				t.Fatalf("timeout err=%v", err)
+			}
+			if time.Since(start) > 2*time.Second {
+				t.Fatalf("process termination took %s", time.Since(start))
+			}
+			if !scanner.acquire() {
+				t.Fatal("terminated process did not release scan slot")
+			}
+			scanner.release()
+		})
+	}
 }

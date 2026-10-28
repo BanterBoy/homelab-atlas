@@ -223,13 +223,15 @@ func canonicalNmapPorts(raw string) (string, error) {
 }
 
 type cancelingLimitWriter struct {
-	buffer bytes.Buffer
-	limit  int
-	cancel context.CancelFunc
+	buffer   bytes.Buffer
+	limit    int
+	cancel   context.CancelFunc
+	overflow bool
 }
 
 func (writer *cancelingLimitWriter) Write(data []byte) (int, error) {
 	if writer.buffer.Len()+len(data) > writer.limit {
+		writer.overflow = true
 		writer.cancel()
 		return 0, errNmapOutputLarge
 	}
@@ -282,8 +284,12 @@ func (scanner *nmapScanner) scan(ctx context.Context, input nmapScanInput) (nmap
 	args = append(args, "-oX", "-")
 	args = append(args, targets...)
 	output := &cancelingLimitWriter{limit: maxNmapBytes, cancel: cancel}
-	if err := scanner.run(ctx, scanner.path, args, output); err != nil {
-		if errors.Is(err, errNmapOutputLarge) || output.buffer.Len() > maxNmapBytes {
+	runErr := scanner.run(ctx, scanner.path, args, output)
+	if output.overflow {
+		return nmapBundle{}, errNmapOutputLarge
+	}
+	if runErr != nil {
+		if errors.Is(runErr, errNmapOutputLarge) {
 			return nmapBundle{}, errNmapOutputLarge
 		}
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {

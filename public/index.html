@@ -36,7 +36,7 @@
   <form id="discovery-form">
     <header><div><span class="eyebrow">Inventory review</span><h2>Discover devices</h2></div><button type="button" data-discovery-close aria-label="Close"><svg aria-hidden="true" viewBox="0 0 20 20"><path d="m5 5 10 10M15 5 5 15"/></svg></button></header>
     <div class="discovery-body">
-      <p class="help">Review a Docker collector, saved snapshot, Nmap XML file, or an explicit bounded network scan. Nothing is added until Apply. <a href="https://aiden0rchad.github.io/homelab-atlas/discovery" target="_blank" rel="noopener noreferrer">Setup guide</a></p>
+      <p class="help">Scan your network, connect a Docker collector, or import saved results. Review everything before adding it. <a href="https://aiden0rchad.github.io/homelab-atlas/discovery" target="_blank" rel="noopener noreferrer">Setup guide</a></p>
       <section class="discovery-source" aria-labelledby="discovery-source-title">
         <h3 id="discovery-source-title">Source</h3>
         <div class="discovery-source-controls"><label for="discovery-source">Collector<select id="discovery-source"><option value="">Loading sources…</option></select></label><button id="discovery-scan" type="button">Scan</button><button id="discovery-import" type="button">Import snapshot</button><input id="discovery-file" type="file" accept="application/json,.json" hidden></div>
@@ -52,7 +52,7 @@
         <div id="discovery-auth" class="discovery-auth" hidden><label for="discovery-api-token">API token<input id="discovery-api-token" type="password" autocomplete="off" spellcheck="false"></label><button id="discovery-unlock" type="button">Unlock</button><small>Used only in memory when this server requires authentication.</small></div>
       </section>
       <p id="discovery-status" class="discovery-status" role="status" aria-live="polite"></p>
-      <div id="discovery-empty" class="discovery-empty"><strong>No scan loaded</strong><span>Choose Scan or import a snapshot. Opening this dialog never starts a scan.</span></div>
+      <div id="discovery-empty" class="discovery-empty"><strong>No scan loaded</strong><span>Choose Scan network, scan a Docker collector, or import saved results.</span></div>
       <section id="discovery-results" hidden>
         <label id="discovery-host-field" hidden>Scan host<select id="discovery-host"></select></label>
         <div class="discovery-meta"><span id="discovery-result-source"></span><span id="discovery-result-time"></span></div>

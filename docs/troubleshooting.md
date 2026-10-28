@@ -17,7 +17,7 @@ Find the symptom that matches what you're seeing. Browser developer tools and `d
 | Collector exits immediately | `ATLAS_COLLECTOR_TOKEN` must be at least 32 characters. Check the read-only Docker socket mount and `docker compose logs collector`. |
 | Scan returns 401 | Enter the separate `ATLAS_API_TOKEN` configured on the editor server. The UI keeps it in memory only. |
 | Scan returns 403 from another hostname | Add the exact browser hostname or IP to `ATLAS_ALLOWED_HOSTS`. A non-loopback entry also requires `ATLAS_API_TOKEN` of at least 32 characters. |
-| Network scan says Nmap is unavailable | Install Nmap on the Atlas server. For a source Docker build, set `ATLAS_WITH_NMAP=true` and rebuild. The published base image intentionally does not include it. |
+| Network scan says Nmap is unavailable or service identification cannot find its data | Install Nmap and its service-detection data on the Atlas server. For a source Docker build, set `ATLAS_WITH_NMAP=true` and rebuild; this installs Alpine's `nmap`, `nmap-nselibs`, and `nmap-scripts`. The published base image intentionally does not include them. |
 | Network target is rejected | Use numeric IPv4 or a canonical CIDR within `ATLAS_NMAP_ALLOWED_CIDRS`. Live scans reject IPv6, hostnames, URLs, option syntax, link-local, multicast, unspecified, and more than 256 expanded addresses. |
 | Network scan finds no host | Nmap host discovery can be blocked by a firewall. The scan runs from the server/container network and does not add `-Pn` automatically. Check that vantage and the configured allowed ranges. |
 | Scan returns 502 | Check collector reachability, token agreement, TLS certificates, fixed source URL, Docker socket access, and collector logs. Backend response bodies are intentionally hidden. |

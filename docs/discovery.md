@@ -4,11 +4,11 @@
 
 Atlas can run a bounded Nmap TCP scan from the server or container where Atlas runs. It starts only when you choose **Scan network**. Enter numeric IPv4 addresses or CIDRs within the configured ranges, optionally enter up to 1,000 TCP ports, and optionally enable service identification. Blank ports use Nmap's common 100 TCP ports. Live scans support at most 16 target terms, 256 expanded addresses, 120 seconds, and one running scan per server.
 
-The fixed scan uses unprivileged TCP connect mode, no DNS, conservative timing, a 15-second host timeout, and no scripts, OS detection, UDP, raw sockets, caller flags, or credentials. **Stop**, closing the dialog, changing inputs, or changing the project cancels it. Host discovery remains enabled, so a firewall can hide a host. The scan runs from the Atlas server's network, which may differ from the browser's network.
+The fixed scan uses unprivileged TCP connect mode, no DNS, conservative timing, a 15-second host timeout, and no customizable scripts, OS detection, UDP, raw sockets, caller flags, or credentials. Optional service identification uses Nmap's fixed lightweight version probes, including its packaged version-detection scripts. **Stop**, closing the dialog, changing inputs, or changing the project cancels it. Host discovery remains enabled, so a firewall can hide a host. The scan runs from the Atlas server's network, which may differ from the browser's network.
 
 The default allowed ranges are `10.0.0.0/8`, `172.16.0.0/12`, and `192.168.0.0/16`. Administrators can set canonical comma-separated IPv4 prefixes with `ATLAS_NMAP_ALLOWED_CIDRS`. Atlas reports the configured ranges to the editor but does not expose server credentials or configuration secrets.
 
-Install Nmap on the server with its operating-system package manager. The published GHCR image stays scanner-free. From a source checkout, opt into Alpine's Nmap package:
+Install Nmap and its service-detection data on the server with its operating-system package manager. The published GHCR image stays scanner-free. From a source checkout, the opt-in Alpine build installs `nmap`, `nmap-nselibs`, and `nmap-scripts`:
 
 ```sh
 ATLAS_WITH_NMAP=true docker compose up -d --build
@@ -187,4 +187,4 @@ Only Hawser Standard mode is compatible. Hawser Edge mode uses an outbound WebSo
 
 Discovery API requests validate the request host and origin. The default host allowlist is `localhost,127.0.0.1,::1`. If the browser uses another hostname or IP, set `ATLAS_ALLOWED_HOSTS` to the exact comma-separated hostnames and set `ATLAS_API_TOKEN` to a separate random value of at least 32 characters.
 
-After a `401`, enter the API token in the masked field and choose **Unlock**. Unlock reloads the collector list but never starts a scan. The token stays in memory only; it is not written to the project or browser storage. Snapshot import remains available without backend authentication. See [Getting started](/getting-started#trusted-lan-access) for an example.
+After a `401`, enter the API token in the masked field and choose **Unlock**. A still-current Nmap scan or XML import retries once; changed or canceled work does not restart. Collector and Nmap availability then refresh without clearing a valid review. The token stays in memory only; it is not written to the project or browser storage. Snapshot import remains available without backend authentication. See [Getting started](/getting-started#trusted-lan-access) for an example.

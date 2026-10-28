@@ -42,4 +42,4 @@ SOFTWARE.
 
 ## Nmap executable
 
-Homelab Atlas does not include Nmap in its published base image or source ZIP. Its optional local Docker build installs the independent Alpine `nmap` package, and Atlas can invoke a user-installed Nmap executable. Nmap remains under its own [Nmap Public Source License terms](https://nmap.org/npsl/npsl-annotated.html); those terms are separate from Atlas's MIT license.
+Homelab Atlas does not include Nmap in its published base image or source ZIP. Its optional local Docker build installs the independent Alpine `nmap`, `nmap-nselibs`, and `nmap-scripts` packages so Nmap's fixed lightweight service identification works, and Atlas can invoke a user-installed Nmap executable. Atlas does not accept caller-selected scripts or flags. Nmap remains under its own [Nmap Public Source License terms](https://nmap.org/npsl/npsl-annotated.html); those terms are separate from Atlas's MIT license.
