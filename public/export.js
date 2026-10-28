@@ -8,6 +8,7 @@ const EMAIL_RE = /[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-
 const MAC_RE = /\b(?:[0-9a-f]{2}[:-]){5}[0-9a-f]{2}\b|\b(?:[0-9a-f]{4}\.){2}[0-9a-f]{4}\b/giu;
 const BRACKETED_IPV6_RE = /\[[0-9a-f:.]+(?:%[a-z0-9_.-]+)?\](?::\d{1,5})?(?:\/\d{1,3})?/giu;
 const IPV6_RE = /(?<![0-9a-z_])(?<![0-9a-f]:)(?:[0-9a-f]{1,4}:|::)[0-9a-f:.]*(?:%[a-z0-9_.-]+)?(?:\/\d{1,3})?(?![0-9a-z_:])/giu;
+const LABELED_IPV6_RE = /\b([a-z0-9-]+:)((?:[0-9a-f]{1,4}:|::)[0-9a-f:.]*(?:%[a-z0-9_.-]+)?(?:\/\d{1,3})?)(?![0-9a-z_:])/giu;
 const IPV4_RE = /\b(?:\d{1,3}\.){3}\d{1,3}(?:\/\d{1,2})?\b/gu;
 
 export function parseExportTerms(value = '') {
@@ -90,6 +91,14 @@ function replaceAddress(text, pattern, valid) {
   });
 }
 
+function replaceLabeledIPv6(text) {
+  return text.replace(LABELED_IPV6_RE, (candidate, label, address) => {
+    const name = label.slice(0, -1);
+    return /[^0-9a-f]/iu.test(name) && !/^[g-z][0-9a-f]+$/iu.test(name)
+      ? `${label}${replaceAddress(address, IPV6_RE, validIPv6)}` : candidate;
+  });
+}
+
 function replaceLiteral(text, term) {
   const escaped = term.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
   return text.replace(new RegExp(escaped, 'giu'), HIDDEN_TEXT);
@@ -100,6 +109,7 @@ function redact(value, options) {
   if (options.hideNetworkDetails) {
     text = replaceValid(text, URL_RE, validURL);
     text = replaceAddress(text, BRACKETED_IPV6_RE, validIPv6);
+    text = replaceLabeledIPv6(text);
     text = replaceAddress(text, IPV6_RE, validIPv6);
     text = text.replace(EMAIL_RE, HIDDEN_TEXT).replace(MAC_RE, HIDDEN_TEXT);
     text = replaceAddress(text, IPV4_RE, validIPv4);
