@@ -53,7 +53,7 @@ Docker and discovery tests use fictional fixtures. The collector must keep its f
 | Hawser | [MIT license](https://github.com/Finsys/hawser/blob/bd1282901f7f33537adaebea33121c1831ef07a5/LICENSE) and [Standard HTTP server](https://github.com/Finsys/hawser/blob/bd1282901f7f33537adaebea33121c1831ef07a5/internal/server/http.go) | Implemented only its `X-Hawser-Token` and Docker-path protocol. MIT permits reuse, but Atlas copied no upstream code and does not vendor the full manager. |
 | Docker/Moby client | [Client source](https://github.com/moby/moby/tree/master/client) and [Apache-2.0 license](https://github.com/moby/moby/blob/master/client/LICENSE) | Not used. It remains useful if Atlas needs a broader Docker SDK; the current two-read standard-library client is smaller. |
 | Ullaakut/nmap | [Pinned MIT wrapper](https://github.com/Ullaakut/nmap/tree/95091f90b599d00827e6d42c609cbe4c3afeb0ac) | Not used. The wrapper shells out to a separately installed Nmap and does not relicense that binary. |
-| Nmap | [Nmap Public Source License](https://nmap.org/npsl/) and [XML format](https://nmap.org/book/output-formats-xml-output.html) | Do not copy or bundle Nmap into MIT Atlas; its license has extra requirements. The recommended next step is planned XML snapshot import with the standard-library parser and the same review/apply flow, not scanning. |
+| Nmap | [NPSL §3](https://nmap.org/npsl/npsl-annotated.html) and [XML format](https://nmap.org/book/output-formats-xml-output.html) | Atlas recommends user-supplied XML import first and ships no Nmap engine or data files. NPSL §3 distinguishes importing end-user results from copying or distributing Nmap; applicable terms would be checked before any executable integration. |
 
 ## Documentation
 

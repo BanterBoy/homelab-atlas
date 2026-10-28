@@ -7,7 +7,7 @@ const URL_RE = /\b[a-z][a-z0-9+.-]{0,31}:\/\/[^\s<>"']+/giu;
 const EMAIL_RE = /[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*/giu;
 const MAC_RE = /\b(?:[0-9a-f]{2}[:-]){5}[0-9a-f]{2}\b|\b(?:[0-9a-f]{4}\.){2}[0-9a-f]{4}\b/giu;
 const BRACKETED_IPV6_RE = /\[[0-9a-f:.]+(?:%[a-z0-9_.-]+)?\](?::\d{1,5})?(?:\/\d{1,3})?/giu;
-const IPV6_RE = /(?<![0-9a-f])(?:[0-9a-f]{1,4}:|::)[0-9a-f:.]*(?:%[a-z0-9_.-]+)?(?:\/\d{1,3})?(?![0-9a-z])/giu;
+const IPV6_RE = /(?<![0-9a-z_:])(?:[0-9a-f]{1,4}:|::)[0-9a-f:.]*(?:%[a-z0-9_.-]+)?(?:\/\d{1,3})?(?![0-9a-z_:])/giu;
 const IPV4_RE = /\b(?:\d{1,3}\.){3}\d{1,3}(?:\/\d{1,2})?\b/gu;
 
 export function parseExportTerms(value = '') {
@@ -33,7 +33,8 @@ function validURL(candidate) {
   try {
     return Boolean(new URL(candidate).protocol);
   } catch {
-    return false;
+    const match = candidate.match(/^[a-z][a-z0-9+.-]{0,31}:\/\/(?:[^\s/?#@]*@)?\[([0-9a-f:.]+%[a-z0-9_.-]+)\](?::(\d{1,5}))?(?:[/?#].*)?$/iu);
+    return Boolean(match && (!match[2] || Number(match[2]) <= 65535) && validIPv6(match[1]));
   }
 }
 
@@ -73,6 +74,17 @@ function replaceValid(text, pattern, valid) {
   return text.replace(pattern, candidate => valid(candidate) ? HIDDEN_TEXT : candidate);
 }
 
+function replaceAddress(text, pattern, valid) {
+  return text.replace(pattern, candidate => {
+    if (valid(candidate)) return HIDDEN_TEXT;
+    const punctuation = candidate.endsWith('.') ? '.' : '';
+    const literal = punctuation ? candidate.slice(0, -1) : candidate;
+    const suffix = literal.match(/\/\d+$/u)?.[0] || '';
+    const address = suffix ? literal.slice(0, -suffix.length) : literal;
+    return valid(address) ? `${HIDDEN_TEXT}${suffix}${punctuation}` : candidate;
+  });
+}
+
 function replaceLiteral(text, term) {
   const escaped = term.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
   return text.replace(new RegExp(escaped, 'giu'), HIDDEN_TEXT);
@@ -81,12 +93,11 @@ function replaceLiteral(text, term) {
 function redact(value, options) {
   let text = String(value);
   if (options.hideNetworkDetails) {
-    text = replaceValid(text, URL_RE, validURL)
-      .replace(EMAIL_RE, HIDDEN_TEXT)
-      .replace(MAC_RE, HIDDEN_TEXT);
-    text = replaceValid(text, BRACKETED_IPV6_RE, validIPv6);
-    text = replaceValid(text, IPV6_RE, validIPv6);
-    text = replaceValid(text, IPV4_RE, validIPv4);
+    text = replaceValid(text, URL_RE, validURL);
+    text = replaceAddress(text, BRACKETED_IPV6_RE, validIPv6);
+    text = replaceAddress(text, IPV6_RE, validIPv6);
+    text = text.replace(EMAIL_RE, HIDDEN_TEXT).replace(MAC_RE, HIDDEN_TEXT);
+    text = replaceAddress(text, IPV4_RE, validIPv4);
   }
   for (const term of options.terms) text = replaceLiteral(text, term);
   return text;

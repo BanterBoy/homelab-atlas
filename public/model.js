@@ -525,10 +525,10 @@ function textElement(text, x, y, options) {
   return `<text x="${x}" y="${y}" fill="${fill}" font-family="${FONT}" font-size="${size}" font-weight="${weight}" text-anchor="${anchor}" opacity="${opacity}">${title}${spans}</text>`;
 }
 
-function renderNetwork(network, box, theme, themeName, customLogos, interactive) {
+function renderNetwork(network, logo, box, theme, themeName, customLogos, interactive) {
   const name = textElement(network.name, box.x + 72, box.y + 37, { fill: theme.text, size: 17, weight: 700, maxChars: Math.max(10, Math.floor((box.w - 88) / 9)) });
   const kind = textElement(network.kind, box.x + 72, box.y + 61, { fill: theme.muted, size: 12, weight: 550, maxChars: Math.max(10, Math.floor((box.w - 88) / 7)), maxLines: 2, lineHeight: 15 });
-  const logos = [networkLogoId(network), network.secondaryIcon].filter(Boolean);
+  const logos = [logo, network.secondaryIcon].filter(Boolean);
   const iconBackground = logos.length === 1
     ? `<rect x="${box.x + 16}" y="${box.y + 25}" width="42" height="42" rx="8" fill="${network.accent}" fill-opacity="0.11"/>`
     : `<rect x="${box.x + 16}" y="${box.y + 11}" width="42" height="74" rx="8" fill="${network.accent}" fill-opacity="0.11"/>`;
@@ -583,10 +583,9 @@ function renderCard(device, box, theme, themeName, customLogos, interactive) {
     const geometry = box.hardwareFacts[index];
     const factX = innerX + (index ? 10 : geometry.markWidth);
     const baseline = y + geometry.size + (index ? 5 : 0);
-    if (geometry.label) {
-      const separator = fact.indexOf(': ');
-      const label = separator >= 0 ? fact.slice(0, separator) : fact;
-      const value = separator >= 0 ? fact.slice(separator + 2) : '';
+    const labeled = geometry.label && fact.match(/^(.+?):\s+(.+)$/u);
+    if (labeled) {
+      const [, label, value] = labeled;
       hardware += textElement(`${label}:`, factX, baseline, { fill: device.accent, size: geometry.size, weight: 600, maxChars: 25 });
       hardware += textElement(value, factX + geometry.labelWidth, baseline, { fill: index ? theme.muted : theme.text, size: geometry.size, weight: index ? 400 : 500, maxChars: geometry.chars, maxLines: 4, lineHeight: geometry.lineHeight });
     } else hardware += textElement(fact, factX, baseline, { fill: index ? theme.muted : theme.text, size: geometry.size, weight: index ? 400 : 500, maxChars: geometry.chars, maxLines: 4, lineHeight: geometry.lineHeight });
@@ -657,7 +656,8 @@ export function renderProject(project, { displayProject = project, interactive =
   const statStart = layout.oneColumnHeader ? layout.margin : layout.width - layout.margin - 360;
   const statWidth = layout.oneColumnHeader ? (layout.width - layout.margin * 2) / 3 : 120;
   const stats = [[project.devices.length, 'HOSTS'], [serviceCount, 'SERVICES'], [project.vlans.length, 'VLANS']].map(([value, label], index) => `${textElement(String(value).padStart(2, '0'), statStart + index * statWidth, statsY, { fill: index ? theme.text : theme.teal, size: 44, weight: 600, maxChars: 3 })}${textElement(label, statStart + index * statWidth, statsY + 28, { fill: theme.muted, size: 10, weight: 600, maxChars: 10 })}`).join('');
-  const networks = displayProject.networks.map(network => renderNetwork(network, layout.networks.find(box => box.id === network.id), theme, project.theme, project.customLogos, interactive)).join('');
+  const networkLogos = new Map(project.networks.map(network => [network.id, networkLogoId(network)]));
+  const networks = displayProject.networks.map(network => renderNetwork(network, networkLogos.get(network.id), layout.networks.find(box => box.id === network.id), theme, project.theme, project.customLogos, interactive)).join('');
   const vlans = displayProject.vlans.map(vlan => {
     const box = layout.vlans.find(item => item.id === vlan.id);
     const label = textElement(vlan.name, box.x + 20, box.y + 29, { fill: theme.text, size: 13, weight: 650, maxChars: Math.max(8, Math.floor((box.w - 30) / 7)) });

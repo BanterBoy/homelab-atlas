@@ -4,7 +4,8 @@ import test from 'node:test';
 import {
   createExportSnapshot, HIDDEN_TEXT, parseExportTerms, redactExportText, sanitizeExportProject,
 } from '../public/export.js';
-import { layoutProject, sampleProject, snapshotManualLayout } from '../public/model.js';
+import { logoDataUri } from '../public/catalog.js';
+import { layoutProject, renderProject, sampleProject, snapshotManualLayout } from '../public/model.js';
 
 const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
 
@@ -28,10 +29,20 @@ test('network literals are hidden without matching ordinary numbers', () => {
   ]) assert.equal(redactExportText(value), HIDDEN_TEXT, value);
 
   assert.equal(redactExportText('Gateway (192.168.10.1/24)'), `Gateway (${HIDDEN_TEXT})`);
+  assert.equal(redactExportText('IP 2001:db8::1.'), `IP ${HIDDEN_TEXT}.`);
+  assert.equal(redactExportText('11:22:33:44:55:66:77:88'), HIDDEN_TEXT);
+  assert.equal(redactExportText('10.0.0.1/99'), `${HIDDEN_TEXT}/99`);
+  assert.equal(redactExportText('2001:db8::1/129'), `${HIDDEN_TEXT}/129`);
+  for (const value of [
+    'http://[fe80::1%25eth0]:8080/private?token=secret',
+    'https://user:secret@[fe80::1%eth0]/private?token=secret#fragment',
+  ]) assert.equal(redactExportText(value), HIDDEN_TEXT, value);
   for (const value of ['RTX 3060', '12:30', '2026-10-27', '1.2.3', 'llama.cpp', 'i5-13500', '32 GB']) {
     assert.equal(redactExportText(value), value);
   }
   assert.equal(redactExportText('999.2.3.4'), '999.2.3.4');
+  assert.equal(redactExportText('x2001:db8::1'), 'x2001:db8::1');
+  assert.equal(redactExportText('http://[fe80::zz%eth0]/private?token=secret'), 'http://[fe80::zz%eth0]/private?token=secret');
 });
 
 test('custom terms are bounded case-insensitive literals', () => {
@@ -93,6 +104,43 @@ test('export rendering keeps auto and manual card geometry', () => {
     }
     assert.deepEqual(JSON.parse(JSON.stringify(layoutProject(project))), JSON.parse(JSON.stringify(before)));
   }
+});
+
+test('export edge-case text stays private without changing hardware geometry or inferred logos', () => {
+  const project = sampleProject();
+  project.title = 'Lab http://[fe80::1%25eth0]:8080/private?token=secret';
+  project.subtitle = 'IPv6 2001:db8::1.';
+  project.networks[0].name = 'LAN 10.0.0.1/99';
+  project.networks[0].kind = 'Private Wi-Fi 2001:db8::1/129';
+  project.devices[0].hardware = [
+    'IP:\t2001:db8::1.',
+    'Address:   11:22:33:44:55:66:77:88',
+    'Private label: visible value',
+    'Private fact: secret value',
+  ];
+  const before = JSON.stringify(project);
+  const layout = layoutProject(project);
+
+  const unfiltered = renderProject(project);
+  assert.equal(unfiltered.includes('<title>IP:</title>'), true);
+  assert.equal(unfiltered.includes('<title>2001:db8::1.</title>'), true);
+  assert.equal(unfiltered.includes('<title>Address:</title>'), true);
+  assert.equal(unfiltered.includes('<title>11:22:33:44:55:66:77:88</title>'), true);
+
+  const snapshot = createExportSnapshot(project, { customTerms: 'Wi-Fi\nPrivate label:\nPrivate fact: secret value' });
+  for (const privateText of [
+    'fe80::1', 'token=secret', '2001:db8::1', '10.0.0.1', '11:22:33:44:55:66:77:88',
+    'Private label', 'Private fact: secret value',
+  ]) assert.equal(snapshot.svg.includes(privateText), false, privateText);
+  assert.match(snapshot.svg, /<title>Lab \[hidden\]<\/title>/u);
+  assert.match(snapshot.svg, /<title>IPv6 \[hidden\]\.<\/title>/u);
+  assert.match(snapshot.svg, /<title>\[hidden\]<\/title>/u);
+  assert.match(snapshot.svg, /<title>\[hidden\] visible value<\/title>/u);
+  assert.doesNotMatch(snapshot.svg, /<title>\[hidden\](?: visible value)?:<\/title>/u);
+  assert.equal(snapshot.svg.includes(logoDataUri('wifi')), true);
+  assert.match(snapshot.svg, new RegExp(`viewBox="0 0 ${layout.width} ${layout.height}"`, 'u'));
+  assert.deepEqual(JSON.parse(JSON.stringify(layoutProject(project))), JSON.parse(JSON.stringify(layout)));
+  assert.equal(JSON.stringify(project), before);
 });
 
 test('privacy can be disabled and uploaded PNG bytes remain unchanged', () => {
