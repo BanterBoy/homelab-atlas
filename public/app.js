@@ -1007,7 +1007,7 @@ function fillDiscoverySources(sources, updateStatus = true) {
     select.add(new Option('No configured collectors', ''));
     select.disabled = true;
     $('#discovery-scan').disabled = true;
-    if (updateStatus) setDiscoveryStatus('No collector is configured. You can still import a sanitized snapshot or Nmap XML.');
+    if (updateStatus) setDiscoveryStatus('No collector is configured. You can still choose Scan network or import saved results.');
     return;
   }
   select.add(new Option('Choose a collector…', ''));
@@ -1434,8 +1434,9 @@ async function unlockDiscoverySources() {
     if (pendingFile) success = await importNmapXML(pendingFile);
     else if (pendingScan) success = await scanNmapNetwork(pendingScan);
     if (success && discoveryState === state) {
+      const actionToken = state.requestToken;
       const ready = await refreshDiscoveryMetadata(state);
-      if (ready && discoveryState === state) {
+      if (ready && discoveryState === state && state.requestToken === actionToken) {
         if (!pendingFile && !pendingScan) setDiscoveryStatus(hadReview && statusBeforeAuth ? statusBeforeAuth : 'Discovery is ready.');
         state.statusBeforeAuth = null;
       }

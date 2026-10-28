@@ -272,7 +272,11 @@ func (scanner *nmapScanner) scan(ctx context.Context, input nmapScanInput) (nmap
 	}
 	ctx, cancel := context.WithTimeout(ctx, deadline)
 	defer cancel()
-	args := []string{"--unprivileged", "-sT", "-n", "-T3", "--max-retries", "1", "--max-parallelism", "32", "--host-timeout", "15s"}
+	hostTimeout := "15s"
+	if input.DetectServices {
+		hostTimeout = "45s"
+	}
+	args := []string{"--unprivileged", "-sT", "-n", "-T3", "--max-retries", "1", "--max-parallelism", "32", "--host-timeout", hostTimeout}
 	if ports == "" {
 		args = append(args, "--top-ports", "100")
 	} else {

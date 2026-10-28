@@ -70,13 +70,14 @@ func TestNmapExactArgumentsAndNormalizedBundle(t *testing.T) {
 	}
 	scanner := testNmapScanner(t, run)
 	bundle, err := scanner.scan(context.Background(), nmapScanInput{Scope: "Lab", Targets: "192.168.1.2", Ports: "443,80", DetectServices: true})
-	want := []string{"--unprivileged", "-sT", "-n", "-T3", "--max-retries", "1", "--max-parallelism", "32", "--host-timeout", "15s", "-p", "80,443", "-sV", "--version-light", "-oX", "-", "192.168.1.2"}
+	want := []string{"--unprivileged", "-sT", "-n", "-T3", "--max-retries", "1", "--max-parallelism", "32", "--host-timeout", "45s", "-p", "80,443", "-sV", "--version-light", "-oX", "-", "192.168.1.2"}
 	if err != nil || gotPath != "/test/nmap" || !slices.Equal(gotArgs, want) || len(bundle.Snapshots) != 1 {
 		t.Fatalf("path=%q args=%v bundle=%+v err=%v", gotPath, gotArgs, bundle, err)
 	}
 	_, _ = scanner.scan(context.Background(), nmapScanInput{Scope: "Lab", Targets: "192.168.1.2"})
-	if !slices.Contains(gotArgs, "--top-ports") || slices.Contains(gotArgs, "-p") {
-		t.Fatalf("default args=%v", gotArgs)
+	wantDefault := []string{"--unprivileged", "-sT", "-n", "-T3", "--max-retries", "1", "--max-parallelism", "32", "--host-timeout", "15s", "--top-ports", "100", "-oX", "-", "192.168.1.2"}
+	if !slices.Equal(gotArgs, wantDefault) {
+		t.Fatalf("default args=%v want=%v", gotArgs, wantDefault)
 	}
 }
 
