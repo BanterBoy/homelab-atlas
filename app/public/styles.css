@@ -385,8 +385,63 @@ dialog header button { width: 32px; padding: 0; }
 .discovery-target select { width: 100%; }
 .discovery-summary { min-height: 34px; max-height: 72px; overflow: auto; padding: 8px 10px; border-radius: 7px; background: #162221; color: #b9d9d5; font-size: 12px; }
 .discovery-footer-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.discovery-progress { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 0 18px; padding: 0; list-style: none; }
+.discovery-progress li { display: flex; align-items: center; gap: 7px; padding: 7px 9px; border-bottom: 2px solid var(--line); color: var(--muted); font-size: 12px; }
+.discovery-progress li[aria-current="step"] { border-color: var(--accent); color: var(--text); }
+.discovery-progress span { display: grid; width: 21px; height: 21px; place-items: center; border: 1px solid currentColor; border-radius: 50%; font-size: 10px; }
+#discovery-choose h3, #discovery-find h3, .discovery-review-head h3 { margin: 0; font-size: 18px; }
+.discovery-methods { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.discovery-methods button { display: grid; min-height: 142px; grid-template-columns: 42px 1fr; gap: 10px; align-content: start; padding: 17px; border-color: #374746; text-align: left; }
+.discovery-methods button:hover, .discovery-methods button:focus-visible { border-color: var(--accent); background: #1b2928; }
+.discovery-methods img { width: 40px; height: 40px; padding: 5px; border-radius: 7px; background: #eef6f5; object-fit: contain; }
+.discovery-methods button:nth-child(2) img, .discovery-methods button:nth-child(3) img { background: #253332; }
+.discovery-methods button > span { display: grid; gap: 5px; }
+.discovery-methods small { color: var(--muted); font-weight: 400; line-height: 1.35; }
+.discovery-methods i { grid-column: 1 / -1; width: max-content; padding: 3px 7px; border: 1px solid #3f5552; border-radius: 999px; color: #9fd6d0; font-size: 10px; font-style: normal; }
+.discovery-back { margin-bottom: 12px; padding-left: 0; border: 0; color: #68d5c9; background: transparent; }
+.discovery-panel { margin-top: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 9px; background: #181c1d; }
+.discovery-panel > div, .discovery-setup, .discovery-advanced { display: grid; gap: 10px; }
+.discovery-panel label { margin: 0; }
+.discovery-panel .help, .discovery-setup p { margin: 0; }
+.discovery-panel > div > .primary { justify-self: start; }
+.discovery-setup h4 { margin: 0; font-size: 16px; }
+.discovery-setup ol { margin: 0; padding-left: 22px; }
+.discovery-setup li { padding: 3px 0; }
+.command-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.command-row code { min-width: 0; padding: 7px 9px; overflow: auto; border: 1px solid #34413f; border-radius: 6px; background: #111617; color: #d1e8e5; white-space: nowrap; user-select: all; }
+.command-row button { flex: none; }
+.discovery-actions, .discovery-network-actions, .discovery-bulk { display: flex; flex-wrap: wrap; gap: 8px; }
+.discovery-notice { margin: 0; padding: 9px 11px; border-left: 3px solid #4ebdb1; background: #162221; color: #c1d9d6; font-size: 12px; }
+.discovery-advanced { padding-top: 8px; border-top: 1px solid var(--line); }
+.discovery-advanced summary, .discovery-placement summary, .discovery-technical summary { cursor: pointer; font-weight: 650; }
+.discovery-import-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.discovery-import-buttons button { display: grid; gap: 4px; min-height: 82px; text-align: left; }
+.discovery-import-buttons small { color: var(--muted); font-weight: 400; }
+.discovery-review-head { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+.discovery-review-head p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+.discovery-host-navigation { display: grid; grid-template-columns: auto minmax(180px, 1fr) auto; align-items: end; gap: 8px; margin: 12px 0; }
+.discovery-host-navigation label { margin: 0; }
+.discovery-placement { grid-column: 1 / -1; margin-top: 5px; padding-top: 8px; border-top: 1px solid var(--line); }
+.discovery-placement > label { margin-top: 10px; }
+.discovery-list-tools { flex-wrap: wrap; }
+.discovery-bulk { align-items: center; }
+.discovery-finding { grid-template-columns: minmax(0, 1.4fr) minmax(180px, 1fr); }
+.discovery-target { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 7px; }
+.discovery-target select { flex: 1 1 180px; }
+.discovery-technical { grid-column: 1 / -1; padding-top: 6px; border-top: 1px solid #293332; color: var(--muted); font-size: 11px; }
+.discovery-technical p { margin: 6px 0 0; overflow-wrap: anywhere; }
+.discovery-error-details { margin: 8px 2px; color: var(--muted); font-size: 11px; }
+.discovery-error-details pre { max-height: 100px; overflow: auto; white-space: pre-wrap; }
+.discovery-technical { grid-column: 1 / -1; color: var(--muted); font-size: 11px; }
+.discovery-technical p { margin: 6px 0 0; overflow-wrap: anywhere; }
+#discovery-dialog footer { position: sticky; bottom: 0; z-index: 2; background: var(--panel); }
+@media (prefers-reduced-motion: reduce) {
+  #discovery-dialog *, #discovery-dialog *::before, #discovery-dialog *::after { scroll-behavior: auto !important; transition: none !important; }
+}
 @media (max-width: 620px) {
-  .discovery-source-controls, .discovery-nmap-controls, .discovery-network-fields { grid-template-columns: 1fr; }
+  .discovery-source-controls, .discovery-nmap-controls, .discovery-network-fields, .discovery-methods, .discovery-import-buttons, .discovery-host-navigation { grid-template-columns: 1fr; }
+  .discovery-methods button { min-height: 104px; }
+  .discovery-host-navigation button { width: 100%; }
 }
 .logo-preview { overflow: auto; }
 .upload-preview-surface { display: grid; place-items: center; min-height: 180px; border: 1px solid var(--line); border-radius: 8px; background-color: #c7cecc; background-image: linear-gradient(45deg, #aeb7b4 25%, transparent 25%), linear-gradient(-45deg, #aeb7b4 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #aeb7b4 75%), linear-gradient(-45deg, transparent 75%, #aeb7b4 75%); background-position: 0 0, 0 8px, 8px -8px, -8px 0; background-size: 16px 16px; }

@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   applyDiscoveryPlan, captureProjectGuard, discoveryBindingLabel, matchDiscoveryLogo,
-  filterDiscoveryFindings, parseDiscoverySnapshot, planDiscoveryMerge, projectGuardCurrent, suggestDiscoveryService,
+  filterDiscoveryFindings, parseDiscoverySnapshot, planDiscoveryMerge, projectGuardCurrent, setVisibleDiscoverySelection,
+  suggestDiscoveryDestination, suggestDiscoveryGroup, suggestDiscoveryService,
   validateDiscoverySnapshot,
 } from '../../app/public/discovery.js';
 import { emptyProject, layoutProject, sampleProject, setManualCard, validateProject } from '../../app/public/model.js';
@@ -67,6 +68,32 @@ test('catalog matching and unique-name suggestions are deterministic', () => {
   const device = sampleProject().devices[0];
   assert.equal(suggestDiscoveryService(finding({ name: 'Portainer' }), device), 'svc-atlas-a-3');
   assert.equal(suggestDiscoveryService(finding({ name: 'Not present' }), device), null);
+});
+
+test('destination and group defaults require authoritative or unique matches', () => {
+  const project = sampleProject();
+  const value = snapshot(finding());
+  project.devices[0].name = 'Docker';
+  assert.equal(suggestDiscoveryDestination(project, value), project.devices[0].id);
+  project.devices[1].name = 'Docker';
+  assert.equal(suggestDiscoveryDestination(project, value), null);
+  project.discovery.bindings.push({ sourceId: value.source.id, key: value.findings[0].key, deviceId: project.devices[1].id, serviceId: null });
+  assert.equal(suggestDiscoveryDestination(project, value), project.devices[1].id);
+  project.discovery.bindings.push({ sourceId: value.source.id, key: key('container', 'b'), deviceId: project.devices[0].id, serviceId: null });
+  assert.equal(suggestDiscoveryDestination(project, value), null);
+
+  assert.equal(suggestDiscoveryGroup({ groups: [{ id: 'one', name: 'Apps' }] }), 'one');
+  assert.equal(suggestDiscoveryGroup({ groups: [{ id: 'one', name: 'Apps' }, { id: 'found', name: 'Discovered services' }] }), 'found');
+  assert.equal(suggestDiscoveryGroup({ groups: [{ id: 'a', name: 'Discovered services' }, { id: 'b', name: 'Discovered services' }] }), null);
+});
+
+test('visible bulk selection skips linked rows and does not affect other pages', () => {
+  const choices = new Map(['a', 'b', 'c'].map(key => [key, { selected: key === 'c' }]));
+  setVisibleDiscoverySelection(choices, ['a', 'b'], ['b'], true);
+  assert.deepEqual([...choices].map(([key, choice]) => [key, choice.selected]), [['a', true], ['b', false], ['c', true]]);
+  setVisibleDiscoverySelection(choices, ['a'], [], false);
+  assert.equal(choices.get('a').selected, false);
+  assert.equal(choices.get('c').selected, true);
 });
 
 test('linking only adds a binding and preserves all project and layout details', () => {

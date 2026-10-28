@@ -13,9 +13,9 @@ Discovery is optional. Atlas needs no account or AI service, and manual diagrams
 
 ## Network scan
 
-Atlas can run a bounded Nmap TCP scan from the server or container where Atlas runs. It starts only when you choose **Scan network**. Enter numeric IPv4 addresses or CIDRs within the configured ranges, optionally enter up to 1,000 TCP ports, and optionally enable service identification. Blank ports use Nmap's common 100 TCP ports. Live scans support at most 16 target terms, 256 expanded addresses, 120 seconds, and one running scan per server.
+Atlas can run a bounded Nmap TCP scan from the server or container where Atlas runs. It starts only when you choose **Find devices**. Start with one numeric IPv4 address from your router's connected-device list, or enter an allowed CIDR. The default **Homelab app ports** preset checks `22,53,80,443,445,1883,2283,3000,5000,5055,5432,6379,6767,7878,8000,8006,8080,8081,8090,8096,8123,8443,8686,8888,8920,8989,9000,9090,9443,9696,11434,32400`; **Common 100 TCP ports** sends a blank port list to Nmap; **Custom ports** accepts up to 1,000 TCP ports. Service identification is on by default but remains imperfect. Live scans support at most 16 target terms, 256 expanded addresses, 120 seconds, and one running scan per server.
 
-The fixed scan uses unprivileged TCP connect mode, no DNS, conservative timing, and no customizable scripts, OS detection, UDP, raw sockets, caller flags, or credentials. Ordinary scans use a 15-second per-host timeout. Optional service identification uses Nmap's fixed lightweight version probes, including its packaged version-detection scripts, and allows 45 seconds per host because those probes take longer. The global scan limit remains 120 seconds. A host that exceeds its per-host timeout can be omitted with its endpoints. **Stop**, closing the dialog, changing inputs, or changing the project cancels it. Host discovery remains enabled, so a firewall can hide a host. The scan runs from the Atlas server's network, which may differ from the browser's network.
+The fixed scan uses unprivileged TCP connect mode, no DNS, conservative timing, and no customizable scripts, OS detection, UDP, raw sockets, caller flags, or credentials. Ordinary scans use a 15-second per-host timeout. Optional service identification uses Nmap's fixed lightweight version probes, including its packaged version-detection scripts, and allows 45 seconds per host because those probes take longer. The global scan limit remains 120 seconds. A host that exceeds its per-host timeout can be omitted with its endpoints. **Stop scan**, closing the dialog, changing inputs, or changing the project cancels it. Host discovery remains enabled, so a firewall can hide a host. The scan runs from the Atlas server's network, which may differ from the browser's network.
 
 The default allowed ranges are `10.0.0.0/8`, `172.16.0.0/12`, and `192.168.0.0/16`. Administrators can set canonical comma-separated IPv4 prefixes with `ATLAS_NMAP_ALLOWED_CIDRS`. Atlas reports the configured ranges to the editor but does not expose server credentials or configuration secrets.
 
@@ -29,12 +29,11 @@ Put `ATLAS_WITH_NMAP=true` in `.env` to retain the choice on later builds.
 
 Nmap is independently licensed under the [Nmap Public Source License](https://nmap.org/npsl/npsl-annotated.html). The source ZIP contains only Atlas and the local build recipe, not Nmap binaries or data.
 
-Use the scan form in this order:
+Choose **Discover devices → Network devices**, then:
 
-1. Enter a stable network name.
-2. Enter allowed IPv4 targets and optional TCP ports.
-3. Enable service identification only when its slower probes are useful.
-4. Choose **Scan network**, then review the candidates before applying anything.
+1. Enter one device IP or an allowed network range.
+2. Open **Advanced settings** only to change the port preset, service identification, or stable network name.
+3. Choose **Find devices**, then review the candidates before adding anything.
 
 <GuideFigure name="network-scan" />
 
@@ -47,12 +46,12 @@ Import accepts a user-selected file and does not execute a scanner or network pr
 In Atlas:
 
 1. Choose **Discover devices**.
-2. Enter a **Network name**, such as `Home network`. Reuse the same name for later imports or scans; it separates overlapping private networks.
-3. Choose **Import Nmap XML** and select the `.xml` file.
-4. Select a scan host and destination card, or choose a new card.
-5. Check the host or endpoints you want, then choose **Apply selected**.
+2. Choose **Import a scan**, then **Nmap scan**.
+3. Under advanced settings, keep or change the **Import scope name**. Reuse it for later imports or scans from the same network.
+4. Select a device and destination card, or keep the suggested new card.
+5. Check the host or endpoints you want, then choose **Add to diagram**.
 
-Every row starts unchecked. A host row adds a host card or links the host identity to an existing card. An endpoint adds or links a service. Ping-only scans still offer the host row. You can apply one host, keep the review open, and move to another host without re-uploading. Each Apply is one undo step. MAC identity survives an IP change; without a MAC, an IP change creates a new identity. A scan changing between MAC-present and MAC-absent can also appear new, so review and link it explicitly.
+Every row starts unchecked. **Select all shown** affects only the filtered visible page and skips items already on the diagram; **Clear selection** clears the current device across pages. A host row adds or links a device card. An endpoint adds or links a service. Ping-only scans still offer the host row. Review choices are retained while moving between devices in the same open scan. Each **Add to diagram** affects only the current device and creates one Undo step. MAC identity survives an IP change; without a MAC, an IP change creates a new identity. A scan changing between MAC-present and MAC-absent can also appear new, so review and link it explicitly.
 
 <GuideFigure name="discovery-review" />
 
@@ -64,7 +63,7 @@ The full XML or live output is held transiently for parsing. Results are not sav
 
 ## Docker discovery
 
-Docker discovery is optional and explicit. Opening the dialog does not scan. Every finding starts unchecked, and the project changes only after you choose **Apply selected**.
+Docker discovery is optional and explicit. Opening the dialog performs only readiness checks; it does not scan. Choose **Docker apps**, then **Find Docker apps**. Every finding starts unchecked, and the project changes only after **Add to diagram**.
 
 ## Local Compose setup
 
@@ -86,7 +85,7 @@ Start the editor and collector profile:
 docker compose --profile discovery up -d
 ```
 
-For the released Compose file, include `-f compose.release.yaml` in that command. Open Atlas, choose **Discover devices**, select **Docker**, then choose **Scan**.
+For the released Compose file, run `docker compose -f compose.release.yaml --profile discovery up -d`. Open Atlas, choose **Discover devices → Docker apps**, then **Find Docker apps**. The setup panel can copy these commands, but it never generates or stores a token, edits `.env`, enables the profile, or mounts a socket.
 
 The editor and collector use the same image but have separate privileges:
 
@@ -100,18 +99,18 @@ Treat the token like a password. Do not commit `.env`; it is ignored by Git.
 
 ## Review findings
 
-Choose an existing destination device or a new Docker device. For additions, choose an existing service group or a new **Discovered services** group.
+Atlas suggests a destination only from an authoritative source binding or a unique exact source-name match; otherwise it suggests a new card. It suggests a single existing group or a unique **Discovered services** group, otherwise a new group. These remain visible review choices, never automatic merges.
 
 Each finding can:
 
 - add a new service with a catalog logo and the discovered replica count; or
 - link to an existing service on the chosen device without changing its name, logo, count, order, group, or card.
 
-An exact unique service-name match is suggested as a link, but the finding remains unchecked. Existing bindings are disabled and show their current target. Stopped containers are marked in the review. Missing services from later scans are not deleted.
+An exact unique service-name match is shown as **Use existing [name]**, but the finding remains unchecked and **Change** exposes other targets. Existing bindings are disabled and show **Already on diagram**. Stopped, unknown, and unidentified states remain visible. Missing services from later scans are not deleted.
 
-Findings are sorted by name and shown 50 at a time. Search checks names, image references, and Compose project/service metadata. Selections and actions persist while searching or changing pages; changing the destination clears them across the full result set.
+Findings are sorted by name and shown 50 at a time. Search checks names, image references, and Compose project/service metadata. Selections and actions persist while searching or changing pages; changing the destination clears them across the full result set. **Select all shown** selects only the filtered visible page and skips existing bindings.
 
-Applying a review is one undoable change. Existing card positions and widths stay fixed. If an added service needs card height that would collide with another card, Atlas asks you to make room or use a new card. A new card is placed below existing cards.
+**Add to diagram** is one undoable change. Existing card positions and widths stay fixed. If an added service needs card height that would collide with another card, Atlas asks you to make room or use a new card. A new card is placed below existing cards.
 
 <GuideFigure name="docker-review" />
 
@@ -141,7 +140,7 @@ The one-off container runs as root only to reach the read-only Docker socket. It
 ATLAS_HOST_ID=nas ATLAS_HOST_NAME="NAS Docker" go run ./app collect > ../nas-docker-snapshot.json
 ```
 
-`ATLAS_DOCKER_HOST` defaults to `unix:///var/run/docker.sock`. Then use **Import snapshot** in the discovery dialog. Snapshot import has the same review and 2 MB limit as a live scan.
+`ATLAS_DOCKER_HOST` defaults to `unix:///var/run/docker.sock`. Then choose **Discover devices → Import a scan → Docker snapshot**. Snapshot import has the same unchecked review and 2 MB limit as a live scan.
 
 Snapshots contain only:
 
@@ -213,6 +212,6 @@ Only Hawser Standard mode is compatible. Hawser Edge mode uses an outbound WebSo
 
 Discovery API requests validate the request host and origin. The default host allowlist is `localhost,127.0.0.1,::1`. If the browser uses another hostname or IP, set `ATLAS_ALLOWED_HOSTS` to the exact comma-separated hostnames and set `ATLAS_API_TOKEN` to a separate random value of at least 32 characters.
 
-After a `401`, enter the API token in the masked field and choose **Unlock**. A still-current Nmap scan or XML import retries once; changed or canceled work does not restart. Collector and Nmap availability then refresh without clearing a valid review. The token stays in memory only; it is not written to the project or browser storage. Snapshot import remains available without backend authentication. See [Getting started](/getting-started#trusted-lan-access) for an example.
+After a `401`, enter the server's `ATLAS_API_TOKEN` in the **Access token** field and choose **Unlock**. A still-current Docker or Nmap scan, or XML import, retries once; changed or canceled work does not restart. Collector and Nmap availability then refresh without clearing a valid review. The token stays in memory only; it is not written to the project or browser storage. It is separate from `ATLAS_COLLECTOR_TOKEN`. Snapshot import remains available without backend authentication. See [Getting started](/getting-started#trusted-lan-access) for an example.
 
 For common availability, token, reachability, and review problems, see the [FAQ](/faq) and [troubleshooting guide](/troubleshooting).

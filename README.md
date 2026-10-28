@@ -39,14 +39,14 @@ Start with **Load example** to see how it works, or **Start empty** for your own
 
 You can upload PNG, JPG, WebP, or SVG logos up to 2 MB, preview their contrast background, and reuse them across devices, services, and network nodes. SVG uploads are converted to PNG, and stored images are at most 512px. They stay in project JSON and work offline and in exports. The bundled catalog still includes 27 provider marks. Atlas starts with an automatic layout; **Arrange** lets you move or resize device cards. **Export** previews and downloads a PNG or SVG, with network details hidden by default and optional literal terms for custom names. Use **Save project** to download a JSON copy you can edit later.
 
-**Discover devices** can review Docker findings, import user-supplied Nmap XML, or explicitly run a bounded TCP scan when Nmap is installed on the Atlas server. Results enter the same unchecked review. Each Apply is one undoable change and preserves manual card positions. See the [discovery guide](https://aiden0rchad.github.io/homelab-atlas/discovery).
+**Discover devices** guides you through **Choose → Find → Review** for Docker apps, network devices, or a saved Docker JSON/Nmap XML scan. Nothing scans automatically, every result starts unchecked, and **Add to diagram** is one undoable change that preserves existing card positions. See the [discovery guide](https://aiden0rchad.github.io/homelab-atlas/discovery).
 
 The [editor guide](https://aiden0rchad.github.io/homelab-atlas/editor) covers the controls, and the [networking guide](https://aiden0rchad.github.io/homelab-atlas/networking) explains connections and VLANs.
 
 ## A few things to know
 
 - **Save a JSON backup.** Autosave lives in your browser, not the container. Clearing browser data, using private browsing, or opening Atlas at a different hostname or port can make your project appear missing. A PNG or SVG can't be imported as an editable project.
-- **Discovery is explicit.** Atlas never scans automatically or polls Docker. A network scan runs only after **Scan network**; the optional collector reads Docker only after **Scan**.
+- **Discovery is explicit.** Atlas never scans automatically or polls Docker. Work starts only after **Find devices** or **Find Docker apps**, and imports always stop for review.
 - **Connections are logical relationships.** They don't represent individual switch ports, and network cards stay in the automatic header even when you arrange device cards.
 - **There's no login system.** Keep it on localhost or a trusted LAN. Don't expose it directly to the internet.
 - **Export filtering is intentionally narrow.** It hides addresses, URLs, emails, and terms you list from SVG and PNG images. It does not change saved JSON or text baked into uploaded logos.

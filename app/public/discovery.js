@@ -185,6 +185,29 @@ export function suggestDiscoveryService(finding, device) {
   return matches.length === 1 ? matches[0].id : null;
 }
 
+export function suggestDiscoveryDestination(project, snapshot) {
+  const deviceIds = new Set(project.discovery.bindings
+    .filter(binding => binding.sourceId === snapshot.source.id && project.devices.some(device => device.id === binding.deviceId))
+    .map(binding => binding.deviceId));
+  if (deviceIds.size === 1) return [...deviceIds][0];
+  if (deviceIds.size > 1) return null;
+  const matches = project.devices.filter(device => device.name === snapshot.source.name);
+  return matches.length === 1 ? matches[0].id : null;
+}
+
+export function suggestDiscoveryGroup(device) {
+  if (!device) return null;
+  if (device.groups.length === 1) return device.groups[0].id;
+  const matches = device.groups.filter(group => group.name === 'Discovered services');
+  return matches.length === 1 ? matches[0].id : null;
+}
+
+export function setVisibleDiscoverySelection(choices, visibleKeys, linkedKeys, selected) {
+  const linked = new Set(linkedKeys);
+  for (const key of visibleKeys) if (!linked.has(key) && choices.has(key)) choices.get(key).selected = selected;
+  return choices;
+}
+
 export function discoveryBinding(project, sourceId, key) {
   return project.discovery.bindings.find(binding => binding.sourceId === sourceId && binding.key === key) || null;
 }

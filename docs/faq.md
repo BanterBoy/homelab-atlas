@@ -40,7 +40,7 @@ No. `ATLAS_API_TOKEN` unlocks the editor server's discovery API. `ATLAS_COLLECTO
 
 ### What do 401, 403, and 502 mean?
 
-- `401`: enter the server's separate `ATLAS_API_TOKEN` and choose **Unlock**.
+- `401`: enter the server's separate `ATLAS_API_TOKEN` in **Access token** and choose **Unlock**.
 - `403`: add the exact browser hostname or IP to `ATLAS_ALLOWED_HOSTS`; a non-loopback host also requires an API token of at least 32 characters.
 - `502`: for Docker, check collector reachability, token agreement, TLS, fixed source URL, socket access, and collector logs. For Nmap, narrow the targets or ports, then check Atlas's Nmap installation, detection data, and displayed scan error.
 
@@ -52,7 +52,7 @@ The scan runs from the Atlas server or container, not the browser. Check its rou
 
 ### Which ports and protocols can a live scan use?
 
-Blank ports means Nmap's common 100 TCP ports. Custom ports and ranges may expand to at most 1,000 TCP ports. Only explicitly open results are offered; service identification is slower and imperfect, and an open port is not proof of a particular app. Live scanning has no UDP, IPv6, OS detection, custom scripts, or caller flags. Imported XML can contain explicitly open TCP/UDP and IPv4/IPv6 results.
+The default **Homelab app ports** preset checks common self-hosted services. **Common 100 TCP ports** sends a blank port list to Nmap, and custom ports or ranges may expand to at most 1,000 TCP ports. Only explicitly open results are offered; service identification is slower and imperfect, and an open port is not proof of a particular app. Live scanning has no UDP, IPv6, OS detection, custom scripts, or caller flags. Imported XML can contain explicitly open TCP/UDP and IPv4/IPv6 results.
 
 ### Why was my network target rejected?
 
@@ -64,11 +64,11 @@ One scan may run at a time, with 120 seconds total, 15 seconds per ordinary host
 
 ### Why did a device appear again after its address changed?
 
-Reuse a stable network name. Atlas prefers MAC identity, then falls back to IP; an address change without a MAC, or a change in MAC availability, can look new. Review it and choose an explicit Link. Missing results never delete old cards or services.
+Reuse a stable network name. Atlas prefers MAC identity, then falls back to IP; an address change without a MAC, or a change in MAC availability, can look new. Review it and explicitly choose the existing destination. Missing results never delete old cards or services.
 
-### Why is Apply disabled or asking me to make room? {#apply-disabled}
+### Why is Add to diagram disabled or asking me to make room? {#apply-disabled}
 
-Check at least one row, then select the required destination and service group for service additions. Changing the destination clears selections. Additions may need card height; if growth would collide, move a card or use a new card. New cards go below existing cards, while existing positions and widths stay fixed and allowed height growth appears in the preview. Each Apply is one session-only Undo.
+Check at least one row. Atlas always shows a destination and group suggestion; changing the destination clears selections. **Select all shown** affects only the filtered visible page and skips rows already on the diagram. Additions may need card height; if growth would collide, move a card or use a new card. New cards go below existing cards, while existing positions and widths stay fixed. Each **Add to diagram** is one session-only Undo.
 
 ### Can discovery build cabling, VLANs, or switch ports automatically?
 
@@ -78,7 +78,7 @@ No. Discovery offers hosts and services for review. Logical connections, VLAN la
 
 ### Why did Undo stop working after a reload?
 
-Undo history lasts only for the current page session. Save project JSON for durable editing and backup. Applying one discovery review creates one undo step, but reloading clears it.
+Undo history lasts only for the current page session. Save project JSON for durable editing and backup. Each **Add to diagram** creates one undo step, but reloading clears it.
 
 ### Does private export remove every secret? {#private-export-limits}
 
