@@ -6,12 +6,13 @@ import {
 import { applyProjectChange, filterInventory, hasStorageConflict, pngDimensions, updateSelection } from './state.js';
 import { CUSTOM_LOGO_LIMITS, normalizeLogoUpload, verifyCustomLogoDecodes } from './custom-logos.js';
 import {
-  applyDiscoveryPlan, captureProjectGuard, discoveryBinding, discoveryBindingLabel, parseDiscoverySnapshot,
-  planDiscoveryMerge, projectGuardCurrent, suggestDiscoveryService, validateDiscoverySnapshot,
+  applyDiscoveryPlan, captureProjectGuard, discoveryBinding, discoveryBindingLabel, filterDiscoveryFindings, matchDiscoveryLogo,
+  parseDiscoverySnapshot, planDiscoveryMerge, projectGuardCurrent, suggestDiscoveryService, validateDiscoverySnapshot,
 } from './discovery.js';
 
 const $ = selector => document.querySelector(selector);
 const STORAGE_KEY = 'homelab-atlas.project';
+const DISCOVERY_PAGE_SIZE = 50;
 const TAB_ID = uid('tab');
 const templates = [
   { id: 'server', name: 'Server', icon: 'server', accent: '#38bdf8', services: [] },
@@ -833,18 +834,11 @@ function invalidateDiscoveryIfStale() {
   setDiscoveryStatus('The project changed. Close this review and open discovery again.', true);
 }
 
-async function discoveryFetch(url, options = {}, retry = true) {
+async function discoveryFetch(url, options = {}) {
   const headers = new Headers(options.headers || {});
   headers.set('X-Atlas-Request', '1');
   if (apiToken) headers.set('Authorization', `Bearer ${apiToken}`);
-  const response = await fetch(url, { ...options, headers });
-  if (response.status === 401 && retry) {
-    const token = prompt('API token for this Atlas server:');
-    if (token === null) throw new Error('Authentication canceled.');
-    apiToken = token;
-    return discoveryFetch(url, options, false);
-  }
-  return response;
+  return fetch(url, { ...options, headers });
 }
 
 function beginDiscoveryRequest(message, clearResults = false) {
@@ -853,14 +847,14 @@ function beginDiscoveryRequest(message, clearResults = false) {
   const controller = new AbortController();
   discoveryState.requestToken = token;
   discoveryState.controller = controller;
-  discoveryState.plan = null;
   if (clearResults) {
+    discoveryState.plan = null;
     discoveryState.snapshot = null;
     discoveryState.choices = new Map();
     $('#discovery-results').hidden = true;
     $('#discovery-empty').hidden = false;
+    $('#discovery-apply').disabled = true;
   }
-  $('#discovery-apply').disabled = true;
   setDiscoveryStatus(message);
   return { state: discoveryState, token, controller };
 }
@@ -868,6 +862,14 @@ function beginDiscoveryRequest(message, clearResults = false) {
 function discoveryRequestCurrent(request) {
   return discoveryState === request.state && request.state.requestToken === request.token
     && projectGuardCurrent(request.state.guard, project) && $('#discovery-dialog').open;
+}
+
+function requestDiscoveryUnlock(request) {
+  if (!discoveryRequestCurrent(request)) return;
+  $('#discovery-source').disabled = true;
+  $('#discovery-scan').disabled = true;
+  setDiscoveryStatus('Authentication required. Enter the API token and choose Unlock.', true);
+  $('#discovery-api-token').focus();
 }
 
 function fillDiscoverySources(sources) {
@@ -882,9 +884,10 @@ function fillDiscoverySources(sources) {
   }
   select.add(new Option('Choose a collector…', ''));
   for (const source of sources) select.add(new Option(source.name, source.id));
+  if (sources.length === 1) select.value = sources[0].id;
   select.disabled = false;
   $('#discovery-scan').disabled = false;
-  setDiscoveryStatus('Choose a collector and select Scan, or import a snapshot.');
+  setDiscoveryStatus(sources.length === 1 ? `${sources[0].name} is ready. Select Scan to start.` : 'Choose a collector and select Scan, or import a snapshot.');
 }
 
 async function loadDiscoverySources() {
@@ -893,6 +896,7 @@ async function loadDiscoverySources() {
   $('#discovery-scan').disabled = true;
   try {
     const response = await discoveryFetch('/api/discovery/sources', { signal: request.controller.signal });
+    if (response.status === 401) return requestDiscoveryUnlock(request);
     if (!response.ok) throw new Error(`Collectors could not be loaded (${response.status}).`);
     const sources = await response.json();
     if (!Array.isArray(sources) || sources.length > 16 || sources.some(source => !source || Object.keys(source).length !== 2 || typeof source.id !== 'string' || typeof source.name !== 'string')) throw new Error('The server returned an invalid collector list.');
@@ -928,7 +932,10 @@ function updateDiscoveryDestination(resetActions = false) {
     group.replaceChildren(new Option('Choose a group…', ''));
   }
   $('#discovery-new-group-field').hidden = !(newDevice || group.value === '__new');
-  if (resetActions) for (const choice of discoveryState.choices.values()) choice.serviceId = undefined;
+  if (resetActions) for (const choice of discoveryState.choices.values()) {
+    choice.selected = false;
+    choice.serviceId = undefined;
+  }
   renderDiscoveryFindings();
 }
 
@@ -937,11 +944,24 @@ function renderDiscoveryFindings() {
   const root = $('#discovery-findings');
   const device = discoveryDestination();
   const newDevice = $('#discovery-device').value === '__new';
-  root.replaceChildren(...discoveryState.snapshot.findings.map((item, index) => {
+  const services = device ? device.groups.flatMap(group => group.services.map(service => ({
+    id: service.id, label: `Link · ${group.name} · ${service.name}`,
+  }))) : [];
+  const serviceLabels = new Map(services.map(service => [service.id, service.label]));
+  const filtered = filterDiscoveryFindings(discoveryState.snapshot.findings, discoveryState.query);
+  const pages = Math.max(1, Math.ceil(filtered.length / DISCOVERY_PAGE_SIZE));
+  discoveryState.page = Math.min(discoveryState.page, pages - 1);
+  const start = discoveryState.page * DISCOVERY_PAGE_SIZE;
+  const visible = filtered.slice(start, start + DISCOVERY_PAGE_SIZE);
+  $('#discovery-range').textContent = filtered.length ? `${start + 1}–${start + visible.length} of ${filtered.length}` : '0 of 0';
+  $('#discovery-previous').disabled = discoveryState.page === 0;
+  $('#discovery-next').disabled = start + visible.length >= filtered.length;
+  root.replaceChildren(...visible.map(item => {
     const binding = discoveryBinding(project, discoveryState.snapshot.source.id, item.key);
     const choice = discoveryState.choices.get(item.key);
     if (choice.serviceId === undefined) choice.serviceId = device ? suggestDiscoveryService(item, device) : null;
     if (newDevice) choice.serviceId = null;
+    if (binding) choice.selected = false;
     const row = document.createElement('article');
     row.className = `discovery-finding${item.stopped ? ' has-stopped' : ''}${binding ? ' bound' : ''}`;
     const checkLabel = document.createElement('label');
@@ -953,6 +973,12 @@ function renderDiscoveryFindings() {
     checkbox.setAttribute('aria-label', `Select ${item.name}`);
     checkbox.addEventListener('change', () => { choice.selected = checkbox.checked; updateDiscoveryPlan(); });
     checkLabel.append(checkbox);
+    const logoId = matchDiscoveryLogo(item);
+    const logo = document.createElement('img');
+    logo.className = `discovery-logo ${logoPlateClass(logoId)}`;
+    logo.src = logoSource(logoId);
+    logo.alt = '';
+    checkLabel.append(logo);
     const identity = document.createElement('div');
     identity.className = 'discovery-identity';
     const heading = document.createElement('strong');
@@ -969,15 +995,23 @@ function renderDiscoveryFindings() {
     const select = document.createElement('select');
     select.setAttribute('aria-label', `Action for ${item.name}`);
     select.add(new Option('Add new service', '__add'));
-    if (device) for (const group of device.groups) for (const service of group.services) select.add(new Option(`Link · ${group.name} · ${service.name}`, service.id));
+    if (choice.serviceId && serviceLabels.has(choice.serviceId)) select.add(new Option(serviceLabels.get(choice.serviceId), choice.serviceId));
     select.value = choice.serviceId || '__add';
     select.disabled = Boolean(binding) || newDevice || !device;
+    const populateOptions = () => {
+      if (select.dataset.populated || select.disabled) return;
+      const selected = select.value;
+      select.replaceChildren(new Option('Add new service', '__add'));
+      for (const service of services) select.add(new Option(service.label, service.id));
+      select.value = selected;
+      select.dataset.populated = 'true';
+    };
+    select.addEventListener('focus', populateOptions);
+    select.addEventListener('pointerdown', populateOptions);
     select.addEventListener('change', () => { choice.serviceId = select.value === '__add' ? null : select.value; updateDiscoveryPlan(); });
     action.append(actionLabel, select);
     checkLabel.append(identity);
     row.append(checkLabel, action);
-    if (binding) choice.selected = false;
-    row.dataset.index = String(index);
     return row;
   }));
   updateDiscoveryPlan();
@@ -1015,7 +1049,7 @@ function updateDiscoveryPlan() {
       choices,
     });
     discoveryState.plan = plan;
-    const parts = [`${plan.summary.added} added`, `${plan.summary.linked} linked`];
+    const parts = [`${choices.length} selected across all pages`, `${plan.summary.added} added`, `${plan.summary.linked} linked`];
     if (plan.summary.newDevice) parts.push(`new device “${plan.project.devices.at(-1).name}”`);
     if (plan.summary.newGroup) parts.push('new service group');
     for (const height of plan.summary.heightChanges) parts.push(`${height.name} height ${height.from} → ${height.to}`);
@@ -1032,6 +1066,9 @@ function showDiscoverySnapshot(value, message) {
   discoveryState.snapshot = structuredClone(value);
   discoveryState.choices = new Map(value.findings.map(item => [item.key, { selected: false, serviceId: undefined }]));
   discoveryState.plan = null;
+  discoveryState.query = '';
+  discoveryState.page = 0;
+  $('#discovery-search').value = '';
   $('#discovery-empty').hidden = true;
   $('#discovery-results').hidden = false;
   $('#discovery-result-source').textContent = value.source.name;
@@ -1039,6 +1076,8 @@ function showDiscoverySnapshot(value, message) {
   const device = $('#discovery-device');
   device.replaceChildren(new Option('Choose a device…', ''), new Option(`New device · ${value.source.name}`, '__new'));
   for (const item of project.devices) device.add(new Option(item.name, item.id));
+  const matchingDevices = project.devices.filter(item => item.name === value.source.name);
+  if (matchingDevices.length === 1) device.value = matchingDevices[0].id;
   $('#discovery-new-device').value = value.source.name;
   $('#discovery-new-group').value = 'Discovered services';
   updateDiscoveryDestination(true);
@@ -1055,7 +1094,8 @@ async function scanDiscoverySource() {
       method: 'POST', signal: request.controller.signal,
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sourceId }),
     });
-    if (!response.ok) throw new Error(response.status === 401 ? 'Authentication failed.' : `Scan failed (${response.status}).`);
+    if (response.status === 401) return requestDiscoveryUnlock(request);
+    if (!response.ok) throw new Error(`Scan failed (${response.status}).`);
     const value = await response.json();
     validateDiscoverySnapshot(value);
     if (value.source.id !== sourceId) throw new Error('The collector returned a different source identity.');
@@ -1083,16 +1123,29 @@ async function importDiscoverySnapshot(file) {
 
 function openDiscovery(opener) {
   discoveryState?.controller?.abort();
-  discoveryState = { guard: captureProjectGuard(project), opener, sources: [], snapshot: null, choices: new Map(), plan: null, controller: null, requestToken: null, stale: false };
+  discoveryState = { guard: captureProjectGuard(project), opener, sources: [], snapshot: null, choices: new Map(), plan: null, controller: null, requestToken: null, stale: false, query: '', page: 0 };
   $('#discovery-results').hidden = true;
   $('#discovery-empty').hidden = false;
   $('#discovery-source').replaceChildren(new Option('Loading sources…', ''));
   $('#discovery-device').replaceChildren(new Option('Choose a device…', ''));
   $('#discovery-findings').replaceChildren();
   $('#discovery-summary').textContent = '';
+  $('#discovery-search').value = '';
+  $('#discovery-api-token').value = '';
+  $('#discovery-range').textContent = '';
+  $('#discovery-previous').disabled = true;
+  $('#discovery-next').disabled = true;
   $('#discovery-apply').disabled = true;
   $('#discovery-file').value = '';
   $('#discovery-dialog').showModal();
+  loadDiscoverySources();
+}
+
+function unlockDiscoverySources() {
+  if (!discoveryState || !$('#discovery-dialog').open || !projectGuardCurrent(discoveryState.guard, project)) return;
+  const token = $('#discovery-api-token').value;
+  if (!token) return setDiscoveryStatus('Enter the API token first.', true);
+  apiToken = token;
   loadDiscoverySources();
 }
 
@@ -1104,12 +1157,38 @@ $('#discovery-file').addEventListener('change', event => {
   event.target.value = '';
   importDiscoverySnapshot(file);
 });
-$('#discovery-device').addEventListener('change', () => updateDiscoveryDestination(true));
+$('#discovery-unlock').addEventListener('click', unlockDiscoverySources);
+$('#discovery-api-token').addEventListener('keydown', event => {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    unlockDiscoverySources();
+  }
+});
+$('#discovery-device').addEventListener('change', () => {
+  updateDiscoveryDestination(true);
+  setDiscoveryStatus('Destination changed. Selections and actions were reset.');
+});
 $('#discovery-group').addEventListener('change', () => {
   $('#discovery-new-group-field').hidden = $('#discovery-group').value !== '__new';
   updateDiscoveryPlan();
 });
 for (const id of ['discovery-new-device', 'discovery-new-group']) $(`#${id}`).addEventListener('input', updateDiscoveryPlan);
+$('#discovery-search').addEventListener('input', event => {
+  if (!discoveryState?.snapshot) return;
+  discoveryState.query = event.target.value;
+  discoveryState.page = 0;
+  renderDiscoveryFindings();
+});
+$('#discovery-previous').addEventListener('click', () => {
+  if (!discoveryState?.snapshot || discoveryState.page === 0) return;
+  discoveryState.page -= 1;
+  renderDiscoveryFindings();
+});
+$('#discovery-next').addEventListener('click', () => {
+  if (!discoveryState?.snapshot) return;
+  discoveryState.page += 1;
+  renderDiscoveryFindings();
+});
 $('#discovery-apply').addEventListener('click', () => {
   const state = discoveryState;
   if (!state?.plan || !projectGuardCurrent(state.guard, project)) return invalidateDiscoveryIfStale();
@@ -1125,6 +1204,7 @@ $('#discovery-dialog').addEventListener('close', () => {
   state?.controller?.abort();
   discoveryState = null;
   $('#discovery-file').value = '';
+  $('#discovery-api-token').value = '';
   if (state?.opener?.isConnected) state.opener.focus();
 });
 

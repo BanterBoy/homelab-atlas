@@ -221,7 +221,9 @@ function validateProjectVersion(project, version) {
     const bindings = new Set();
     for (const binding of project.discovery.bindings) {
       exact(binding, ['sourceId', 'key', 'deviceId', 'serviceId'], 'Discovery binding');
-      if (!ID_RE.test(binding.sourceId) || !/^(?:compose|container):[0-9a-f]{64}$/.test(binding.key)) fail('Discovery binding has an invalid source or key.');
+      if (![binding.sourceId, binding.key, binding.deviceId, binding.serviceId].every(value => typeof value === 'string')
+        || !ID_RE.test(binding.sourceId) || !/^(?:compose|container):[0-9a-f]{64}$/.test(binding.key)
+        || !ID_RE.test(binding.deviceId) || !ID_RE.test(binding.serviceId)) fail('Discovery binding has invalid fields.');
       const identity = `${binding.sourceId}\0${binding.key}`;
       if (bindings.has(identity)) fail('Discovery binding source and key must be unique.');
       bindings.add(identity);

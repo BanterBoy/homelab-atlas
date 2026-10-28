@@ -274,6 +274,15 @@ test('discovery bindings validate exact unique service targets', () => {
   project.discovery.bindings[0].deviceId = project.devices[0].id;
   project.discovery.bindings[0].extra = true;
   assert.throws(() => validateProject(project), /structure/);
+
+  for (const malformed of [
+    { sourceId: 'test', key: `container:${'a'.repeat(64)}` },
+    ...Object.keys(binding).map(field => ({ ...binding, [field]: [binding[field]] })),
+  ]) {
+    const invalid = sampleProject();
+    invalid.discovery.bindings.push(malformed);
+    assert.throws(() => validateProject(invalid), /binding/i);
+  }
 });
 
 test('deleting devices, groups, and services cleans dangling references', () => {

@@ -43,6 +43,8 @@ Each finding can:
 
 An exact unique service-name match is suggested as a link, but the finding remains unchecked. Existing bindings are disabled and show their current target. Stopped containers are marked in the review. Missing services from later scans are not deleted.
 
+Findings are sorted by name and shown 50 at a time. Search checks names, image references, and Compose project/service metadata. Selections and actions persist while searching or changing pages; changing the destination clears them across the full result set.
+
 Applying a review is one undoable change. Existing card positions and widths stay fixed. If an added service needs card height that would collide with another card, Atlas asks you to make room or use a new card. A new card is placed below existing cards.
 
 ## Import a snapshot
@@ -107,4 +109,4 @@ TLS certificates are verified. Plain HTTP Docker backends are accepted only on l
 
 Discovery API requests validate the request host and origin. The default host allowlist is `localhost,127.0.0.1,::1`. If the browser uses another hostname or IP, set `ATLAS_ALLOWED_HOSTS` to the exact comma-separated hostnames and set `ATLAS_API_TOKEN` to a separate random value of at least 32 characters.
 
-The UI asks for the API token after a `401` and keeps it in memory only. It is not written to the project or browser storage. See [Getting started](/getting-started#trusted-lan-access) for an example.
+After a `401`, enter the API token in the masked field and choose **Unlock**. Unlock reloads the collector list but never starts a scan. The token stays in memory only; it is not written to the project or browser storage. Snapshot import remains available without backend authentication. See [Getting started](/getting-started#trusted-lan-access) for an example.

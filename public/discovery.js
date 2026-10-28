@@ -42,7 +42,7 @@ export function validateDiscoverySnapshot(input) {
   exact(input, ['format', 'version', 'source', 'scannedAt', 'findings'], 'Snapshot');
   if (input.format !== 'homelab-atlas.docker-discovery' || input.version !== 1) throw new Error('Unsupported discovery snapshot.');
   exact(input.source, ['id', 'name'], 'Snapshot source');
-  if (!ID_RE.test(input.source.id)) throw new Error('Snapshot source ID is invalid.');
+  if (typeof input.source.id !== 'string' || !ID_RE.test(input.source.id)) throw new Error('Snapshot source ID is invalid.');
   text(input.source.name, 120, 'Snapshot source name', false);
   text(input.scannedAt, 64, 'Scan date', false);
   if (!validTimestamp(input.scannedAt)) throw new Error('Scan date is invalid.');
@@ -51,7 +51,7 @@ export function validateDiscoverySnapshot(input) {
   let total = 0;
   for (const finding of input.findings) {
     exact(finding, ['key', 'name', 'image', 'count', 'running', 'stopped', 'ports', 'composeProject', 'composeService', 'containerNames'], 'Finding');
-    if (!KEY_RE.test(finding.key) || keys.has(finding.key)) throw new Error('Finding key is invalid or duplicated.');
+    if (typeof finding.key !== 'string' || !KEY_RE.test(finding.key) || keys.has(finding.key)) throw new Error('Finding key is invalid or duplicated.');
     keys.add(finding.key);
     text(finding.name, 120, 'Finding name', false);
     text(finding.image, 256, 'Finding image');
@@ -77,6 +77,13 @@ export function parseDiscoverySnapshot(source) {
 }
 
 const normalize = value => String(value || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+
+export function filterDiscoveryFindings(findings, query) {
+  const needle = normalize(query);
+  return findings.filter(finding => !needle || [finding.name, finding.image, finding.composeProject, finding.composeService]
+    .some(value => normalize(value).includes(needle)))
+    .sort((left, right) => left.name.localeCompare(right.name, undefined, { sensitivity: 'base' }) || left.key.localeCompare(right.key));
+}
 
 function imageName(image) {
   const basename = String(image || '').split('/').at(-1).split('@')[0];

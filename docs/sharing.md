@@ -4,7 +4,7 @@ JSON is your editable project file. SVG and PNG are images of it.
 
 ## Browser autosave
 
-Changes autosave to `localStorage` in the current browser profile. The browser keeps separate storage for each hostname, port, and protocol. Nothing is saved to the Python server or a container volume.
+Changes autosave to `localStorage` in the current browser profile. The browser keeps separate storage for each hostname, port, and protocol. Nothing is saved to the Go server or a container volume.
 
 A project can appear missing after you:
 

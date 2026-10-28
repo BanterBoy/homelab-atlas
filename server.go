@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/sha256"
 	"crypto/subtle"
@@ -28,14 +29,29 @@ const securityPolicy = "default-src 'self'; img-src 'self' data:; style-src 'sel
 var hostnamePattern = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$`)
 
 type atlasServer struct {
-	public       fs.FS
+	assets       map[string]staticAsset
 	sources      []discoverySource
 	allowedHosts map[string]bool
 	apiToken     string
 	httpClient   *http.Client
 }
 
+type staticAsset struct {
+	contentType string
+	raw         staticRepresentation
+	compressed  staticRepresentation
+}
+
+type staticRepresentation struct {
+	data []byte
+	etag string
+}
+
 func newAtlasServer(public fs.FS) (*atlasServer, error) {
+	assets, err := loadStaticAssets(public)
+	if err != nil {
+		return nil, err
+	}
 	sources, err := loadDiscoverySources()
 	if err != nil {
 		return nil, err
@@ -57,13 +73,63 @@ func newAtlasServer(public fs.FS) (*atlasServer, error) {
 		ResponseHeaderTimeout: 8 * time.Second,
 	}
 	return &atlasServer{
-		public: public, sources: sources, allowedHosts: allowed, apiToken: token,
+		assets: assets, sources: sources, allowedHosts: allowed, apiToken: token,
 		httpClient: &http.Client{
 			Transport:     transport,
 			Timeout:       12 * time.Second,
 			CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse },
 		},
 	}, nil
+}
+
+func loadStaticAssets(public fs.FS) (map[string]staticAsset, error) {
+	assets := make(map[string]staticAsset)
+	err := fs.WalkDir(public, ".", func(name string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		data, err := fs.ReadFile(public, name)
+		if err != nil {
+			return err
+		}
+		contentType := mime.TypeByExtension(path.Ext(name))
+		if contentType == "" {
+			contentType = http.DetectContentType(data)
+		}
+		asset := staticAsset{contentType: contentType, raw: makeRepresentation(data)}
+		if compressible(contentType) {
+			var buffer bytes.Buffer
+			writer := gzip.NewWriter(&buffer)
+			if _, err := writer.Write(data); err != nil {
+				return err
+			}
+			if err := writer.Close(); err != nil {
+				return err
+			}
+			if buffer.Len() < len(data) {
+				asset.compressed = makeRepresentation(buffer.Bytes())
+			}
+		}
+		assets[name] = asset
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not prepare embedded assets: %w", err)
+	}
+	return assets, nil
+}
+
+func makeRepresentation(data []byte) staticRepresentation {
+	digest := sha256.Sum256(data)
+	return staticRepresentation{data: data, etag: fmt.Sprintf(`"%x"`, digest)}
+}
+
+func compressible(contentType string) bool {
+	mediaType, _, _ := mime.ParseMediaType(contentType)
+	return strings.HasPrefix(mediaType, "text/") || mediaType == "application/javascript" || mediaType == "application/json" || mediaType == "image/svg+xml"
 }
 
 func allowedHostSet(raw string) (map[string]bool, bool, error) {
@@ -140,22 +206,50 @@ func (server *atlasServer) serveStatic(writer http.ResponseWriter, request *http
 	if name == "" {
 		name = "index.html"
 	}
-	info, err := fs.Stat(server.public, name)
-	if err != nil || !info.Mode().IsRegular() {
+	asset, ok := server.assets[name]
+	if !ok {
 		http.NotFound(writer, request)
 		return
 	}
-	data, err := fs.ReadFile(server.public, name)
-	if err != nil {
-		http.NotFound(writer, request)
-		return
+	representation := asset.raw
+	if len(asset.compressed.data) > 0 && acceptsGzip(request.Header.Get("Accept-Encoding")) {
+		representation = asset.compressed
+		writer.Header().Set("Content-Encoding", "gzip")
 	}
-	contentType := mime.TypeByExtension(path.Ext(name))
-	if contentType == "" {
-		contentType = http.DetectContentType(data)
+	writer.Header().Set("Cache-Control", "no-cache")
+	writer.Header().Set("Content-Type", asset.contentType)
+	writer.Header().Set("Content-Length", strconv.Itoa(len(representation.data)))
+	writer.Header().Set("ETag", representation.etag)
+	writer.Header().Set("Vary", "Accept-Encoding")
+	http.ServeContent(writer, request, name, time.Time{}, bytes.NewReader(representation.data))
+}
+
+func acceptsGzip(header string) bool {
+	wildcard := false
+	for _, item := range strings.Split(header, ",") {
+		parts := strings.Split(item, ";")
+		encoding := strings.ToLower(strings.TrimSpace(parts[0]))
+		quality := 1.0
+		for _, parameter := range parts[1:] {
+			key, value, found := strings.Cut(strings.TrimSpace(parameter), "=")
+			if !found || !strings.EqualFold(key, "q") {
+				continue
+			}
+			parsed, err := strconv.ParseFloat(strings.TrimSpace(value), 64)
+			if err != nil || parsed < 0 || parsed > 1 {
+				quality = 0
+			} else {
+				quality = parsed
+			}
+		}
+		if encoding == "gzip" {
+			return quality > 0
+		}
+		if encoding == "*" {
+			wildcard = quality > 0
+		}
 	}
-	writer.Header().Set("Content-Type", contentType)
-	http.ServeContent(writer, request, name, info.ModTime(), bytes.NewReader(data))
+	return wildcard
 }
 
 func (server *atlasServer) authorizeAPI(writer http.ResponseWriter, request *http.Request) bool {

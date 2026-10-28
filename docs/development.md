@@ -2,6 +2,8 @@
 
 The app uses browser JavaScript and the Go standard library, with no runtime packages to install. Node.js is used for tests, building logo data, and this documentation site. Python is retained for deterministic release packaging tests.
 
+At startup, the Go server prepares reusable gzip representations for compressible embedded assets when they are smaller than the originals. Static responses use encoding-specific ETags and `Cache-Control: no-cache` revalidation; discovery API and collector inventory responses remain private and uncompressed.
+
 ## Source layout
 
 | Path | Purpose |

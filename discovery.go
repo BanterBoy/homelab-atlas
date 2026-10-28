@@ -87,10 +87,13 @@ func validateSnapshot(snapshot *discoverySnapshot, expectedSource string) error 
 	if expectedSource != "" && snapshot.Source.ID != expectedSource {
 		return errors.New("discovery source mismatch")
 	}
+	if snapshot.ScannedAt == "" || !validText(snapshot.ScannedAt, 64) {
+		return errors.New("invalid discovery scan time")
+	}
 	if _, err := time.Parse(time.RFC3339Nano, snapshot.ScannedAt); err != nil {
 		return errors.New("invalid discovery scan time")
 	}
-	if len(snapshot.Findings) > maxContainers {
+	if snapshot.Findings == nil || len(snapshot.Findings) > maxContainers {
 		return errors.New("too many discovery findings")
 	}
 	keys := make(map[string]bool, len(snapshot.Findings))
@@ -108,7 +111,7 @@ func validateSnapshot(snapshot *discoverySnapshot, expectedSource string) error 
 		if item.Count < 1 || item.Running < 0 || item.Stopped < 0 || item.Count != item.Running+item.Stopped {
 			return errors.New("invalid discovery counts")
 		}
-		if len(item.Ports) > 20 || len(item.ContainerNames) < 1 || len(item.ContainerNames) > maxContainers || len(item.ContainerNames) != item.Count {
+		if item.Ports == nil || len(item.Ports) > 20 || len(item.ContainerNames) < 1 || len(item.ContainerNames) > maxContainers || len(item.ContainerNames) != item.Count {
 			return errors.New("invalid discovery details")
 		}
 		for _, value := range item.Ports {

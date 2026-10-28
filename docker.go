@@ -142,6 +142,7 @@ func collectDocker(ctx context.Context) (discoverySnapshot, error) {
 }
 
 func (client *dockerClient) collect(ctx context.Context) (discoverySnapshot, error) {
+	defer client.client.CloseIdleConnections()
 	var version struct {
 		APIVersion string `json:"ApiVersion"`
 	}

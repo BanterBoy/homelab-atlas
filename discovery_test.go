@@ -63,6 +63,22 @@ func TestSnapshotLimits(t *testing.T) {
 	if _, err := decodeSnapshot(make([]byte, maxSnapshotBytes+1), ""); err == nil || !strings.Contains(err.Error(), "2 MB") {
 		t.Fatalf("unexpected oversized error: %v", err)
 	}
+
+	snapshot = testSnapshot()
+	snapshot.Findings = nil
+	if _, err := encodeSnapshot(snapshot); err == nil {
+		t.Fatal("null findings were accepted")
+	}
+	snapshot = testSnapshot()
+	snapshot.Findings[0].Ports = nil
+	if _, err := encodeSnapshot(snapshot); err == nil {
+		t.Fatal("null ports were accepted")
+	}
+	snapshot = testSnapshot()
+	snapshot.ScannedAt = "2026-10-27T12:00:00." + strings.Repeat("0", 50) + "Z"
+	if _, err := encodeSnapshot(snapshot); err == nil {
+		t.Fatal("an oversized scan timestamp was accepted")
+	}
 }
 
 func TestLoadDiscoverySources(t *testing.T) {

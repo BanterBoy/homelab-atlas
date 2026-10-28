@@ -14,6 +14,7 @@ This file lists the notable changes in each Homelab Atlas release.
 
 - Saved projects now use schema version 5 with discovery bindings; schema versions 1 through 4 upgrade without changing existing inventory or manual layout.
 - Container images now use a static Go binary and an optional isolated `discovery` Compose profile.
+- The Go server now precompresses eligible embedded assets once and serves encoding-specific ETags with cache revalidation.
 
 ## [0.5.0] - 2026-10-25
 

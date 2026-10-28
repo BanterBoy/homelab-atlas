@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   applyDiscoveryPlan, captureProjectGuard, discoveryBindingLabel, matchDiscoveryLogo,
-  parseDiscoverySnapshot, planDiscoveryMerge, projectGuardCurrent, suggestDiscoveryService,
+  filterDiscoveryFindings, parseDiscoverySnapshot, planDiscoveryMerge, projectGuardCurrent, suggestDiscoveryService,
   validateDiscoverySnapshot,
 } from '../public/discovery.js';
 import { emptyProject, layoutProject, sampleProject, setManualCard, validateProject } from '../public/model.js';
@@ -40,7 +40,24 @@ test('snapshot validation is strict, bounded, and non-mutating', () => {
   const badUnicode = structuredClone(value);
   badUnicode.findings[0].name = '\ud800';
   assert.throws(() => validateDiscoverySnapshot(badUnicode), /name/);
+  const arraySource = structuredClone(value);
+  arraySource.source.id = ['localdocker'];
+  assert.throws(() => validateDiscoverySnapshot(arraySource), /source ID/);
+  const arrayKey = structuredClone(value);
+  arrayKey.findings[0].key = [arrayKey.findings[0].key];
+  assert.throws(() => validateDiscoverySnapshot(arrayKey), /key/);
   assert.throws(() => parseDiscoverySnapshot('x'.repeat(2_000_001)), /2 MB/);
+});
+
+test('finding search covers names, images, and Compose metadata without mutating order', () => {
+  const findings = [
+    finding({ key: key('container', 'b'), name: 'Zulu', image: 'example/worker:1' }),
+    finding({ key: key('compose', 'c'), name: 'Alpha', image: 'example/api:1', composeProject: 'Home Stack', composeService: 'gateway' }),
+  ];
+  assert.deepEqual(filterDiscoveryFindings(findings, '').map(item => item.name), ['Alpha', 'Zulu']);
+  assert.deepEqual(filterDiscoveryFindings(findings, 'worker').map(item => item.name), ['Zulu']);
+  assert.deepEqual(filterDiscoveryFindings(findings, 'home stack').map(item => item.name), ['Alpha']);
+  assert.deepEqual(findings.map(item => item.name), ['Zulu', 'Alpha']);
 });
 
 test('catalog matching and unique-name suggestions are deterministic', () => {

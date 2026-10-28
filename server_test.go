@@ -2,9 +2,12 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
+	"io"
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -16,9 +19,58 @@ func testAtlasServer(t *testing.T) *atlasServer {
 	if err != nil {
 		t.Fatal(err)
 	}
+	assets, err := loadStaticAssets(public)
+	if err != nil {
+		t.Fatal(err)
+	}
 	return &atlasServer{
-		public: public, allowedHosts: map[string]bool{"localhost": true, "127.0.0.1": true},
+		assets: assets, allowedHosts: map[string]bool{"localhost": true, "127.0.0.1": true},
 		httpClient: &http.Client{Timeout: time.Second, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }},
+	}
+}
+
+func TestStaticCompressionCachingAndHead(t *testing.T) {
+	server := testAtlasServer(t)
+	source, err := fs.ReadFile(embeddedFiles, "public/app.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	gzipped := request(server, http.MethodGet, "/app.js", nil, map[string]string{"Accept-Encoding": "gzip"})
+	if gzipped.Code != http.StatusOK || gzipped.Header().Get("Content-Encoding") != "gzip" || gzipped.Header().Get("Vary") != "Accept-Encoding" || gzipped.Header().Get("Cache-Control") != "no-cache" {
+		t.Fatalf("gzip response: status=%d headers=%v", gzipped.Code, gzipped.Header())
+	}
+	if gzipped.Body.Len() >= len(source) {
+		t.Fatalf("gzip did not reduce app.js: raw=%d gzip=%d", len(source), gzipped.Body.Len())
+	}
+	reader, err := gzip.NewReader(bytes.NewReader(gzipped.Body.Bytes()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := io.ReadAll(reader)
+	if closeErr := reader.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil || !bytes.Equal(decoded, source) {
+		t.Fatalf("gzip did not decode to source: err=%v", err)
+	}
+
+	identity := request(server, http.MethodGet, "/app.js", nil, map[string]string{"Accept-Encoding": "gzip;q=0, identity"})
+	if identity.Header().Get("Content-Encoding") != "" || !bytes.Equal(identity.Body.Bytes(), source) {
+		t.Fatal("q=0 did not select the identity representation")
+	}
+	if identity.Header().Get("ETag") == gzipped.Header().Get("ETag") {
+		t.Fatal("gzip and identity ETags match")
+	}
+
+	conditional := request(server, http.MethodGet, "/app.js", nil, map[string]string{
+		"Accept-Encoding": "gzip", "If-None-Match": gzipped.Header().Get("ETag"),
+	})
+	if conditional.Code != http.StatusNotModified || conditional.Body.Len() != 0 || conditional.Header().Get("Content-Length") != "" {
+		t.Fatalf("conditional response: status=%d body=%d headers=%v", conditional.Code, conditional.Body.Len(), conditional.Header())
+	}
+	head := request(server, http.MethodHead, "/app.js", nil, map[string]string{"Accept-Encoding": "gzip"})
+	if head.Code != http.StatusOK || head.Body.Len() != 0 || head.Header().Get("Content-Encoding") != "gzip" || head.Header().Get("ETag") != gzipped.Header().Get("ETag") || head.Header().Get("Content-Length") != strconv.Itoa(gzipped.Body.Len()) {
+		t.Fatalf("HEAD response: status=%d body=%d headers=%v", head.Code, head.Body.Len(), head.Header())
 	}
 }
 
@@ -71,11 +123,14 @@ func TestDiscoveryAPIHostOriginTokenAndStrictBody(t *testing.T) {
 	server.apiToken = strings.Repeat("a", 32)
 	source := discoverySource{ID: "lab", Name: "Lab", URL: "http://collector.invalid/inventory", token: strings.Repeat("c", 32)}
 	server.sources = []discoverySource{source}
-	baseHeaders := map[string]string{"X-Atlas-Request": "1", "Authorization": "Bearer " + server.apiToken}
+	baseHeaders := map[string]string{"X-Atlas-Request": "1", "Authorization": "Bearer " + server.apiToken, "Accept-Encoding": "gzip"}
 
 	record := request(server, http.MethodGet, "/api/discovery/sources", nil, baseHeaders)
 	if record.Code != http.StatusOK || strings.Contains(record.Body.String(), source.URL) || strings.Contains(record.Body.String(), source.token) {
 		t.Fatalf("unsafe source response: %d %s", record.Code, record.Body.String())
+	}
+	if record.Header().Get("Cache-Control") != "no-store" || record.Header().Get("Content-Encoding") != "" {
+		t.Fatalf("API caching/compression headers: %v", record.Header())
 	}
 
 	for name, mutate := range map[string]func(*http.Request){

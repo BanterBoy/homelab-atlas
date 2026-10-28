@@ -330,6 +330,7 @@ dialog header button { width: 32px; padding: 0; }
 #logo-dialog .logo-grid > .no-results { grid-column: 1 / -1; }
 #discovery-dialog { width: min(920px, calc(100vw - 28px)); }
 #discovery-dialog form { display: flex; max-height: calc(100vh - 42px); flex-direction: column; }
+#discovery-dialog [hidden] { display: none; }
 #discovery-dialog header, #discovery-dialog footer { flex: none; }
 #discovery-dialog footer { padding-top: 14px; border-top: 1px solid var(--line); }
 .discovery-body { min-height: 0; overflow: auto; padding: 0 2px 4px; }
@@ -337,7 +338,9 @@ dialog header button { width: 32px; padding: 0; }
 .discovery-body a { color: #68d5c9; }
 .discovery-source { padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #181c1d; }
 .discovery-source h3, .discovery-list-head h3 { margin: 0; font-size: 12px; letter-spacing: .07em; text-transform: uppercase; }
-.discovery-source > div { display: grid; grid-template-columns: minmax(180px, 1fr) auto auto; align-items: end; gap: 8px; }
+.discovery-source-controls { display: grid; grid-template-columns: minmax(180px, 1fr) auto auto; align-items: end; gap: 8px; }
+.discovery-auth { display: grid; grid-template-columns: minmax(180px, 1fr) auto; align-items: end; gap: 4px 8px; margin-top: 8px; }
+.discovery-auth small { grid-column: 1 / -1; color: var(--muted); }
 .discovery-source label { margin: 0; }
 .discovery-status { min-height: 20px; margin: 10px 2px; color: var(--muted); font-size: 12px; }
 .discovery-status.error, .discovery-summary.error { color: #fca5a5; }
@@ -350,12 +353,18 @@ dialog header button { width: 32px; padding: 0; }
 .discovery-destination label { margin: 4px 0; }
 .discovery-list-head { display: flex; align-items: center; justify-content: space-between; margin: 16px 2px 8px; }
 .discovery-list-head span { color: var(--muted); font-size: 11px; }
+.discovery-list-tools { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.discovery-list-tools label { flex: 1; margin: 0; }
+.discovery-list-tools input { width: 100%; }
+.discovery-pager { display: flex; align-items: center; gap: 7px; }
+.discovery-pager output { min-width: 78px; color: var(--muted); font-size: 11px; text-align: center; }
 .discovery-findings { display: grid; gap: 7px; }
 .discovery-finding { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(190px, 1fr); gap: 12px; align-items: center; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: #181c1d; }
 .discovery-finding.has-stopped { border-left: 3px solid #b88947; }
 .discovery-finding.bound { opacity: .68; }
 .discovery-check { display: flex; align-items: flex-start; gap: 10px; min-width: 0; margin: 0; cursor: pointer; }
 .discovery-check input { flex: none; width: 16px; height: 16px; margin: 4px 0 0; padding: 0; }
+.discovery-logo { flex: none; width: 36px; height: 36px; padding: 4px; border-radius: 6px; object-fit: contain; }
 .discovery-identity { display: grid; min-width: 0; }
 .discovery-identity strong, .discovery-identity span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .discovery-identity span, .discovery-identity small { color: var(--muted); font-size: 11px; font-weight: 400; }
@@ -434,8 +443,11 @@ dialog header button { width: 32px; padding: 0; }
   dialog footer { flex-wrap: wrap; }
   .logo-tools { grid-template-columns: 1fr auto; }
   .logo-tools .search { grid-column: 1 / -1; }
-  .discovery-source > div, .discovery-destination, .discovery-finding { grid-template-columns: 1fr; }
-  .discovery-source > div button { width: 100%; }
+  .discovery-source-controls, .discovery-auth, .discovery-destination, .discovery-finding { grid-template-columns: 1fr; }
+  .discovery-source-controls button, .discovery-auth button { width: 100%; }
+  .discovery-auth small { grid-column: auto; }
+  .discovery-list-tools { align-items: stretch; flex-direction: column; }
+  .discovery-pager { justify-content: space-between; }
   .discovery-meta { display: grid; gap: 2px; }
   .export-options { grid-template-columns: 1fr; }
   .workspace.focus-mode { display: block; }
