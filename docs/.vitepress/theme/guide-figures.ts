@@ -11,6 +11,8 @@ type GuideFigure = {
   title: string
   description: string
   image: string
+  imageWidth?: number
+  imageHeight?: number
   crop: Rect
   circleRadius: number
   gutter: number
@@ -49,42 +51,74 @@ export const guideFigures = {
       { rect: { x: 1391.71875, y: 976.546875, width: 106.78125, height: 32 }, circle: [1531, 992], target: [1498.5, 992], caption: 'Add the selected services. Cancel leaves the project unchanged.' },
     ],
   },
-  'network-scan': {
-    title: 'Set up a live network scan',
-    description: 'The network discovery form with network name, targets, TCP ports, and Scan network highlighted.',
-    image: 'network-scan.jpg',
-    crop: { x: 717.5, y: 394.328125, width: 920, height: 794.328125 },
+  'discovery-choose': {
+    title: 'Choose a discovery method',
+    description: 'The first discovery step with readiness checks and Docker, network, and import method cards highlighted.',
+    image: 'discovery-choose.jpg',
+    imageWidth: 1874,
+    imageHeight: 1583,
+    crop: { x: 477, y: 576.515625, width: 920, height: 429.96875 },
     ...dialogStyle,
     marks: [
-      { rect: { x: 751.5, y: 622.5, width: 704.546875, height: 32.796875 }, circle: [704, 639], target: [751.5, 639], caption: 'Give the network a stable name so later results match the same scope.' },
-      { rect: { x: 751.5, y: 751.21875, width: 422, height: 32.796875 }, circle: [704, 768], target: [751.5, 768], caption: 'Replace the example with an allowed IPv4 address or CIDR you control.' },
-      { rect: { x: 1181.5, y: 751.21875, width: 422, height: 32.796875 }, circle: [1651, 768], target: [1603.5, 768], caption: 'Leave ports blank for the common 100 TCP ports, or enter up to 1,000 TCP ports. Identify services is slower.' },
-      { rect: { x: 751.5, y: 816.8125, width: 109.8125, height: 32 }, circle: [704, 833], target: [751.5, 833], caption: 'Start the bounded scan. It only finds candidates; nothing is added until review and Apply.' },
+      { rect: { x: 498, y: 654.703125, width: 878, height: 37 }, circle: [456, 673], target: [498, 673], caption: 'Choose, Find, and Review keep setup and results separate. Opening discovery only checks readiness.' },
+      { rect: { x: 498, y: 782.484375, width: 878, height: 142 }, circle: [1418, 853], target: [1376, 853], caption: 'Readiness appears on each method. Choose Docker apps, Network devices, or a saved scan to continue.' },
+    ],
+  },
+  'network-scan': {
+    title: 'Set up a live network scan',
+    description: 'The network Find step with target, optional advanced settings, and Find devices highlighted.',
+    image: 'network-scan.jpg',
+    imageWidth: 1874,
+    imageHeight: 1583,
+    crop: { x: 477, y: 498.15625, width: 920, height: 586.6875 },
+    ...dialogStyle,
+    marks: [
+      { rect: { x: 515, y: 751.328125, width: 844, height: 32.796875 }, circle: [456, 768], target: [515, 768], caption: 'Start with one device IP from the router, or enter an allowed network range.' },
+      { rect: { x: 515, y: 865.25, width: 844, height: 38.59375 }, circle: [1418, 885], target: [1359, 885], caption: 'The Homelab app ports preset is ready by default. Open Advanced settings for other ports, service identification, or the network name.' },
+      { rect: { x: 515, y: 913.84375, width: 844, height: 32 }, circle: [456, 930], target: [515, 930], caption: 'Find devices starts the bounded scan. Results remain unchanged until Review.' },
     ],
   },
   'discovery-review': {
-    title: 'Review an imported Nmap result',
-    description: 'An imported Nmap XML review with host, destination, findings, and Apply boundary highlighted.',
+    title: 'Review network findings',
+    description: 'A multi-device network review with navigation, destination, findings, and Add to diagram boundary highlighted.',
     image: 'discovery-review.jpg',
-    crop: { x: 717, y: 680, width: 921, height: 766 },
+    imageWidth: 1874,
+    imageHeight: 1583,
+    crop: { x: 477, y: 257.25, width: 920, height: 1068.484375 },
     ...dialogStyle,
     marks: [
-      { rect: { x: 738.5, y: 716.296875, width: 878, height: 33 }, circle: [704, 733], target: [738.5, 733], caption: 'Pick the scanned host to review.' },
-      { rect: { x: 748, y: 840, width: 860, height: 43 }, circle: [1651, 862], target: [1608, 862], caption: 'Choose its destination device and service group.' },
-      { rect: { x: 738.5, y: 998.078125, width: 878, height: 322.5625 }, circle: [704, 1110], target: [738.5, 1110], caption: 'Check only the host or services you want, then choose Add or Link. Only nginx is manually checked here.' },
-      { rect: { x: 736, y: 1350, width: 883, height: 77 }, circle: [1651, 1389], target: [1619, 1389], caption: 'Read the change preview, then Apply. Cancel changes nothing; each Apply is one Undo.', accent: true },
+      { rect: { x: 498, y: 479.421875, width: 878, height: 76.59375 }, circle: [456, 518], target: [498, 518], caption: 'Move between discovered devices. Pending choices stay with each device while this scan remains open.' },
+      { rect: { x: 511, y: 655.40625, width: 421, height: 33 }, circle: [1418, 672], target: [932, 672], caption: 'Review the suggested destination. It is never an automatic merge.' },
+      { rect: { x: 498, y: 799.59375, width: 878, height: 402.140625 }, circle: [456, 1001], target: [498, 1001], caption: 'Everything starts unchecked. Only nginx is manually selected here; bulk controls affect the visible filtered page.' },
+      { rect: { x: 496, y: 1221.734375, width: 882, height: 85 }, circle: [1418, 1264], target: [1378, 1264], caption: 'Add to diagram affects only the current device and creates one Undo step.', accent: true },
     ],
   },
   'docker-review': {
     title: 'Review Docker findings',
-    description: 'A Docker discovery review with destination, findings, and Apply boundary highlighted.',
+    description: 'A Docker review with destination, unchecked findings, and Add to diagram boundary highlighted.',
     image: 'docker-review.jpg',
-    crop: { x: 717, y: 770, width: 921, height: 590 },
+    imageWidth: 1874,
+    imageHeight: 1583,
+    crop: { x: 477, y: 355.5625, width: 920, height: 871.859375 },
     ...dialogStyle,
     marks: [
-      { rect: { x: 748, y: 840, width: 860, height: 43 }, circle: [704, 862], target: [748, 862], caption: 'Select a destination device and service group.' },
-      { rect: { x: 738.5, y: 995.96875, width: 878, height: 240.171875 }, circle: [1651, 1088], target: [1616.5, 1088], caption: 'Review every result. Jellyfin is manually checked and set to Link; a matching name suggests Link but never checks it. The stopped container shows why review matters.' },
-      { rect: { x: 736, y: 1266, width: 883, height: 79 }, circle: [704, 1306], target: [736, 1306], caption: 'Inspect the counts and summary, then Apply. Linking preserves the existing label, logo, and order.', accent: true },
+      { rect: { x: 511, y: 633.328125, width: 421, height: 33 }, circle: [456, 650], target: [511, 650], caption: 'Relay is suggested because it uniquely matches the snapshot source name. You still choose the destination.' },
+      { rect: { x: 498, y: 777.515625, width: 878, height: 325.90625 }, circle: [1418, 940], target: [1376, 940], caption: 'No row is checked automatically. Jellyfin is manually checked with Use existing Jellyfin; stopped Paperless remains visible.' },
+      { rect: { x: 496, y: 1123.421875, width: 882, height: 85 }, circle: [456, 1166], target: [496, 1166], caption: 'Confirm the summary, then Add to diagram. Existing placement and one-step Undo are preserved.', accent: true },
+    ],
+  },
+  'docker-setup': {
+    title: 'Connect a Docker host',
+    description: 'The Docker setup panel with token checklist, Compose commands, and readiness retry highlighted.',
+    image: 'docker-setup.jpg',
+    imageWidth: 1874,
+    imageHeight: 1583,
+    crop: { x: 477, y: 415.046875, width: 920, height: 752.890625 },
+    ...dialogStyle,
+    marks: [
+      { rect: { x: 515, y: 708.40625, width: 844, height: 148.96875 }, circle: [456, 783], target: [515, 783], caption: 'Generate the value yourself, then save only ATLAS_COLLECTOR_TOKEN in .env beside the Atlas Compose file on the Docker host.' },
+      { rect: { x: 515, y: 867.375, width: 844, height: 129.96875 }, circle: [1418, 932], target: [1359, 932], caption: 'Use the command for a source checkout or the released Compose file. Atlas never runs these commands for you.' },
+      { rect: { x: 515, y: 1036.9375, width: 103.109375, height: 32 }, circle: [456, 1053], target: [515, 1053], caption: 'Check setup only repeats the readiness check. It does not create tokens or enable the collector.' },
     ],
   },
   'private-export': {

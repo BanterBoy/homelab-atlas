@@ -1034,6 +1034,10 @@ async function loadNmapStatus(expectedState = discoveryState) {
   const controller = new AbortController();
   state.statusController = controller;
   const request = { state, controller, apiToken, actionToken: state.requestToken };
+  $('#discovery-network-badge').textContent = 'Checking';
+  $('#discovery-network-ready').hidden = true;
+  $('#discovery-network-setup').hidden = true;
+  $('#discovery-network-error').hidden = true;
   try {
     const response = await discoveryFetch('/api/discovery/nmap/status', { signal: controller.signal }, request.apiToken);
     if (response.status === 401) {
@@ -1054,6 +1058,7 @@ async function loadNmapStatus(expectedState = discoveryState) {
     $('#discovery-network-badge').textContent = value.available ? 'Ready' : 'Setup needed';
     $('#discovery-network-ready').hidden = !value.available;
     $('#discovery-network-setup').hidden = value.available;
+    $('#discovery-network-error').hidden = true;
     $('#discovery-network-help').textContent = value.available
       ? `Runs from this Atlas server. Allowed ranges: ${value.allowedCidrs.join(', ')}. Up to ${value.maxHosts} hosts and ${value.timeoutSeconds} seconds; firewalls may hide hosts.`
       : `Nmap is not installed on this Atlas server. XML import and Docker discovery are still available. Allowed ranges: ${value.allowedCidrs.join(', ')}.`;
@@ -1061,12 +1066,12 @@ async function loadNmapStatus(expectedState = discoveryState) {
   } catch (error) {
     if (error.name === 'AbortError' || !metadataRequestCurrent(request, 'statusController')) return false;
     $('#discovery-network-start').disabled = true;
-    const blocked = error.message.startsWith('Discovery access is blocked.');
-    $('#discovery-network-badge').textContent = blocked ? 'Blocked' : 'Setup needed';
+    $('#discovery-network-badge').textContent = 'Check failed';
     $('#discovery-network-help').textContent = error.message;
     $('#discovery-network-ready').hidden = true;
-    $('#discovery-network-setup').hidden = blocked;
-    if (blocked) setDiscoveryStatus(error.message, true);
+    $('#discovery-network-setup').hidden = true;
+    $('#discovery-network-error p').textContent = error.message;
+    $('#discovery-network-error').hidden = false;
     return false;
   } finally {
     if (metadataRequestCurrent(request, 'statusController')) state.statusController = null;
@@ -1083,6 +1088,7 @@ function fillDiscoverySources(sources, updateStatus = true) {
     $('#discovery-docker-badge').textContent = 'Setup needed';
     $('#discovery-docker-ready').hidden = true;
     $('#discovery-docker-setup').hidden = false;
+    $('#discovery-docker-error').hidden = true;
     if (updateStatus && discoveryState?.method === 'docker') setDiscoveryStatus('Connect a Docker host, then check the connection.');
     return;
   }
@@ -1094,6 +1100,7 @@ function fillDiscoverySources(sources, updateStatus = true) {
   $('#discovery-docker-badge').textContent = 'Ready';
   $('#discovery-docker-ready').hidden = false;
   $('#discovery-docker-setup').hidden = true;
+  $('#discovery-docker-error').hidden = true;
   if (updateStatus && discoveryState?.method === 'docker') setDiscoveryStatus(sources.length === 1 ? `${sources[0].name} is ready.` : 'Choose a Docker host.');
 }
 
@@ -1105,6 +1112,10 @@ async function loadDiscoverySources(preserveStatus = false, expectedState = disc
   state.sourcesController = controller;
   const request = { state, controller, apiToken, actionToken: state.requestToken };
   if (!preserveStatus && expectedState.method === 'docker') setDiscoveryStatus('Checking Docker hosts…');
+  $('#discovery-docker-badge').textContent = 'Checking';
+  $('#discovery-docker-ready').hidden = true;
+  $('#discovery-docker-setup').hidden = true;
+  $('#discovery-docker-error').hidden = true;
   $('#discovery-source').disabled = true;
   $('#discovery-scan').disabled = true;
   try {
@@ -1126,14 +1137,14 @@ async function loadDiscoverySources(preserveStatus = false, expectedState = disc
     return true;
   } catch (error) {
     if (error.name === 'AbortError' || !metadataRequestCurrent(request, 'sourcesController')) return false;
-    const updateStatus = !preserveStatus && state.requestToken === request.actionToken;
-    const blocked = error.message.startsWith('Discovery access is blocked.');
-    fillDiscoverySources([], updateStatus && !blocked);
-    if (blocked) {
-      $('#discovery-docker-badge').textContent = 'Blocked';
-      $('#discovery-docker-setup').hidden = true;
-      setDiscoveryStatus(error.message, true);
-    } else if (updateStatus && state.method === 'docker') setDiscoveryStatus('Docker hosts could not be reached. Check the collector setup and try again.', true, error.message);
+    $('#discovery-source').replaceChildren(new Option('Readiness unavailable', ''));
+    $('#discovery-source').disabled = true;
+    $('#discovery-scan').disabled = true;
+    $('#discovery-docker-badge').textContent = 'Check failed';
+    $('#discovery-docker-ready').hidden = true;
+    $('#discovery-docker-setup').hidden = true;
+    $('#discovery-docker-error p').textContent = error.message;
+    $('#discovery-docker-error').hidden = false;
     return false;
   } finally {
     if (metadataRequestCurrent(request, 'sourcesController')) state.sourcesController = null;
@@ -1559,8 +1570,10 @@ function openDiscovery(opener) {
   $('#discovery-network-badge').textContent = 'Checking';
   $('#discovery-docker-ready').hidden = true;
   $('#discovery-docker-setup').hidden = true;
+  $('#discovery-docker-error').hidden = true;
   $('#discovery-network-ready').hidden = true;
   $('#discovery-network-setup').hidden = true;
+  $('#discovery-network-error').hidden = true;
   setNetworkScanning(false);
   $('#discovery-dialog').showModal();
   setDiscoveryStep('choose');
@@ -1618,6 +1631,8 @@ $('#discovery-back').addEventListener('click', showDiscoveryChooser);
 $('#discovery-start-over').addEventListener('click', showDiscoveryChooser);
 $('#discovery-check-docker').addEventListener('click', () => loadDiscoverySources(false));
 $('#discovery-check-network').addEventListener('click', () => loadNmapStatus());
+$('#discovery-retry-docker').addEventListener('click', () => loadDiscoverySources(false));
+$('#discovery-retry-network').addEventListener('click', () => loadNmapStatus());
 document.querySelectorAll('[data-copy-command]').forEach(button => button.addEventListener('click', async () => {
   const command = button.parentElement.querySelector('code').textContent;
   try {

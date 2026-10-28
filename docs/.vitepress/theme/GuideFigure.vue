@@ -67,7 +67,7 @@ async function toggleSize() {
           </marker>
         </defs>
         <rect class="guide-figure__surface" :x="figure.crop.x - figure.gutter" :y="figure.crop.y - figure.gutter" :width="figure.crop.width + figure.gutter * 2" :height="figure.crop.height + figure.gutter * 2" rx="18" />
-        <image :href="withBase(`/guides/${figure.image}`)" width="2355" height="1583" :clip-path="`url(#guide-clip-${name})`" />
+        <image :href="withBase(`/guides/${figure.image}`)" :width="figure.imageWidth ?? 2355" :height="figure.imageHeight ?? 1583" :clip-path="`url(#guide-clip-${name})`" />
         <g aria-hidden="true">
           <g v-for="(mark, index) in figure.marks" :key="index" :class="{ 'is-accent': mark.accent }">
             <rect class="guide-figure__mark" v-bind="mark.rect" rx="7" />

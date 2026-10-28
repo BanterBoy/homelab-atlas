@@ -30,6 +30,10 @@ The whole file must pass schema and reference validation before Atlas replaces t
 
 Set `ATLAS_COLLECTOR_TOKEN` to the same value of at least 32 characters for the configured local collector, then start the discovery profile with `docker compose --profile discovery up -d` and check its logs. Include `-f compose.release.yaml` for the released Compose file. An explicit `ATLAS_DISCOVERY_SOURCES` file overrides the local source. Follow [Local Compose setup](/discovery#local-compose-setup).
 
+### Why could Atlas not check discovery readiness?
+
+Choose the blocked Docker or network method to see its diagnostic and **Check again** control. A `403` means the browser hostname or IP is missing from `ATLAS_ALLOWED_HOSTS`; fix that server setting before retrying. A failed readiness check does not mean Nmap is missing and never starts a scan.
+
 ### What can Docker discovery see?
 
 Only inventory from the Docker daemon configured for that collector is listed. Other LAN hosts, Kubernetes, and Podman are not discovered automatically. A remote collector or [Hawser Standard mode](/discovery#hawser-standard-mode) can point at another daemon. Hawser Edge is not supported, and Atlas never needs an exposed unauthenticated Docker API.
@@ -41,7 +45,7 @@ No. `ATLAS_API_TOKEN` unlocks the editor server's discovery API. `ATLAS_COLLECTO
 ### What do 401, 403, and 502 mean?
 
 - `401`: enter the server's separate `ATLAS_API_TOKEN` in **Access token** and choose **Unlock**.
-- `403`: add the exact browser hostname or IP to `ATLAS_ALLOWED_HOSTS`; a non-loopback host also requires an API token of at least 32 characters.
+- `403`: add the exact browser hostname or IP to `ATLAS_ALLOWED_HOSTS`; a non-loopback host also requires an API token of at least 32 characters. Then reopen the affected method and choose **Check again**.
 - `502`: for Docker, check collector reachability, token agreement, TLS, fixed source URL, socket access, and collector logs. For Nmap, narrow the targets or ports, then check Atlas's Nmap installation, detection data, and displayed scan error.
 
 See the [troubleshooting table](/troubleshooting).

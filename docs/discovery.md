@@ -2,6 +2,16 @@
 
 Discovery is optional. Atlas needs no account or AI service, and manual diagrams work without a scanner or Docker socket.
 
+Choose **Discover devices**, then follow three steps:
+
+1. **Choose** Docker apps, network devices, or a saved scan. Opening discovery only checks readiness.
+2. **Find** results with that method. Setup help appears only when needed.
+3. **Review** unchecked findings, choose their destination, then select **Add to diagram**.
+
+<GuideFigure name="discovery-choose" />
+
+Screenshots use fictional devices and test results.
+
 ## Requirements by method
 
 | Method | Requirements |
@@ -37,7 +47,15 @@ Choose **Discover devices → Network devices**, then:
 
 <GuideFigure name="network-scan" />
 
-These Atlas v0.9.0 screenshots use fictional names and addresses. The example target shown above was filled in but never scanned.
+The form uses fictional `192.0.2.10`. No real lab was scanned.
+
+### Review network findings
+
+Move between discovered devices, choose a destination, and check only the rows to add or link. Pending choices stay with each device while the scan remains open. **Add to diagram** affects only the current device and creates one Undo step.
+
+<GuideFigure name="discovery-review" />
+
+This review uses fabricated TCP Nmap output processed by the real discovery API.
 
 ## Import Nmap XML
 
@@ -53,13 +71,9 @@ In Atlas:
 
 Every row starts unchecked. **Select all shown** affects only the filtered visible page and skips items already on the diagram; **Clear selection** clears the current device across pages. A host row adds or links a device card. An endpoint adds or links a service. Ping-only scans still offer the host row. Review choices are retained while moving between devices in the same open scan. Each **Add to diagram** affects only the current device and creates one Undo step. MAC identity survives an IP change; without a MAC, an IP change creates a new identity. A scan changing between MAC-present and MAC-absent can also appear new, so review and link it explicitly.
 
-<GuideFigure name="discovery-review" />
-
-This review came from imported Nmap XML. Its UDP row is not live-scan output; live scans are TCP-only.
-
 Only explicitly up hosts with a valid IP and explicitly open TCP/UDP ports qualify. Filtered, `open|filtered`, closed, unsupported, down, and summarized `extraports` results count as ports not imported. Even a summarized `open` state lacks individual protocol/port identity, so Atlas does not fabricate endpoints from it. Limits are 2 MB, 256 host records, 1,000 normalized findings, 16 addresses and 16 names per host, and 64 XML nesting levels. Eligible output over a limit is rejected instead of silently truncated.
 
-The full XML or live output is held transiently for parsing. Results are not saved on the server. Normalized review data discards command arguments, NSE/script output, service fingerprints, traces, and unknown XML fields. Retained hostnames, vendor, service, product, and version text can still contain private or credential-like content; inspect it before applying or sharing. Canceling before Apply changes nothing. Existing names, metadata, connections, and card geometry are never overwritten; card growth that would overlap another card is blocked. Existing SVG/PNG privacy filtering applies after findings are explicitly added.
+The full XML or live output is held transiently for parsing. Results are not saved on the server. Normalized review data discards command arguments, NSE/script output, service fingerprints, traces, and unknown XML fields. Retained hostnames, vendor, service, product, and version text can still contain private or credential-like content; inspect it before adding or sharing. Canceling before **Add to diagram** changes nothing. Existing names, metadata, connections, and card geometry are never overwritten; card growth that would overlap another card is blocked. Existing SVG/PNG privacy filtering applies after findings are explicitly added.
 
 ## Docker discovery
 
@@ -86,6 +100,8 @@ docker compose --profile discovery up -d
 ```
 
 For the released Compose file, run `docker compose -f compose.release.yaml --profile discovery up -d`. Open Atlas, choose **Discover devices → Docker apps**, then **Find Docker apps**. The setup panel can copy these commands, but it never generates or stores a token, edits `.env`, enables the profile, or mounts a socket.
+
+<GuideFigure name="docker-setup" />
 
 The editor and collector use the same image but have separate privileges:
 
@@ -114,7 +130,7 @@ Findings are sorted by name and shown 50 at a time. Search checks names, image r
 
 <GuideFigure name="docker-review" />
 
-This fictional example was imported from a Docker snapshot, not scanned from a live host.
+This review uses a fixture collector returning sanitized fictional snapshot JSON.
 
 ## Import a snapshot
 
@@ -130,7 +146,7 @@ docker run --rm \
   -e ATLAS_HOST_ID=nas \
   -e 'ATLAS_HOST_NAME=NAS Docker' \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
-  ghcr.io/aiden0rchad/homelab-atlas:0.9.0 collect \
+  ghcr.io/aiden0rchad/homelab-atlas:0.10.0 collect \
   > ../nas-docker-snapshot.json
 ```
 

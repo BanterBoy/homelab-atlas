@@ -2,6 +2,19 @@
 
 This file lists the notable changes in each Homelab Atlas release.
 
+## [0.10.0] - 2026-10-28
+
+### Added
+
+- Added a beginner discovery guide that walks through choosing a method, finding candidates, reviewing results, and applying selected changes.
+- Added focused guide figures for Docker readiness, network scanning, and both review paths.
+
+### Changed
+
+- Discovery readiness failures now stay with their method and offer an in-place retry without misreporting missing setup.
+- The repository and source ZIP now use the consolidated `app/`, `deploy/`, and `tools/` layout.
+- Current downloads, image tags, Compose defaults, and documentation now point to v0.10.0.
+
 ## [0.9.0] - 2026-10-28
 
 ### Added
@@ -114,3 +127,4 @@ This file lists the notable changes in each Homelab Atlas release.
 [0.7.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.7.0
 [0.8.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.8.0
 [0.9.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.9.0
+[0.10.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.10.0
