@@ -46,7 +46,7 @@ function validIPv4(value) {
 function validIP(value) {
   if (validIPv4(value)) return true;
   const parts = value.split('%');
-  if (parts.length > 2 || (parts.length === 2 && !/^[A-Za-z0-9_.-]{1,32}$/.test(parts[1]))) return false;
+  if (parts.length > 2 || !/^[0-9A-Fa-f:.]+$/.test(parts[0]) || (parts.length === 2 && !/^[A-Za-z0-9_.-]{1,32}$/.test(parts[1]))) return false;
   try {
     return new URL(`http://[${parts[0]}]/`).hostname.length > 2;
   } catch {

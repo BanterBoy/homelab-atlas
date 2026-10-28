@@ -92,6 +92,10 @@ function countServices(source = project) {
   return source.devices.reduce((total, device) => total + device.groups.reduce((sum, group) => sum + group.services.length, 0), 0);
 }
 
+function quantity(count, singular, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
 function countGroups(source = project) {
   return source.devices.reduce((total, device) => total + device.groups.length, 0);
 }
@@ -917,7 +921,7 @@ function fillDiscoverySources(sources) {
     select.add(new Option('No configured collectors', ''));
     select.disabled = true;
     $('#discovery-scan').disabled = true;
-    setDiscoveryStatus('No collector is configured. You can still import a sanitized snapshot.');
+    setDiscoveryStatus('No collector is configured. You can still import a sanitized snapshot or Nmap XML.');
     return;
   }
   select.add(new Option('Choose a collector…', ''));
@@ -1024,13 +1028,15 @@ function renderDiscoveryFindings() {
     identity.className = 'discovery-identity';
     const heading = document.createElement('strong');
     heading.textContent = item.name;
+    const nmapEndpoint = !hostFinding && discoveryState.snapshot.format === 'homelab-atlas.nmap-discovery';
     const detail = document.createElement('span');
-    detail.textContent = hostFinding ? 'Host' : discoveryState.snapshot.format === 'homelab-atlas.nmap-discovery'
-      ? [item.product || item.service || 'Unknown service', `${item.protocol}/${item.port}`].join(' · ')
+    detail.textContent = hostFinding ? 'Host' : nmapEndpoint
+      ? [item.service && `Service: ${item.service}`, item.product && item.product !== item.service && `Product: ${item.product}`, item.version && `Version: ${item.version}`, item.tunnel && `Tunnel: ${item.tunnel}`].filter(Boolean).join(' · ') || 'No additional detection metadata'
       : item.image || 'Image name unavailable';
     const status = document.createElement('small');
     status.textContent = hostFinding ? 'Device identity' : item.count ? `${item.count} ${item.count === 1 ? 'container' : 'containers'} · ${item.running} running · ${item.stopped} stopped` : [item.product, item.version, item.tunnel].filter(Boolean).join(' · ') || 'No product details detected';
-    identity.append(heading, detail, status);
+    identity.append(heading, detail);
+    if (!nmapEndpoint) identity.append(status);
     const action = document.createElement('label');
     action.className = 'discovery-target';
     const actionLabel = document.createElement('span');
@@ -1092,8 +1098,8 @@ function updateDiscoveryPlan() {
       choices,
     });
     discoveryState.plan = plan;
-    const parts = [`${choices.length} selected across all pages`, `${plan.summary.added} services added`, `${plan.summary.linked} services linked`];
-    if (plan.summary.hosts) parts.push(`${plan.summary.hosts} host linked`);
+    const parts = [`${choices.length} selected across all pages`, `${quantity(plan.summary.added, 'service')} added`, `${quantity(plan.summary.linked, 'service')} linked`];
+    if (plan.summary.hosts) parts.push(`${quantity(plan.summary.hosts, 'host')} linked`);
     if (plan.summary.newDevice) parts.push(`new device “${plan.project.devices.at(-1).name}”`);
     if (plan.summary.newGroup) parts.push('new service group');
     for (const height of plan.summary.heightChanges) parts.push(`${height.name} height ${height.from} → ${height.to}`);
@@ -1148,7 +1154,7 @@ async function scanDiscoverySource() {
     validateDiscoverySnapshot(value);
     if (value.source.id !== sourceId) throw new Error('The collector returned a different source identity.');
     if (!discoveryRequestCurrent(request)) return;
-    showDiscoverySnapshot(value, `Scan complete: ${value.findings.length} findings.`);
+    showDiscoverySnapshot(value, `Scan complete: ${quantity(value.findings.length, 'finding')}.`);
   } catch (error) {
     if (error.name === 'AbortError' || !discoveryRequestCurrent(request)) return;
     setDiscoveryStatus(error.message, true);
@@ -1178,10 +1184,10 @@ async function importNmapXML(file) {
     $('#discovery-host-field').hidden = bundle.snapshots.length <= 1;
     if (!bundle.snapshots.length) {
       $('#discovery-empty').hidden = false;
-      setDiscoveryStatus(`No usable up hosts. ${bundle.skippedHosts} hosts and ${bundle.skippedPorts} ports were not imported.`);
+      setDiscoveryStatus(`No usable up hosts. ${quantity(bundle.skippedHosts, 'host')} and ${quantity(bundle.skippedPorts, 'port')} were not imported.`);
       return;
     }
-    showDiscoverySnapshot(bundle.snapshots[0], `Nmap import loaded ${bundle.snapshots.length} hosts. ${bundle.skippedHosts} hosts and ${bundle.skippedPorts} ports were not imported.`);
+    showDiscoverySnapshot(bundle.snapshots[0], `Nmap import loaded ${quantity(bundle.snapshots.length, 'host')}. ${quantity(bundle.skippedHosts, 'host')} and ${quantity(bundle.skippedPorts, 'port')} were not imported.`);
   } catch (error) {
     if (error.name === 'AbortError' || !discoveryRequestCurrent(request)) return;
     discoveryState.pendingNmapFile = null;
@@ -1196,7 +1202,7 @@ async function importDiscoverySnapshot(file) {
     if (file.size > 2_000_000) throw new Error('Snapshot is larger than 2 MB.');
     const value = parseDiscoverySnapshot(await file.text());
     if (!discoveryRequestCurrent(request)) return;
-    showDiscoverySnapshot(value, `Snapshot loaded: ${value.findings.length} findings.`);
+    showDiscoverySnapshot(value, `Snapshot loaded: ${quantity(value.findings.length, 'finding')}.`);
   } catch (error) {
     if (error.name === 'AbortError' || !discoveryRequestCurrent(request)) return;
     setDiscoveryStatus(error.message, true);
@@ -1208,6 +1214,7 @@ function openDiscovery(opener) {
   discoveryState = { guard: captureProjectGuard(project), opener, sources: [], bundle: null, pendingNmapFile: null, snapshot: null, choices: new Map(), plan: null, controller: null, requestToken: null, stale: false, query: '', page: 0 };
   $('#discovery-results').hidden = true;
   $('#discovery-empty').hidden = false;
+  $('#discovery-empty span').textContent = 'Choose Scan, import a snapshot, or import Nmap XML. Opening this dialog never starts a scan.';
   $('#discovery-source').replaceChildren(new Option('Loading sources…', ''));
   $('#discovery-device').replaceChildren(new Option('Choose a device…', ''));
   $('#discovery-findings').replaceChildren();

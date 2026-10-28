@@ -40,7 +40,7 @@ test('Go-shaped empty service metadata and native IPv6 validation match the cont
   Object.assign(value.findings[1], { service: '', product: '', version: '', tunnel: '' });
   value.host.addresses = ['fe80::1%eth0'];
   assert.equal(validateDiscoverySnapshot(value), true);
-  for (const address of ['1:::2', ':1:2:3:4:5:6:7:8', 'fe80::1%', 'fe80::1%bad zone']) {
+  for (const address of ['1:::2', ':1:2:3:4:5:6:7:8', 'fe80::1%', 'fe80::1%bad zone', '::1]/x', '::1]?x', '[::1]', 'http://[::1]', '::1/path', '::1?query']) {
     const invalid = structuredClone(value);
     invalid.host.addresses = [address];
     assert.throws(() => validateDiscoverySnapshot(invalid), /address/);
