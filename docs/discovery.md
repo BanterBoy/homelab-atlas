@@ -16,11 +16,11 @@ In Atlas:
 4. Select a scan host and destination card, or choose a new card.
 5. Check the host or endpoints you want, then choose **Apply selected**.
 
-Every row starts unchecked. A host row adds a host card or links the host identity to an existing card. An endpoint adds or links a service. Ping-only scans still offer the host row. You can apply one host, keep the review open, and move to another host without re-uploading. Each Apply is one undo step.
+Every row starts unchecked. A host row adds a host card or links the host identity to an existing card. An endpoint adds or links a service. Ping-only scans still offer the host row. You can apply one host, keep the review open, and move to another host without re-uploading. Each Apply is one undo step. MAC identity survives an IP change; without a MAC, an IP change creates a new identity. A scan changing between MAC-present and MAC-absent can also appear new, so review and link it explicitly.
 
-Only explicitly up hosts with a valid IP and explicitly open TCP/UDP ports qualify. Filtered, `open|filtered`, closed, unsupported, and down results are counted as skipped. Limits are 2 MB, 256 host records, 1,000 normalized findings, 16 addresses and 16 names per host, and 64 XML nesting levels. Eligible output over a limit is rejected instead of silently truncated.
+Only explicitly up hosts with a valid IP and explicitly open TCP/UDP ports qualify. Filtered, `open|filtered`, closed, unsupported, down, and summarized `extraports` results count as ports not imported. Even a summarized `open` state lacks individual protocol/port identity, so Atlas does not fabricate endpoints from it. Limits are 2 MB, 256 host records, 1,000 normalized findings, 16 addresses and 16 names per host, and 64 XML nesting levels. Eligible output over a limit is rejected instead of silently truncated.
 
-The full XML is sent only to the Atlas backend serving the current editor and held transiently for parsing. Normalized review data discards command arguments, scripts, script output, credentials, fingerprints, traces, and unknown XML fields. Canceling before Apply changes nothing. Existing names, metadata, connections, and card geometry are never overwritten; card growth that would overlap another card is blocked.
+The full XML is sent only to the Atlas backend serving the current editor and held transiently for parsing. Normalized review data discards command arguments, NSE/script output, service fingerprints, traces, and unknown XML fields. Retained hostnames, vendor, service, product, and version text can still contain private or credential-like content; inspect it before applying or sharing. Canceling before Apply changes nothing. Existing names, metadata, connections, and card geometry are never overwritten; card growth that would overlap another card is blocked.
 
 ## Docker discovery
 

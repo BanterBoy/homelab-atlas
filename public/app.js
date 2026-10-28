@@ -868,12 +868,24 @@ function beginDiscoveryRequest(message, clearResults = false) {
   discoveryState.requestToken = token;
   discoveryState.controller = controller;
   if (clearResults) {
+    discoveryState.bundle = null;
+    discoveryState.pendingNmapFile = null;
     discoveryState.plan = null;
     discoveryState.snapshot = null;
     discoveryState.choices = new Map();
+    discoveryState.query = '';
+    discoveryState.page = 0;
     $('#discovery-results').hidden = true;
     $('#discovery-empty').hidden = false;
     $('#discovery-apply').disabled = true;
+    $('#discovery-findings').replaceChildren();
+    $('#discovery-summary').textContent = '';
+    $('#discovery-search').value = '';
+    $('#discovery-range').textContent = '';
+    $('#discovery-host').replaceChildren();
+    $('#discovery-host-field').hidden = true;
+    $('#discovery-host-meta').hidden = true;
+    $('#discovery-host-meta').textContent = '';
   }
   setDiscoveryStatus(message);
   return { state: discoveryState, token, controller };
@@ -1013,7 +1025,9 @@ function renderDiscoveryFindings() {
     const heading = document.createElement('strong');
     heading.textContent = item.name;
     const detail = document.createElement('span');
-    detail.textContent = hostFinding ? 'Host' : item.image || [item.product || item.service || 'Unknown service', `${item.protocol}/${item.port}`].join(' · ');
+    detail.textContent = hostFinding ? 'Host' : discoveryState.snapshot.format === 'homelab-atlas.nmap-discovery'
+      ? [item.product || item.service || 'Unknown service', `${item.protocol}/${item.port}`].join(' · ')
+      : item.image || 'Image name unavailable';
     const status = document.createElement('small');
     status.textContent = hostFinding ? 'Device identity' : item.count ? `${item.count} ${item.count === 1 ? 'container' : 'containers'} · ${item.running} running · ${item.stopped} stopped` : [item.product, item.version, item.tunnel].filter(Boolean).join(' · ') || 'No product details detected';
     identity.append(heading, detail, status);
@@ -1101,9 +1115,10 @@ function showDiscoverySnapshot(value, message) {
   $('#discovery-search').value = '';
   $('#discovery-empty').hidden = true;
   $('#discovery-results').hidden = false;
-  $('#discovery-result-source').textContent = value.source.name;
-  $('#discovery-result-time').textContent = `Scanned ${new Date(value.scannedAt).toLocaleString()}`;
   const nmap = value.format === 'homelab-atlas.nmap-discovery';
+  $('#discovery-result-source').textContent = nmap && discoveryState.bundle ? `${discoveryState.bundle.scope} · ${value.source.name}` : value.source.name;
+  $('#discovery-result-time').textContent = `Scanned ${new Date(value.scannedAt).toLocaleString()}`;
+  $('#discovery-host-field').hidden = !nmap || !discoveryState.bundle || discoveryState.bundle.snapshots.length <= 1;
   $('#discovery-host-meta').hidden = !nmap;
   $('#discovery-host-meta').textContent = nmap ? [`Addresses: ${value.host.addresses.join(', ')}`, value.host.hostnames.length ? `Names: ${value.host.hostnames.join(', ')}` : '', value.host.vendor ? `Vendor: ${value.host.vendor}` : ''].filter(Boolean).join(' · ') : '';
   const device = $('#discovery-device');
@@ -1142,9 +1157,9 @@ async function scanDiscoverySource() {
 
 async function importNmapXML(file) {
   if (!file || !discoveryState || !projectGuardCurrent(discoveryState.guard, project)) return;
-  discoveryState.pendingNmapFile = file;
   const scope = $('#discovery-scope').value;
   const request = beginDiscoveryRequest('Parsing Nmap XML…', true);
+  discoveryState.pendingNmapFile = file;
   try {
     if (file.size > 2_000_000) throw new Error('Nmap XML is larger than 2 MB.');
     const response = await discoveryFetch(`/api/discovery/nmap?scope=${encodeURIComponent(scope)}`, {
@@ -1155,6 +1170,7 @@ async function importNmapXML(file) {
     const bundle = await boundedResponseJSON(response);
     validateNmapBundle(bundle);
     if (!discoveryRequestCurrent(request)) return;
+    hideDiscoveryAuth();
     discoveryState.bundle = structuredClone(bundle);
     discoveryState.pendingNmapFile = null;
     const hostSelect = $('#discovery-host');
@@ -1162,12 +1178,13 @@ async function importNmapXML(file) {
     $('#discovery-host-field').hidden = bundle.snapshots.length <= 1;
     if (!bundle.snapshots.length) {
       $('#discovery-empty').hidden = false;
-      setDiscoveryStatus(`No usable up hosts. Skipped ${bundle.skippedHosts} hosts and ${bundle.skippedPorts} ports.`);
+      setDiscoveryStatus(`No usable up hosts. ${bundle.skippedHosts} hosts and ${bundle.skippedPorts} ports were not imported.`);
       return;
     }
-    showDiscoverySnapshot(bundle.snapshots[0], `Nmap import loaded ${bundle.snapshots.length} hosts. Skipped ${bundle.skippedHosts} hosts and ${bundle.skippedPorts} non-open or unsupported ports.`);
+    showDiscoverySnapshot(bundle.snapshots[0], `Nmap import loaded ${bundle.snapshots.length} hosts. ${bundle.skippedHosts} hosts and ${bundle.skippedPorts} ports were not imported.`);
   } catch (error) {
     if (error.name === 'AbortError' || !discoveryRequestCurrent(request)) return;
+    discoveryState.pendingNmapFile = null;
     setDiscoveryStatus(error.message, true);
   }
 }
@@ -1220,12 +1237,10 @@ function unlockDiscoverySources() {
 $('#discover-docker').addEventListener('click', event => openDiscovery(event.currentTarget));
 $('#discovery-source').addEventListener('change', () => {
   if (!discoveryState) return;
-  discoveryState.bundle = null;
   beginDiscoveryRequest('Collector changed. Choose Scan to load fresh findings.', true);
 });
 $('#discovery-scope').addEventListener('change', () => {
   if (!discoveryState) return;
-  discoveryState.bundle = null;
   beginDiscoveryRequest('Network name changed. Import the XML again to create correctly scoped identities.', true);
 });
 $('#discovery-scan').addEventListener('click', scanDiscoverySource);

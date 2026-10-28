@@ -12,6 +12,7 @@ LABEL org.opencontainers.image.source="https://github.com/aiden0rchad/homelab-at
       org.opencontainers.image.licenses="MIT"
 RUN apk add --no-cache ca-certificates
 COPY --from=build /out/atlas /usr/local/bin/atlas
+COPY LICENSE THIRD_PARTY_NOTICES.md /usr/share/licenses/homelab-atlas/
 USER 10001:10001
 EXPOSE 8080
 ENV HOST=0.0.0.0 PORT=8080

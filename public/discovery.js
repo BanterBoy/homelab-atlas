@@ -45,14 +45,13 @@ function validIPv4(value) {
 
 function validIP(value) {
   if (validIPv4(value)) return true;
-  if (!value.includes(':') || !/^[0-9a-f:.]+$/.test(value) || (value.match(/::/g) || []).length > 1) return false;
-  const pieces = value.split(':').filter(Boolean);
-  let groups = 0;
-  for (const piece of pieces) {
-    if (piece.includes('.')) { if (!validIPv4(piece)) return false; groups += 2; }
-    else { if (!/^[0-9a-f]{1,4}$/.test(piece)) return false; groups += 1; }
+  const parts = value.split('%');
+  if (parts.length > 2 || (parts.length === 2 && !/^[A-Za-z0-9_.-]{1,32}$/.test(parts[1]))) return false;
+  try {
+    return new URL(`http://[${parts[0]}]/`).hostname.length > 2;
+  } catch {
+    return false;
   }
-  return value.includes('::') ? groups < 8 : groups === 8;
 }
 
 export function validateDiscoverySnapshot(input) {
@@ -88,7 +87,7 @@ export function validateDiscoverySnapshot(input) {
 
 function validateNmapSnapshot(input) {
   exact(input, ['format', 'version', 'source', 'scannedAt', 'host', 'findings'], 'Nmap snapshot');
-  if (input.version !== 1) throw new Error('Unsupported Nmap snapshot.');
+  if (input.format !== 'homelab-atlas.nmap-discovery' || input.version !== 1) throw new Error('Unsupported Nmap snapshot.');
   exact(input.source, ['id', 'name'], 'Snapshot source');
   if (typeof input.source.id !== 'string' || !/^[0-9a-f]{64}$/.test(input.source.id)) throw new Error('Snapshot source ID is invalid.');
   text(input.source.name, 120, 'Snapshot source name', false);
@@ -106,7 +105,7 @@ function validateNmapSnapshot(input) {
   text(input.host.mac, 17, 'Host MAC'); text(input.host.vendor, 120, 'Host vendor');
   if (input.host.mac && !/^(?:[0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(input.host.mac)) throw new Error('Host MAC is invalid.');
   if (!Array.isArray(input.findings) || !input.findings.length || input.findings.length > DISCOVERY_LIMITS.findings) throw new Error('Nmap findings are invalid.');
-  const keys = new Set(); let hosts = 0;
+  const keys = new Set(); const endpoints = new Set(); let hosts = 0;
   for (const finding of input.findings) {
     const host = finding?.kind === 'host';
     exact(finding, host ? ['key', 'name', 'kind'] : ['key', 'name', 'kind', 'protocol', 'port', 'service', 'product', 'version', 'tunnel'], 'Nmap finding');
@@ -118,6 +117,9 @@ function validateNmapSnapshot(input) {
     } else {
       if (finding.kind !== 'service' || !finding.key.startsWith('nmap:') || !['tcp', 'udp'].includes(finding.protocol)
         || !Number.isInteger(finding.port) || finding.port < 1 || finding.port > 65535) throw new Error('Endpoint finding is invalid.');
+      const endpoint = `${finding.protocol}/${finding.port}`;
+      if (endpoints.has(endpoint)) throw new Error('Endpoint protocol and port are duplicated.');
+      endpoints.add(endpoint);
       for (const field of ['service', 'product', 'version', 'tunnel']) text(finding[field], 120, `Endpoint ${field}`);
     }
   }
@@ -131,7 +133,7 @@ export function validateNmapBundle(input) {
   text(input.scope, 120, 'Network name', false); text(input.scannedAt, 64, 'Scan date', false);
   if (input.scope !== input.scope.trim().replace(/\s+/gu, ' ') || /\p{Cc}/u.test(input.scope)) throw new Error('Network name is invalid.');
   if (!validTimestamp(input.scannedAt) || !Array.isArray(input.snapshots) || input.snapshots.length > 256
-    || ![input.skippedHosts, input.skippedPorts].every(value => Number.isInteger(value) && value >= 0)) throw new Error('Nmap import metadata is invalid.');
+    || ![input.skippedHosts, input.skippedPorts].every(value => Number.isSafeInteger(value) && value >= 0)) throw new Error('Nmap import metadata is invalid.');
   let findings = 0; const sources = new Set();
   for (const snapshot of input.snapshots) {
     validateNmapSnapshot(snapshot);

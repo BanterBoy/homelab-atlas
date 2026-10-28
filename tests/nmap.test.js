@@ -21,16 +21,36 @@ test('Nmap bundle and snapshots validate exact bounded unions', () => {
   assert.equal(validateDiscoverySnapshot(value), true);
   for (const mutate of [
     item => { item.extra = true; },
+    item => { item.snapshots[0].format = 'homelab-atlas.docker-discovery'; },
     item => { item.snapshots[0].findings[0].protocol = 'tcp'; },
     item => { item.snapshots[0].findings[1].port = 0; },
     item => { item.snapshots[0].findings.push(structuredClone(item.snapshots[0].findings[0])); },
     item => { item.snapshots[0].host.mac = 'not-a-mac'; },
+    item => { item.skippedPorts = Number.MAX_SAFE_INTEGER + 1; },
   ]) {
     const invalid = structuredClone(bundle); mutate(invalid);
     assert.throws(() => validateNmapBundle(invalid));
   }
   assert.deepEqual(filterDiscoveryFindings(value.findings, '443').map(item => item.kind), ['service']);
   assert.deepEqual(filterDiscoveryFindings(value.findings, 'caddy').map(item => item.kind), ['service']);
+});
+
+test('Go-shaped empty service metadata and native IPv6 validation match the contract', () => {
+  const value = snapshot();
+  Object.assign(value.findings[1], { service: '', product: '', version: '', tunnel: '' });
+  value.host.addresses = ['fe80::1%eth0'];
+  assert.equal(validateDiscoverySnapshot(value), true);
+  for (const address of ['1:::2', ':1:2:3:4:5:6:7:8', 'fe80::1%', 'fe80::1%bad zone']) {
+    const invalid = structuredClone(value);
+    invalid.host.addresses = [address];
+    assert.throws(() => validateDiscoverySnapshot(invalid), /address/);
+  }
+});
+
+test('semantic duplicate endpoints are rejected even with distinct keys', () => {
+  const value = snapshot();
+  value.findings.push({ ...value.findings[1], key: `nmap:${hex('d')}` });
+  assert.throws(() => validateDiscoverySnapshot(value), /duplicated/);
 });
 
 test('host-only Nmap import creates a card and null device binding', () => {

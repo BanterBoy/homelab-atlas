@@ -4,6 +4,8 @@ The app uses browser JavaScript and the Go standard library, with no runtime pac
 
 At startup, the Go server prepares reusable gzip representations for compressible embedded assets when they are smaller than the originals. Static responses use encoding-specific ETags and `Cache-Control: no-cache` revalidation; discovery API and collector inventory responses remain private and uncompressed.
 
+The final container includes `LICENSE` and `THIRD_PARTY_NOTICES.md` under `/usr/share/licenses/homelab-atlas/`, including the notice for the adapted Nmap XML projections.
+
 ## Source layout
 
 | Path | Purpose |

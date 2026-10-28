@@ -211,6 +211,27 @@ func TestNmapImportAPIContract(t *testing.T) {
 	if got := request(server, http.MethodPost, "/api/discovery/nmap?scope=Lab", large, headers); got.Code != http.StatusRequestEntityTooLarge || strings.Contains(got.Body.String(), string(body)) {
 		t.Fatalf("oversized response: %d %q", got.Code, got.Body.String())
 	}
+
+	server.apiToken = strings.Repeat("a", 32)
+	guardedHeaders := map[string]string{"X-Atlas-Request": "1", "Content-Type": "application/xml", "Authorization": "Bearer " + server.apiToken, "Origin": "http://localhost"}
+	for name, mutate := range map[string]func(*http.Request){
+		"missing X-Atlas-Request": func(req *http.Request) { req.Header.Del("X-Atlas-Request") },
+		"bad host":                func(req *http.Request) { req.Host = "attacker.example" },
+		"bad origin":              func(req *http.Request) { req.Header.Set("Origin", "https://attacker.example") },
+		"bad token":               func(req *http.Request) { req.Header.Set("Authorization", "Bearer wrong") },
+	} {
+		req := httptest.NewRequest(http.MethodPost, "/api/discovery/nmap?scope=Lab", bytes.NewReader(body))
+		req.Host = "localhost"
+		for key, value := range guardedHeaders {
+			req.Header.Set(key, value)
+		}
+		mutate(req)
+		record := httptest.NewRecorder()
+		server.ServeHTTP(record, req)
+		if record.Code != http.StatusForbidden && record.Code != http.StatusUnauthorized {
+			t.Errorf("%s: status=%d", name, record.Code)
+		}
+	}
 }
 
 func TestStaticServerHealthAssetsAndRestrictions(t *testing.T) {

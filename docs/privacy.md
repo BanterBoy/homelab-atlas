@@ -16,7 +16,7 @@ The Go editor process serves embedded app files and, when configured, proxies fi
 
 The normal editor container has no Docker socket. Optional Docker discovery runs as a separate collector with a read-only socket mount and no published port. It calls only Docker's version and container-list endpoints after you choose **Scan**. The returned snapshot excludes container IDs, environment variables, mounts, commands, logs, arbitrary labels, credentials, and backend URLs. See [Docker discovery](/discovery).
 
-Nmap import accepts only a user-selected XML file. Atlas runs no scanner, network probe, URL fetch, or disk read. The full file reaches only your Atlas backend transiently; normalized review discards scripts, credentials, raw command arguments, traces, and unknown fields. Applied IP address facts remain in project JSON. The existing SVG/PNG privacy filter can hide them from image exports.
+Nmap import accepts only a user-selected XML file. Atlas runs no scanner, network probe, URL fetch, or disk read. The full file reaches only your Atlas backend transiently; normalized review discards NSE/script output, raw command arguments, service fingerprints, traces, and unknown fields. Retained hostname, vendor, service, product, and version strings can still be private or contain credential-like text. Applied names and IP address facts remain in project JSON. The existing SVG/PNG privacy filter can hide network literals from image exports.
 
 ## Documentation is separate
 

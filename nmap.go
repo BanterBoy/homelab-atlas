@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -31,7 +32,7 @@ type nmapBundle struct {
 	ScannedAt    string         `json:"scannedAt"`
 	Snapshots    []nmapSnapshot `json:"snapshots"`
 	SkippedHosts int            `json:"skippedHosts"`
-	SkippedPorts int            `json:"skippedPorts"`
+	SkippedPorts int64          `json:"skippedPorts"`
 }
 
 type nmapSnapshot struct {
@@ -57,12 +58,33 @@ type nmapFinding struct {
 	Key      string `json:"key"`
 	Name     string `json:"name"`
 	Kind     string `json:"kind"`
-	Protocol string `json:"protocol,omitempty"`
-	Port     int    `json:"port,omitempty"`
-	Service  string `json:"service,omitempty"`
-	Product  string `json:"product,omitempty"`
-	Version  string `json:"version,omitempty"`
-	Tunnel   string `json:"tunnel,omitempty"`
+	Protocol string `json:"-"`
+	Port     int    `json:"-"`
+	Service  string `json:"-"`
+	Product  string `json:"-"`
+	Version  string `json:"-"`
+	Tunnel   string `json:"-"`
+}
+
+func (finding nmapFinding) MarshalJSON() ([]byte, error) {
+	if finding.Kind == "host" {
+		return json.Marshal(struct {
+			Key  string `json:"key"`
+			Name string `json:"name"`
+			Kind string `json:"kind"`
+		}{finding.Key, finding.Name, finding.Kind})
+	}
+	return json.Marshal(struct {
+		Key      string `json:"key"`
+		Name     string `json:"name"`
+		Kind     string `json:"kind"`
+		Protocol string `json:"protocol"`
+		Port     int    `json:"port"`
+		Service  string `json:"service"`
+		Product  string `json:"product"`
+		Version  string `json:"version"`
+		Tunnel   string `json:"tunnel"`
+	}{finding.Key, finding.Name, finding.Kind, finding.Protocol, finding.Port, finding.Service, finding.Product, finding.Version, finding.Tunnel})
 }
 
 type nmapXML struct {
@@ -102,6 +124,10 @@ type xmlHost struct {
 			Tunnel  string `xml:"tunnel,attr"`
 		} `xml:"service"`
 	} `xml:"ports>port"`
+	ExtraPorts []struct {
+		State string `xml:"state,attr"`
+		Count string `xml:"count,attr"`
+	} `xml:"ports>extraports"`
 }
 
 func normalizedScope(scope string) (string, string, error) {
@@ -124,9 +150,11 @@ func nmapDigest(parts ...string) string {
 
 func preflightNmapXML(data []byte) error {
 	decoder := xml.NewDecoder(bytes.NewReader(data))
-	depth, roots, finished := 0, 0, false
+	decoder.Strict = true
+	depth, roots, doctypes := 0, 0, 0
+	rootStarted, finished := false, false
 	for {
-		token, err := decoder.RawToken()
+		token, err := decoder.Token()
 		if err == io.EOF {
 			break
 		}
@@ -140,6 +168,7 @@ func preflightNmapXML(data []byte) error {
 				if roots != 1 || value.Name.Local != "nmaprun" {
 					return errors.New("XML must contain one nmaprun root")
 				}
+				rootStarted = true
 			}
 			depth++
 			if depth > 64 {
@@ -151,12 +180,13 @@ func preflightNmapXML(data []byte) error {
 				finished = true
 			}
 		case xml.CharData:
-			if finished && strings.TrimSpace(string(value)) != "" {
-				return errors.New("unexpected data after nmaprun")
+			if (!rootStarted || finished) && strings.TrimSpace(string(value)) != "" {
+				return errors.New("unexpected data outside nmaprun")
 			}
 		case xml.Directive:
 			directive := strings.TrimSpace(string(value))
-			if depth != 0 || directive != "DOCTYPE nmaprun" {
+			doctypes++
+			if rootStarted || depth != 0 || doctypes > 1 || directive != "DOCTYPE nmaprun" {
 				return errors.New("only the standard <!DOCTYPE nmaprun> declaration is allowed")
 			}
 		}
@@ -195,7 +225,7 @@ func parseNmapXML(data []byte, scope string) (nmapBundle, error) {
 		return nmapBundle{}, errors.New("Nmap scan did not finish successfully")
 	}
 	seconds, err := strconv.ParseInt(finished.Time, 10, 64)
-	if err != nil || seconds < 0 {
+	if err != nil || seconds < 0 || seconds > time.Date(9999, 12, 31, 23, 59, 59, 0, time.UTC).Unix() {
 		return nmapBundle{}, errors.New("Nmap finish time is invalid")
 	}
 	scannedAt := time.Unix(seconds, 0).UTC().Format(time.RFC3339)
@@ -208,14 +238,21 @@ func parseNmapXML(data []byte, scope string) (nmapBundle, error) {
 	for _, host := range run.Hosts {
 		if host.Status.State != "up" {
 			bundle.SkippedHosts++
-			bundle.SkippedPorts += len(host.Ports)
+			skipped, err := skippedNmapPorts(host)
+			if err != nil || skipped > (1<<53-1)-bundle.SkippedPorts {
+				return nmapBundle{}, errors.New("Nmap skipped port count is invalid")
+			}
+			bundle.SkippedPorts += skipped
 			continue
 		}
 		snapshot, skipped, identity, err := normalizeNmapHost(host, scopeID, scannedAt)
-		bundle.SkippedPorts += skipped
 		if err != nil {
 			return nmapBundle{}, err
 		}
+		if skipped > (1<<53-1)-bundle.SkippedPorts {
+			return nmapBundle{}, errors.New("Nmap skipped port count is invalid")
+		}
+		bundle.SkippedPorts += skipped
 		if identity == "" {
 			bundle.SkippedHosts++
 			continue
@@ -234,6 +271,18 @@ func parseNmapXML(data []byte, scope string) (nmapBundle, error) {
 	return bundle, nil
 }
 
+func skippedNmapPorts(host xmlHost) (int64, error) {
+	total := int64(len(host.Ports))
+	for _, extra := range host.ExtraPorts {
+		count, err := strconv.ParseInt(extra.Count, 10, 64)
+		if err != nil || count < 0 || count > (1<<53-1)-total {
+			return 0, errors.New("Nmap extraports count is invalid")
+		}
+		total += count
+	}
+	return total, nil
+}
+
 func boundedNmapText(value string, limit int, label string) (string, error) {
 	value = strings.TrimSpace(value)
 	if !utf8.ValidString(value) || len([]byte(value)) > limit {
@@ -247,7 +296,12 @@ func boundedNmapText(value string, limit int, label string) (string, error) {
 	return value, nil
 }
 
-func normalizeNmapHost(host xmlHost, scopeID, scannedAt string) (nmapSnapshot, int, string, error) {
+func normalizeNmapHost(host xmlHost, scopeID, scannedAt string) (nmapSnapshot, int64, string, error) {
+	allSkipped, err := skippedNmapPorts(host)
+	if err != nil {
+		return nmapSnapshot{}, 0, "", err
+	}
+	skipped := allSkipped - int64(len(host.Ports))
 	info := nmapHostInfo{Addresses: []string{}, Hostnames: []string{}}
 	var ipv4, ipv6 []string
 	seenAddresses := map[string]bool{}
@@ -257,6 +311,11 @@ func normalizeNmapHost(host xmlHost, scopeID, scannedAt string) (nmapSnapshot, i
 			parsed, err := netip.ParseAddr(address.Addr)
 			if err != nil || (address.AddrType == "ipv4") != parsed.Is4() {
 				return nmapSnapshot{}, 0, "", errors.New("Nmap host contains an invalid IP address")
+			}
+			if zone := parsed.Zone(); zone != "" && (len(zone) > 32 || strings.IndexFunc(zone, func(r rune) bool {
+				return !(r == '-' || r == '_' || r == '.' || r >= '0' && r <= '9' || r >= 'A' && r <= 'Z' || r >= 'a' && r <= 'z')
+			}) >= 0) {
+				return nmapSnapshot{}, 0, "", errors.New("Nmap host contains an invalid IPv6 zone")
 			}
 			canonical := parsed.String()
 			if seenAddresses[canonical] {
@@ -288,7 +347,7 @@ func normalizeNmapHost(host xmlHost, scopeID, scannedAt string) (nmapSnapshot, i
 	sort.Strings(ipv6)
 	info.Addresses = append(ipv4, ipv6...)
 	if len(info.Addresses) == 0 {
-		return nmapSnapshot{}, len(host.Ports), "", nil
+		return nmapSnapshot{}, allSkipped, "", nil
 	}
 	if len(info.Addresses) > 16 {
 		return nmapSnapshot{}, 0, "", errors.New("Nmap host has too many addresses")
@@ -320,7 +379,6 @@ func normalizeNmapHost(host xmlHost, scopeID, scannedAt string) (nmapSnapshot, i
 	snapshot := nmapSnapshot{Format: "homelab-atlas.nmap-discovery", Version: 1, Source: nmapSource{ID: sourceID, Name: name}, ScannedAt: scannedAt, Host: info}
 	snapshot.Findings = []nmapFinding{{Key: "nmap-host:" + nmapDigest(identity), Name: name, Kind: "host"}}
 	ports := map[string]bool{}
-	skipped := 0
 	for _, port := range host.Ports {
 		if port.State.State != "open" || (port.Protocol != "tcp" && port.Protocol != "udp") {
 			skipped++

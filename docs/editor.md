@@ -24,15 +24,17 @@ Select a device to edit:
 
 The duplicate button copies a device and gives the copy new internal IDs without copying discovery bindings. Use the arrow buttons to reorder devices or services. Deleting a device or network node also deletes its connections. Deleting a device, group, or service removes discovery bindings that point to it.
 
-## Discover Docker services
+## Discover devices
 
-Choose **Discover Docker** in the inventory rail to review an optional collector scan or import a sanitized snapshot. Opening the dialog never scans. Choose **Scan** explicitly, or use **Import snapshot**.
+Choose **Discover devices** to review an optional Docker collector, import a sanitized Docker snapshot, or import user-supplied Nmap XML. Opening the dialog never scans. Docker requires an explicit **Scan**; Nmap import runs no scanner or network probe.
 
-Choose a destination device and service group. Every finding starts unchecked. For each selected finding, choose **Add new service** or link it to a service already on the destination device. A unique exact name match may be suggested, but it is still unchecked. Already-linked findings are disabled, and stopped containers are clearly marked.
+For Nmap, enter a stable **Network name**, choose **Import Nmap XML**, then select a host in multi-host results. The loaded scope, host addresses, names, vendor, scan time, and ports not imported appear in the review. Reuse the same network name for later scans.
 
-Linking keeps all manual service details and layout unchanged. Additions use the discovered name, matching local catalog logo, and replica count. Atlas never adds image names or ports to the diagram. It does not delete services missing from a later scan.
+Choose a destination device and service group. Every finding starts unchecked. Docker and Nmap endpoint rows can add a service or link to one already on the destination device. Nmap host rows add a host card or link the host identity to an existing card. Ping-only hosts therefore work without a fake service. Suggestions never check a row automatically.
 
-The review summary shows additions, links, new cards/groups, and card-height changes. **Apply selected** is disabled for an empty or invalid review. One application creates one undo step. Canceling, pressing `Escape`, scanning, or importing without applying does not change the project. See [Docker discovery](/discovery) for collector setup and security boundaries.
+Linking keeps existing metadata and layout unchanged. Docker additions use the discovered name, logo match, and replica count. Nmap endpoint names include the detected product or service plus protocol and port. New Nmap cards persist bounded canonical IP addresses as hardware facts. Missing findings never delete existing services.
+
+The review summary shows additions, links, new cards/groups, and card-height changes. **Apply selected** is disabled for an empty or invalid review. One application creates one undo step. A Nmap file stays open after applying one host so another can be reviewed. Canceling, pressing `Escape`, scanning, or importing without applying does not change the project. See [Discovery](/discovery) for setup, limits, and security boundaries.
 
 ## Add service tiles
 

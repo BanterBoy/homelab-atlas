@@ -1,12 +1,12 @@
 # Project format
 
-**Save project** downloads schema-version-5 JSON. Atlas 0.6 and newer can open it. Schema versions 1 through 4 still import after strict validation. Version 1 gains automatic layout, versions 1 and 2 gain empty network-logo fields, and versions 1 through 3 gain an empty `customLogos` array. Every older version gains empty discovery bindings without changing inventory, uploaded logos, manual rectangles, or revision. Older Atlas versions cannot open schema version 5.
+**Save project** downloads schema-version-6 JSON. Atlas imports schema versions 1 through 5 after strict validation. Version 1 gains automatic layout, versions 1 and 2 gain empty network-logo fields, versions 1 through 3 gain an empty `customLogos` array, and versions 1 through 4 gain empty discovery bindings. A valid version-5 project keeps every Docker binding, inventory field, uploaded logo, connection, manual rectangle, and revision; only `schemaVersion` changes. Older Atlas versions cannot open schema version 6.
 
 ## Top-level fields
 
 | Field | Type | Meaning |
 |---|---|---|
-| `schemaVersion` | integer | Must be `5` |
+| `schemaVersion` | integer | Must be `6` |
 | `revision` | integer | Browser conflict/change revision, from 0 through 1,000,000,000 |
 | `title`, `subtitle` | string | Diagram heading text, at most 120 characters each |
 | `theme` | string | `navy`, `light`, or `midnight` |
@@ -14,7 +14,7 @@
 | `density` | string | `comfortable` or `compact` |
 | `layout` | object | Device-card layout mode and saved rectangles |
 | `customLogos` | array | Uploaded PNG assets stored with the project |
-| `discovery` | object | Stable Docker finding-to-service bindings only |
+| `discovery` | object | Stable Docker and Nmap finding bindings |
 | `networks` | array | Network node records |
 | `vlans` | array | VLAN chip records |
 | `devices` | array | Device cards, hardware facts, groups, and services |
@@ -40,7 +40,9 @@ Colors use six-digit hexadecimal values such as `#55d6c9`. A device `icon`, serv
 
 Custom logo IDs start with `custom-` and use the same safe ASCII ID characters, with a total limit of 64 characters. Labels are trimmed, nonempty text up to 120 characters. `background` is `none`, `light`, or `dark`. `dataUrl` is a canonical `data:image/png;base64,...` value. Raw SVG, remote URLs, blob URLs, extra fields, duplicates, and IDs colliding with catalog or project records are rejected.
 
-`discovery.bindings` maps one stable finding identity to one existing service. `sourceId` is a safe ID of at most 64 characters. `key` is `compose:` or `container:` followed by a 64-character lowercase SHA-256 digest. Each `(sourceId, key)` pair is unique. `serviceId` must belong to `deviceId`. Raw inventories, scan times, image names, ports, collector URLs, and tokens are never saved in a project.
+`discovery.bindings` maps one stable finding identity to a target. `sourceId` is a safe ID of at most 64 characters and each `(sourceId, key)` pair is unique. Docker keys use `compose:` or `container:` plus a 64-character lowercase SHA-256 digest. Nmap endpoints use `nmap:` plus a digest and require a string `serviceId` belonging to `deviceId`. Nmap hosts use `nmap-host:` plus a digest, target the device itself, and require `serviceId: null`. Other null targets and key/target combinations are rejected.
+
+Raw discovery responses and scan times are not saved. A new Nmap card stores selected canonical IP addresses as hardware facts, and selected endpoint services store their display names, such as `Caddy · tcp/443`. Existing cards are not rewritten. These persisted values can contain private network details.
 
 ## IDs and references
 
@@ -84,7 +86,7 @@ The group limit applies to each device array and to the whole project. Each obje
 
 ```json
 {
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "revision": 1,
   "title": "Small Lab",
   "subtitle": "Fictional example",
