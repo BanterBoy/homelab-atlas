@@ -39,10 +39,9 @@ An endpoint can be a network node or a device. Connections show relationships, n
 
 Homelab Atlas does not:
 
-- discover hosts or services
+- scan automatically or in the background
 - request device credentials
-- access the Docker socket
 - monitor reachability, traffic, or health
 - configure VLANs, routers, switches, or firewalls
 
-Atlas only shows what you enter yourself. Read the [privacy guidance](/privacy) before sharing network names or other topology details.
+Explicit Nmap scans, Docker collection, and imports enter the review; only findings you apply appear in the diagram. The editor has no Docker socket. The optional collector accesses only its configured Docker API. See [Discovery](/discovery) and read the [privacy guidance](/privacy) before sharing topology details.

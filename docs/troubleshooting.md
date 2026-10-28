@@ -7,7 +7,7 @@ Find the symptom that matches what you're seeing. Browser developer tools and `d
 | Project is empty at another URL | Use the same browser profile, hostname, port, and protocol. If you changed the address, import a saved JSON backup. |
 | “Not saved — storage unavailable” | Allow site storage, leave private mode, and check the browser's storage quota or policy. If the project is still open, download JSON right away. |
 | Another-tab conflict banner | Download the project in the current tab first. Then choose **Keep my edits** or **Load saved version** based on which copy you want. |
-| Import rejected | Make sure it is valid Homelab Atlas schema-version-1 through schema-version-5 JSON no larger than 2 MB. Schema version 5 requires Atlas 0.6 or newer. Unknown keys, duplicate or unsafe IDs, unknown logo IDs, and bad references are rejected. |
+| Import rejected | Make sure it is valid Homelab Atlas schema-version-6 JSON, or schema version 1 through 5 for migration, no larger than 2 MB. Unknown keys, duplicate or unsafe IDs, unknown logo IDs, and bad references are rejected. |
 | Custom logo upload rejected | Use a PNG, JPG, WebP, or safe SVG no larger than 2 MB, 4096px per side, or 16 million pixels. Active or externally loaded SVG content is rejected. |
 | Port 8080 already in use | Stop the conflicting service or use a different local port as shown below. |
 | Released container does not start | Run `docker compose -f compose.release.yaml config`, then use the same `-f compose.release.yaml` argument with `pull`, `ps`, and `logs atlas`. Also confirm the GHCR package is public. |
@@ -66,6 +66,6 @@ Atlas checks the entire import before replacing your current project. If the fil
 
 If the storage or import problem continues, replace any private details with fictional data before opening a [bug report](https://github.com/aiden0rchad/homelab-atlas/issues/new?template=bug_report.yml).
 
-## Discovery snapshot rejection
+## Docker discovery snapshot rejection
 
-Snapshots must be at most 2,000,000 bytes and use `homelab-atlas.docker-discovery` version 1. Atlas rejects unknown fields, duplicate or malformed finding keys, invalid dates or counts, more than 1,000 containers, more than 20 ports per finding, oversized text, and source mismatches from a live collector. A rejected scan or import does not change the project.
+Docker snapshots must be at most 2,000,000 bytes and use `homelab-atlas.docker-discovery` version 1. Atlas rejects unknown fields, duplicate or malformed finding keys, invalid dates or counts, more than 1,000 containers, more than 20 ports per finding, oversized text, and source mismatches from a live collector. See [Discovery](/discovery) for Nmap scan and XML limits. A rejected scan or import does not change the project.
