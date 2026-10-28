@@ -11,23 +11,25 @@ import stat
 import zipfile
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 TAG_RE = re.compile(r"^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 FILES = (
     "go.mod",
-    "main.go",
-    "server.go",
-    "docker.go",
-    "discovery.go",
-    "nmap.go",
-    "nmap_scan.go",
-    "Dockerfile",
+    "app/main.go",
+    "app/server.go",
+    "app/docker.go",
+    "app/discovery.go",
+    "app/nmap.go",
+    "app/nmap_scan.go",
+    "deploy/Dockerfile",
     "compose.yaml",
-    "compose.release.yaml",
-    "compose.nmap.yaml",
+    "deploy/compose.release.yaml",
+    "deploy/compose.nmap.yaml",
     "README.md",
     "LICENSE",
-    "THIRD_PARTY_NOTICES.md",
+    "docs/THIRD_PARTY_NOTICES.md",
+    ".github/CONTRIBUTING.md",
+    ".github/SECURITY.md",
 )
 
 
@@ -40,7 +42,7 @@ def version_for(root: Path, tag: str) -> str:
     if version != package_version:
         raise ValueError(f"tag {tag} does not match package.json version {package_version}")
     expected_image = f"ghcr.io/aiden0rchad/homelab-atlas:${{ATLAS_VERSION:-{version}}}"
-    compose = (root / "compose.release.yaml").read_text()
+    compose = (root / "deploy/compose.release.yaml").read_text()
     images = re.findall(r"^\s*image:\s*(\S+)\s*$", compose, re.MULTILINE)
     if images != [expected_image, expected_image]:
         raise ValueError(f"compose.release.yaml editor and collector images must be {expected_image}")
@@ -48,8 +50,12 @@ def version_for(root: Path, tag: str) -> str:
 
 
 def release_files(root: Path) -> list[Path]:
+    for name in ("app", "deploy", "docs", ".github"):
+        directory = root / name
+        if directory.is_symlink():
+            raise ValueError(f"release input must not be a symlink: {directory}")
     paths = [root / name for name in FILES]
-    public = root / "public"
+    public = root / "app/public"
     if public.is_symlink():
         raise ValueError(f"release input must not be a symlink: {public}")
     for current, directories, filenames in os.walk(public, followlinks=False):
@@ -91,7 +97,7 @@ def build(root: Path, tag: str, output: Path) -> tuple[Path, Path, Path]:
             info.external_attr = (stat.S_IFREG | 0o644) << 16
             bundle.writestr(info, path.read_bytes(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
 
-    shutil.copyfile(root / "compose.release.yaml", compose)
+    shutil.copyfile(root / "deploy/compose.release.yaml", compose)
     covered = sorted((archive, compose), key=lambda path: path.name)
     checksums.write_text("".join(f"{sha256(path)}  {path.name}\n" for path in covered))
     return archive, compose, checksums

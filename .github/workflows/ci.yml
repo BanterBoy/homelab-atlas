@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -t homelab-atlas:test .
+      - run: docker build -f deploy/Dockerfile -t homelab-atlas:test .
       - run: docker run -d --name atlas --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges -p 127.0.0.1:8080:8080 homelab-atlas:test
       - run: |
           for i in {1..20}; do

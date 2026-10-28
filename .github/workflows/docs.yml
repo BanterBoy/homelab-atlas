@@ -5,16 +5,16 @@ on:
     paths:
       - "docs/**"
       - "README.md"
-      - "CONTRIBUTING.md"
-      - "SECURITY.md"
+      - ".github/CONTRIBUTING.md"
+      - ".github/SECURITY.md"
       - ".github/workflows/docs.yml"
   push:
     branches: [main]
     paths:
       - "docs/**"
       - "README.md"
-      - "CONTRIBUTING.md"
-      - "SECURITY.md"
+      - ".github/CONTRIBUTING.md"
+      - ".github/SECURITY.md"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
 

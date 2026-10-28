@@ -10,27 +10,18 @@ The final container includes `LICENSE` and `THIRD_PARTY_NOTICES.md` under `/usr/
 
 | Path | Purpose |
 |---|---|
-| `public/index.html` | Editor page and dialogs |
-| `public/app.js` | Editor controls, autosave, import, and export |
-| `public/export.js` | Pure image-export filtering and snapshot preparation |
-| `public/model.js` | Project schema, validation, layout, and SVG rendering |
-| `public/state.js` | State, conflict, selection, and PNG-size helpers |
-| `public/catalog.js` | Logo metadata and lookup helpers |
-| `public/custom-logos.js` | Uploaded PNG validation and browser normalization |
-| `public/discovery.js` | Snapshot validation, matching, and atomic merge planning |
-| `public/logos/` | Included SVG logo files |
-| `public/licenses/` | Logo sources and upstream licenses |
-| `main.go` | Embedded assets and the server, `healthcheck`, and `collect` commands |
-| `server.go` | Restricted static server, discovery API, and collector HTTP handler |
-| `docker.go` | Bounded read-only Docker client and sanitized grouping |
-| `discovery.go` | Discovery snapshot and configured-source validation |
-| `nmap.go` | Strict Nmap XML projection, normalization, limits, and identities |
-| `nmap_scan.go` | Validated target/port expansion and bounded Nmap process execution |
-| `scripts/` | Repeatable icon and release artifact tools |
-| `tests/` | Node model/discovery tests and Python release tests |
+| `app/public/` | Embedded editor assets, logos, sources, and upstream licenses |
+| `app/main.go` | Embedded assets and the server, `healthcheck`, and `collect` commands |
+| `app/server.go` | Restricted static server, discovery API, and collector HTTP handler |
+| `app/docker.go` | Bounded read-only Docker client and sanitized grouping |
+| `app/discovery.go` | Discovery snapshot and configured-source validation |
+| `app/nmap.go` | Strict Nmap XML projection, normalization, limits, and identities |
+| `app/nmap_scan.go` | Validated target/port expansion and bounded Nmap process execution |
+| `deploy/` | Dockerfile and source/released Compose recipes |
+| `tools/scripts/` | Repeatable icon and release artifact tools |
+| `tools/tests/` | Node model/discovery tests and Python release tests |
 | `docs/` | VitePress documentation and sample files |
-| `compose.release.yaml` | Docker Compose file for the published GHCR image |
-| `compose.nmap.yaml` | Opt-in local Nmap build override |
+| `compose.yaml` | Default source Compose configuration |
 
 ## Checks
 
@@ -43,8 +34,9 @@ go vet ./...
 npm run build:icons
 npm run check:icons
 docker compose config
-docker compose -f compose.release.yaml -f compose.nmap.yaml config
-python3 scripts/release.py v0.9.0 --output dist
+docker compose --project-directory . -f deploy/compose.release.yaml config
+docker compose --project-directory . -f compose.yaml -f deploy/compose.nmap.yaml config
+python3 tools/scripts/release.py v0.9.0 --output dist
 ```
 
 `npm test` checks logo data, runs the Node tests, runs `go test ./...`, and runs the Python release tests. Release files go into the ignored `dist/` directory, and the release workflow checks their checksums too.
@@ -80,17 +72,17 @@ Annotated guide screenshots live in `docs/public/guides/`; their crops, marks, a
 ## Adding or updating logos
 
 1. Use a legitimate, pinned SVG source with a license that allows it to be included.
-2. Add or replace the SVG in `public/logos/`.
-3. Add its metadata to `public/catalog.js`, including the light/dark contrast plate sets if it needs them.
-4. Add the exact source and license information to `public/licenses/logo-sources.json`.
-5. Update `THIRD_PARTY_NOTICES.md` and add any license file that applies.
+2. Add or replace the SVG in `app/public/logos/`.
+3. Add its metadata to `app/public/catalog.js`, including the light/dark contrast plate sets if it needs them.
+4. Add the exact source and license information to `app/public/licenses/logo-sources.json`.
+5. Update `docs/THIRD_PARTY_NOTICES.md` and add any license file that applies.
 6. Run `npm run build:icons` and `npm run check:icons`.
-7. Include the generated `public/icon-data.js` change.
+7. Include the generated `app/public/icon-data.js` change.
 
-Keep the logos in the repository. Do not load them, fonts, or other images from a CDN at runtime. Product names and trademarks still belong to their owners; see [THIRD_PARTY_NOTICES.md on GitHub](https://github.com/aiden0rchad/homelab-atlas/blob/main/THIRD_PARTY_NOTICES.md).
+Keep the logos in the repository. Do not load them, fonts, or other images from a CDN at runtime. Product names and trademarks still belong to their owners; see [THIRD_PARTY_NOTICES.md on GitHub](https://github.com/aiden0rchad/homelab-atlas/blob/main/docs/THIRD_PARTY_NOTICES.md).
 
 Project uploads are different from bundled logos. They are decoded by the browser, converted to PNG, limited to 512px and 200,000 data-URL characters each, and stored only in project JSON. Imports validate PNG structure, native zlib output within a fixed bound, and native browser image decoding. Projects allow 32 uploads and 1,200,000 total custom data-URL characters. Original files are limited to 2,000,000 bytes, 4096px per side, and 16 million pixels.
 
 ## Preparing a release
 
-Update the root package version, the default tag in `compose.release.yaml`, the release notes, and `CHANGELOG.md` together. Run the app, docs, Compose, and release-file checks before pushing a strict `vMAJOR.MINOR.PATCH` tag. The [release guide](/releases/) has the full checklist and the first-package visibility step.
+Update the root package version, the default tag in `deploy/compose.release.yaml`, the release notes, and `docs/changelog.md` together. Run the app, docs, Compose, and release-file checks before pushing a strict `vMAJOR.MINOR.PATCH` tag. The [release guide](/releases/) has the full checklist and the first-package visibility step.

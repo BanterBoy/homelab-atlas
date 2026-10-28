@@ -90,9 +90,10 @@ jobs:
       - name: Validate Compose files
         run: |
           docker compose config --quiet
-          docker compose -f compose.release.yaml config --quiet
+          docker compose --project-directory . -f deploy/compose.release.yaml config --quiet
+          docker compose --project-directory . -f compose.yaml -f deploy/compose.nmap.yaml config --quiet
       - name: Build source image
-        run: docker build --tag homelab-atlas:release .
+        run: docker build -f deploy/Dockerfile --tag homelab-atlas:release .
       - name: Smoke-test source image
         run: |
           set -euo pipefail
@@ -113,7 +114,7 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          python3 scripts/release.py "v$VERSION" --output dist
+          python3 tools/scripts/release.py "v$VERSION" --output dist
           cp "docs/releases/v$VERSION.md" dist/RELEASE-NOTES.md
           cd dist
           sha256sum --check SHA256SUMS
@@ -158,7 +159,7 @@ jobs:
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a
         with:
           context: .
-          file: Dockerfile
+          file: deploy/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |

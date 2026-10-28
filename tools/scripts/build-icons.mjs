@@ -2,9 +2,9 @@ import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const logoDir = resolve(root, 'public/logos');
-const output = resolve(root, 'public/icon-data.js');
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+const logoDir = resolve(root, 'app/public/logos');
+const output = resolve(root, 'app/public/icon-data.js');
 const unsafe = /<!DOCTYPE|<!ENTITY|<script\b|<foreignObject\b|<iframe\b|<object\b|<embed\b|\s+on[a-z]+\s*=|\b(?:href|src)\s*=\s*["'](?!#)/i;
 
 const files = (await readdir(logoDir)).filter(name => name.endsWith('.svg')).sort();

@@ -12,25 +12,28 @@ SPEC.loader.exec_module(release)
 
 class ReleaseTests(unittest.TestCase):
     def fixture(self, root: Path, version: str = "0.1.0") -> None:
-        (root / "public/licenses").mkdir(parents=True)
+        (root / "app/public/licenses").mkdir(parents=True)
         files = {
             "package.json": json.dumps({"version": version}),
             "go.mod": "module example.invalid/atlas\n\ngo 1.26\n",
-            "main.go": "package main\nfunc main() {}\n",
-            "server.go": "package main\n",
-            "docker.go": "package main\n",
-            "discovery.go": "package main\n",
-            "nmap.go": "package main\n",
-            "nmap_scan.go": "package main\n",
-            "Dockerfile": "FROM golang:1.26-alpine\n",
+            "app/main.go": "package main\nfunc main() {}\n",
+            "app/server.go": "package main\n",
+            "app/docker.go": "package main\n",
+            "app/discovery.go": "package main\n",
+            "app/nmap.go": "package main\n",
+            "app/nmap_scan.go": "package main\n",
+            "app/main_test.go": "package main\n",
+            "deploy/Dockerfile": "FROM golang:1.26-alpine\n",
             "compose.yaml": "services: {}\n",
-            "compose.release.yaml": "services:\n  atlas:\n    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.1.0}\n  collector:\n    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.1.0}\n",
-            "compose.nmap.yaml": "services:\n  atlas:\n    build: .\n",
+            "deploy/compose.release.yaml": "services:\n  atlas:\n    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.1.0}\n  collector:\n    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.1.0}\n",
+            "deploy/compose.nmap.yaml": "services:\n  atlas:\n    build: .\n",
             "README.md": "# Atlas\n",
             "LICENSE": "MIT\n",
-            "THIRD_PARTY_NOTICES.md": "Notices\n",
-            "public/index.html": "<!doctype html>\n",
-            "public/licenses/logo.txt": "license\n",
+            "docs/THIRD_PARTY_NOTICES.md": "Notices\n",
+            ".github/CONTRIBUTING.md": "# Contributing\n",
+            ".github/SECURITY.md": "# Security\n",
+            "app/public/index.html": "<!doctype html>\n",
+            "app/public/licenses/logo.txt": "license\n",
         }
         for name, content in files.items():
             path = root / name
@@ -38,7 +41,7 @@ class ReleaseTests(unittest.TestCase):
             path.write_text(content)
         (root / ".agent").mkdir()
         (root / ".agent/private.json").write_text('{"host":"private.invalid"}\n')
-        (root / "docs").mkdir()
+        (root / "docs").mkdir(exist_ok=True)
         (root / "docs/screenshot.png").write_bytes(b"private fixture")
 
     def test_repeatable_archive_checksums_and_contents(self):
@@ -51,15 +54,18 @@ class ReleaseTests(unittest.TestCase):
             self.assertEqual(first[2].read_text(), second[2].read_text())
             with zipfile.ZipFile(first[0]) as bundle:
                 names = set(bundle.namelist())
-            self.assertIn("homelab-atlas-0.1.0/public/index.html", names)
-            self.assertIn("homelab-atlas-0.1.0/public/licenses/logo.txt", names)
+            self.assertIn("homelab-atlas-0.1.0/app/public/index.html", names)
+            self.assertIn("homelab-atlas-0.1.0/app/public/licenses/logo.txt", names)
             self.assertIn("homelab-atlas-0.1.0/go.mod", names)
-            self.assertIn("homelab-atlas-0.1.0/docker.go", names)
-            self.assertIn("homelab-atlas-0.1.0/nmap.go", names)
-            self.assertIn("homelab-atlas-0.1.0/nmap_scan.go", names)
+            self.assertIn("homelab-atlas-0.1.0/app/docker.go", names)
+            self.assertIn("homelab-atlas-0.1.0/app/nmap.go", names)
+            self.assertIn("homelab-atlas-0.1.0/app/nmap_scan.go", names)
+            self.assertIn("homelab-atlas-0.1.0/deploy/Dockerfile", names)
             self.assertIn("homelab-atlas-0.1.0/compose.yaml", names)
-            self.assertIn("homelab-atlas-0.1.0/compose.nmap.yaml", names)
-            self.assertIn("homelab-atlas-0.1.0/THIRD_PARTY_NOTICES.md", names)
+            self.assertIn("homelab-atlas-0.1.0/deploy/compose.nmap.yaml", names)
+            self.assertIn("homelab-atlas-0.1.0/docs/THIRD_PARTY_NOTICES.md", names)
+            self.assertIn("homelab-atlas-0.1.0/.github/CONTRIBUTING.md", names)
+            self.assertNotIn("homelab-atlas-0.1.0/app/main_test.go", names)
             self.assertNotIn("homelab-atlas-0.1.0/.agent/private.json", names)
             self.assertNotIn("homelab-atlas-0.1.0/docs/screenshot.png", names)
 
@@ -82,7 +88,7 @@ class ReleaseTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             self.fixture(root)
-            (root / "compose.release.yaml").write_text(
+            (root / "deploy/compose.release.yaml").write_text(
                 "services:\n  atlas:\n    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.2.0}\n  collector:\n    image: ghcr.io/aiden0rchad/homelab-atlas:${ATLAS_VERSION:-0.2.0}\n"
             )
             with self.assertRaisesRegex(ValueError, "editor and collector images"):
@@ -92,7 +98,17 @@ class ReleaseTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             self.fixture(root)
-            (root / "public/link.html").symlink_to(root / "public/index.html")
+            (root / "app/public/link.html").symlink_to(root / "app/public/index.html")
+            with self.assertRaisesRegex(ValueError, "symlink"):
+                release.build(root, "v0.1.0", root / "dist")
+
+    def test_parent_directory_symlink_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.fixture(root)
+            outside = root / "outside-app"
+            (root / "app").rename(outside)
+            (root / "app").symlink_to(outside, target_is_directory=True)
             with self.assertRaisesRegex(ValueError, "symlink"):
                 release.build(root, "v0.1.0", root / "dist")
 

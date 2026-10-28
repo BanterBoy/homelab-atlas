@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { applyDiscoveryPlan, filterDiscoveryFindings, planDiscoveryMerge, validateDiscoverySnapshot, validateNmapBundle } from '../public/discovery.js';
-import { emptyProject, sampleProject, validateProject } from '../public/model.js';
+import { applyDiscoveryPlan, filterDiscoveryFindings, planDiscoveryMerge, validateDiscoverySnapshot, validateNmapBundle } from '../../app/public/discovery.js';
+import { emptyProject, sampleProject, validateProject } from '../../app/public/model.js';
 
 const hex = value => value.repeat(64).slice(0, 64);
 const snapshot = () => ({

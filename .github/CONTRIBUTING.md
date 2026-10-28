@@ -25,13 +25,13 @@ npm --prefix docs ci
 npm --prefix docs run build
 ```
 
-For logo changes, use a pinned legitimate SVG source. Update `public/catalog.js`, its contrast plate sets when needed, `public/licenses/logo-sources.json`, `THIRD_PARTY_NOTICES.md`, and applicable license files, then run:
+For logo changes, use a pinned legitimate SVG source. Update `app/public/catalog.js`, its contrast plate sets when needed, `app/public/licenses/logo-sources.json`, `docs/THIRD_PARTY_NOTICES.md`, and applicable license files, then run:
 
 ```sh
 npm run build:icons
 npm run check:icons
 ```
 
-Generated `public/icon-data.js` must match the reviewed SVG files. Do not commit `docs/.vitepress/cache/` or `docs/.vitepress/dist/`.
+Generated `app/public/icon-data.js` must match the reviewed SVG files. Do not commit `docs/.vitepress/cache/` or `docs/.vitepress/dist/`.
 
 The runtime uses the Go standard library only. Discovery changes must keep the editor process away from the Docker socket, keep collector requests read-only and bounded, and use fictional test fixtures.

@@ -3,9 +3,9 @@ import test from 'node:test';
 
 import {
   createExportSnapshot, HIDDEN_TEXT, parseExportTerms, redactExportText, sanitizeExportProject,
-} from '../public/export.js';
-import { logoDataUri } from '../public/catalog.js';
-import { layoutProject, renderProject, sampleProject, snapshotManualLayout } from '../public/model.js';
+} from '../../app/public/export.js';
+import { logoDataUri } from '../../app/public/catalog.js';
+import { layoutProject, renderProject, sampleProject, snapshotManualLayout } from '../../app/public/model.js';
 
 const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
 

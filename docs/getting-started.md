@@ -86,7 +86,7 @@ docker compose down
 From a source checkout, run:
 
 ```sh
-go run .
+go run ./app
 ```
 
 For the portable release, extract the ZIP and move into its top-level directory first:
@@ -97,7 +97,7 @@ cd homelab-atlas-0.9.0
 go run .
 ```
 
-Open `http://localhost:8080`. The server only exposes `public/` and, by default, only listens on the same machine.
+Open `http://localhost:8080`. The server only exposes the embedded editor assets and, by default, only listens on the same machine. The v0.9.0 ZIP retains its original root source layout; newly generated ZIPs use `app/` and `deploy/`.
 
 ## Open it from another computer {#trusted-lan-access}
 

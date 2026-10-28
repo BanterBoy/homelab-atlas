@@ -75,7 +75,7 @@ export default defineConfig({
     lastUpdated: { text: 'Last updated', formatOptions: { dateStyle: 'medium' } },
     socialLinks: [{ icon: 'github', link: 'https://github.com/aiden0rchad/homelab-atlas' }],
     footer: {
-      message: 'MIT licensed · <a href="https://github.com/aiden0rchad/homelab-atlas/blob/main/THIRD_PARTY_NOTICES.md">Logo attribution</a>',
+      message: 'MIT licensed · <a href="https://github.com/aiden0rchad/homelab-atlas/blob/main/docs/THIRD_PARTY_NOTICES.md">Logo attribution</a>',
       copyright: 'Homelab Atlas contributors',
     },
     darkModeSwitchLabel: 'Theme',

@@ -25,11 +25,13 @@ Install Nmap and its service-detection data on the server with its operating-sys
 ATLAS_WITH_NMAP=true docker compose up -d --build
 ```
 
-Put `ATLAS_WITH_NMAP=true` in the existing `.env` to retain the choice on later builds. From an extracted release source ZIP:
+Put `ATLAS_WITH_NMAP=true` in the existing `.env` to retain the choice on later builds. From a newly generated source ZIP:
 
 ```sh
-docker compose -f compose.release.yaml -f compose.nmap.yaml up -d --build
+docker compose --project-directory . -f deploy/compose.release.yaml -f deploy/compose.nmap.yaml up -d --build
 ```
+
+The published v0.9.0 ZIP retains its original root Compose paths.
 
 Nmap is independently licensed under the [Nmap Public Source License](https://nmap.org/npsl/npsl-annotated.html). The source ZIP contains only Atlas and the local build recipe, not Nmap binaries or data.
 
@@ -142,7 +144,7 @@ docker run --rm \
 The one-off container runs as root only to reach the read-only Docker socket. It has no network, capabilities, or writable container filesystem. If you are developing from source, the equivalent command is:
 
 ```sh
-ATLAS_HOST_ID=nas ATLAS_HOST_NAME="NAS Docker" go run . collect > ../nas-docker-snapshot.json
+ATLAS_HOST_ID=nas ATLAS_HOST_NAME="NAS Docker" go run ./app collect > ../nas-docker-snapshot.json
 ```
 
 `ATLAS_DOCKER_HOST` defaults to `unix:///var/run/docker.sock`. Then use **Import snapshot** in the discovery dialog. Snapshot import has the same review and 2 MB limit as a live scan.

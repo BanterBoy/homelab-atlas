@@ -4,8 +4,8 @@ import {
   applyDiscoveryPlan, captureProjectGuard, discoveryBindingLabel, matchDiscoveryLogo,
   filterDiscoveryFindings, parseDiscoverySnapshot, planDiscoveryMerge, projectGuardCurrent, suggestDiscoveryService,
   validateDiscoverySnapshot,
-} from '../public/discovery.js';
-import { emptyProject, layoutProject, sampleProject, setManualCard, validateProject } from '../public/model.js';
+} from '../../app/public/discovery.js';
+import { emptyProject, layoutProject, sampleProject, setManualCard, validateProject } from '../../app/public/model.js';
 
 const key = (kind, character) => `${kind}:${character.repeat(64)}`;
 const finding = (overrides = {}) => ({

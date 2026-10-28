@@ -57,10 +57,10 @@ More detail is in the [backup guide](https://aiden0rchad.github.io/homelab-atlas
 
 This is still an early version. If something breaks or a layout looks wrong, [open an issue](https://github.com/aiden0rchad/homelab-atlas/issues) with a screenshot and steps to reproduce it. Remove private details from anything you attach.
 
-PRs are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) has the checks to run, and the [development docs](https://aiden0rchad.github.io/homelab-atlas/development) explain the code and logo catalog. Please report security problems privately using [SECURITY.md](SECURITY.md).
+PRs are welcome. [CONTRIBUTING.md](.github/CONTRIBUTING.md) has the checks to run, and the [development docs](https://aiden0rchad.github.io/homelab-atlas/development) explain the code and logo catalog. Please report security problems privately using [SECURITY.md](.github/SECURITY.md).
 
 If you'd like to support the project, you can [buy me a coffee](https://www.buymeacoffee.com/aiden0rchad).
 
 ## License
 
-The code is [MIT licensed](LICENSE). App and hardware logos belong to their respective owners and keep their original licenses. Attribution is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+The code is [MIT licensed](LICENSE). App and hardware logos belong to their respective owners and keep their original licenses. Attribution is in [THIRD_PARTY_NOTICES.md](docs/THIRD_PARTY_NOTICES.md).

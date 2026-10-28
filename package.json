@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "go run .",
-    "build:icons": "node scripts/build-icons.mjs",
-    "check:icons": "node scripts/check-icons.mjs",
-    "test": "npm run check:icons && node --test tests/*.test.js && mkdir -p .agent/go-tmp .agent/go-cache && GOTMPDIR=\"$PWD/.agent/go-tmp\" GOCACHE=\"$PWD/.agent/go-cache\" go test ./... && python3 -m unittest discover -s tests -p 'test_*.py'"
+    "start": "go run ./app",
+    "build:icons": "node tools/scripts/build-icons.mjs",
+    "check:icons": "node tools/scripts/check-icons.mjs",
+    "test": "npm run check:icons && node --test tools/tests/*.test.js && mkdir -p .agent/go-tmp .agent/go-cache && GOTMPDIR=\"$PWD/.agent/go-tmp\" GOCACHE=\"$PWD/.agent/go-cache\" go test ./... && python3 -m unittest discover -s tools/tests -p 'test_*.py'"
   },
   "engines": {
     "node": ">=20"

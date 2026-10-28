@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { deflateSync } from 'node:zlib';
-import { LOGOS, logoById, logoDataUri, logoPlate } from '../public/catalog.js';
-import { CUSTOM_LOGO_LIMITS, hasExternalSvgUrl, PNG_INFLATED_LIMIT, pngInfo, svgTextHasUnsafeContent, validateCustomLogo, validateCustomLogos, verifyCustomLogoDecodes, verifyPngImageData } from '../public/custom-logos.js';
-import { parseProject, renderProject, sampleProject, validateProject } from '../public/model.js';
+import { LOGOS, logoById, logoDataUri, logoPlate } from '../../app/public/catalog.js';
+import { CUSTOM_LOGO_LIMITS, hasExternalSvgUrl, PNG_INFLATED_LIMIT, pngInfo, svgTextHasUnsafeContent, validateCustomLogo, validateCustomLogos, verifyCustomLogoDecodes, verifyPngImageData } from '../../app/public/custom-logos.js';
+import { parseProject, renderProject, sampleProject, validateProject } from '../../app/public/model.js';
 
 const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
 const custom = (id = 'custom-test', overrides = {}) => ({ id, label: 'Test logo', dataUrl: PNG, background: 'none', ...overrides });

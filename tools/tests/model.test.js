@@ -1,14 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { LOGOS, logoDataUri, logoPlate, networkLogoId, searchLogos } from '../public/catalog.js';
-import { ICON_DATA } from '../public/icon-data.js';
+import { LOGOS, logoDataUri, logoPlate, networkLogoId, searchLogos } from '../../app/public/catalog.js';
+import { ICON_DATA } from '../../app/public/icon-data.js';
 import {
   LIMITS, layoutProject, parseProject, removeDevice, removeGroup, removeNetwork, removeService,
   renderProject, resetAutoLayout, sampleProject, serviceRowGeometry, serviceTileGeometry,
   setManualCard, snapshotManualLayout, uid, validateProject, wrapText,
-} from '../public/model.js';
-import { applyProjectChange, filterInventory, hasStorageConflict, pngDimensions, updateSelection } from '../public/state.js';
+} from '../../app/public/model.js';
+import { applyProjectChange, filterInventory, hasStorageConflict, pngDimensions, updateSelection } from '../../app/public/state.js';
 
 test('sample validates and renders deterministically in dark and light themes', () => {
   const project = sampleProject();
@@ -39,7 +39,7 @@ test('bundled catalog uses real embedded assets and safe generic fallbacks', () 
 
 test('provider catalog has 27 distinct embedded and attributed assets', () => {
   const providers = LOGOS.filter(logo => logo.category.startsWith('ISP ·'));
-  const sources = JSON.parse(readFileSync(new URL('../public/licenses/logo-sources.json', import.meta.url)));
+  const sources = JSON.parse(readFileSync(new URL('../../app/public/licenses/logo-sources.json', import.meta.url)));
   assert.equal(providers.length, 27);
   assert.equal(providers.filter(logo => logo.category === 'ISP · US').length, 9);
   assert.equal(providers.filter(logo => logo.category === 'ISP · Europe').length, 18);

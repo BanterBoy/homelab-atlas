@@ -44,9 +44,9 @@ The exact version tags keep pointing to the same release. The `0.9` and `latest`
 
 ## Maintainer checklist
 
-1. Update the version in the root `package.json`, the default image tag in `compose.release.yaml`, `docs/releases/vVERSION.md`, and `CHANGELOG.md`.
+1. Update the version in the root `package.json`, the default image tag in `deploy/compose.release.yaml`, `docs/releases/vVERSION.md`, and `docs/changelog.md`.
 2. Run `npm test`, the release-file tests, both Compose checks, and the docs build.
-3. Make sure the release notes match the version and only describe behavior that exists.
+3. Make sure the release notes match the version and only describe behavior that exists. Refresh version-specific ZIP command examples for the new release layout.
 4. Commit on `main`, create a strict stable tag in the form `vMAJOR.MINOR.PATCH`, and push it.
 5. Watch the whole release workflow: validation, multi-architecture image publishing, anonymous image verification, and GitHub release creation.
 

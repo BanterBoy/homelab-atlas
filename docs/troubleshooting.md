@@ -32,7 +32,7 @@ Start with the [FAQ](/faq) for setup, discovery, layout, and saving explanations
 With the direct Go server:
 
 ```sh
-PORT=8081 go run .
+PORT=8081 go run ./app
 ```
 
 For a source build, build the image and publish a different host port:

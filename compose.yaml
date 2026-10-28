@@ -2,6 +2,7 @@ services:
   atlas:
     build:
       context: .
+      dockerfile: deploy/Dockerfile
       args:
         ATLAS_WITH_NMAP: "${ATLAS_WITH_NMAP:-false}"
     environment:
@@ -26,6 +27,7 @@ services:
     profiles: ["discovery"]
     build:
       context: .
+      dockerfile: deploy/Dockerfile
       args:
         ATLAS_WITH_NMAP: "${ATLAS_WITH_NMAP:-false}"
     command: ["collect", "--listen", ":8081"]
