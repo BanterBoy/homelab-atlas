@@ -840,6 +840,7 @@ function setDiscoveryStep(step, focus = false) {
   $('#discovery-find').hidden = step !== 'find';
   $('#discovery-results').hidden = step !== 'review';
   $('#discovery-apply').hidden = step !== 'review';
+  $('#discovery-summary').hidden = step !== 'review';
   for (const name of ['choose', 'find', 'review']) {
     const item = $(`#discovery-progress-${name}`);
     if (name === step) item.setAttribute('aria-current', 'step'); else item.removeAttribute('aria-current');
@@ -857,7 +858,7 @@ function cancelDiscoveryWork() {
   discoveryState.pendingDockerSource = null;
   discoveryState.pendingAuthToken = null;
   setNetworkScanning(false);
-  hideDiscoveryAuth();
+  if (discoveryState.authRequired) showDiscoveryAuth(); else hideDiscoveryAuth();
 }
 
 function chooseDiscoveryMethod(method, focus = true) {
@@ -872,7 +873,7 @@ function chooseDiscoveryMethod(method, focus = true) {
   const titles = { docker: 'Find Docker apps', network: 'Find network devices', import: 'Import a scan' };
   $('#discovery-find-title').textContent = titles[method];
   setDiscoveryStep('find', focus);
-  setDiscoveryStatus('');
+  if (discoveryState.authRequired) showDiscoveryAuth(); else setDiscoveryStatus('');
 }
 
 function showDiscoveryChooser() {
@@ -882,12 +883,12 @@ function showDiscoveryChooser() {
   discoveryState.snapshot = null;
   discoveryState.reviewCache.clear();
   setDiscoveryStep('choose', true);
-  $('#discovery-summary').textContent = 'Choose a method to begin.';
-  setDiscoveryStatus('');
+  if (discoveryState.authRequired) showDiscoveryAuth(); else setDiscoveryStatus('');
 }
 
 function invalidateDiscoveryIfStale() {
   if (!discoveryState || !$('#discovery-dialog').open || projectGuardCurrent(discoveryState.guard, project)) return;
+  if (discoveryState.applying) return;
   discoveryState.controller?.abort();
   discoveryState.requestToken = Symbol('stale-project');
   discoveryState.pendingNmapFile = null;
@@ -971,16 +972,21 @@ function hideDiscoveryAuth(clear = true) {
   if (clear) $('#discovery-api-token').value = '';
 }
 
-function requestDiscoveryUnlock(request) {
-  if (!discoveryRequestCurrent(request)) return;
-  if (discoveryState.snapshot && discoveryState.statusBeforeAuth === null) discoveryState.statusBeforeAuth = $('#discovery-status').textContent;
-  if (!discoveryState.unlocking) $('#discovery-unlock').disabled = false;
+function showDiscoveryAuth(focus = false) {
   $('#discovery-source').disabled = true;
   $('#discovery-scan').disabled = true;
   $('#discovery-network-start').disabled = true;
   $('#discovery-auth').hidden = false;
   setDiscoveryStatus('Access token required. Enter the Atlas server token and choose Unlock.', true);
-  $('#discovery-api-token').focus();
+  if (focus) $('#discovery-api-token').focus();
+}
+
+function requestDiscoveryUnlock(request) {
+  if (!discoveryRequestCurrent(request)) return;
+  discoveryState.authRequired = true;
+  if (discoveryState.snapshot && discoveryState.statusBeforeAuth === null) discoveryState.statusBeforeAuth = $('#discovery-status').textContent;
+  if (!discoveryState.unlocking) $('#discovery-unlock').disabled = false;
+  showDiscoveryAuth(true);
 }
 
 function setNetworkScanning(active, request = null) {
@@ -1031,12 +1037,13 @@ async function loadNmapStatus(expectedState = discoveryState) {
   try {
     const response = await discoveryFetch('/api/discovery/nmap/status', { signal: controller.signal }, request.apiToken);
     if (response.status === 401) {
-      if (metadataRequestCurrent(request, 'statusController') && state.requestToken === request.actionToken) {
+      if (metadataRequestCurrent(request, 'statusController')) {
         state.pendingAuthToken = state.requestToken;
         requestDiscoveryUnlock({ state, token: state.requestToken, controller: state.controller });
       }
       return false;
     }
+    if (response.status === 403) throw new Error('Discovery access is blocked. Add this browser hostname or IP to ATLAS_ALLOWED_HOSTS.');
     if (!response.ok) throw new Error(`Nmap status could not be loaded (${response.status}).`);
     const value = await boundedResponseJSON(response);
     if (!value || Object.keys(value).length !== 4 || typeof value.available !== 'boolean' || !Array.isArray(value.allowedCidrs)
@@ -1054,10 +1061,12 @@ async function loadNmapStatus(expectedState = discoveryState) {
   } catch (error) {
     if (error.name === 'AbortError' || !metadataRequestCurrent(request, 'statusController')) return false;
     $('#discovery-network-start').disabled = true;
-    $('#discovery-network-badge').textContent = 'Setup needed';
+    const blocked = error.message.startsWith('Discovery access is blocked.');
+    $('#discovery-network-badge').textContent = blocked ? 'Blocked' : 'Setup needed';
     $('#discovery-network-help').textContent = error.message;
     $('#discovery-network-ready').hidden = true;
-    $('#discovery-network-setup').hidden = false;
+    $('#discovery-network-setup').hidden = blocked;
+    if (blocked) setDiscoveryStatus(error.message, true);
     return false;
   } finally {
     if (metadataRequestCurrent(request, 'statusController')) state.statusController = null;
@@ -1101,12 +1110,13 @@ async function loadDiscoverySources(preserveStatus = false, expectedState = disc
   try {
     const response = await discoveryFetch('/api/discovery/sources', { signal: controller.signal }, request.apiToken);
     if (response.status === 401) {
-      if (metadataRequestCurrent(request, 'sourcesController') && state.requestToken === request.actionToken) {
+      if (metadataRequestCurrent(request, 'sourcesController')) {
         state.pendingAuthToken = state.requestToken;
         requestDiscoveryUnlock({ state, token: state.requestToken, controller: state.controller });
       }
       return false;
     }
+    if (response.status === 403) throw new Error('Discovery access is blocked. Add this browser hostname or IP to ATLAS_ALLOWED_HOSTS.');
     if (!response.ok) throw new Error(`Collectors could not be loaded (${response.status}).`);
     const sources = await boundedResponseJSON(response);
     if (!Array.isArray(sources) || sources.length > 16 || sources.some(source => !source || Object.keys(source).length !== 2 || typeof source.id !== 'string' || typeof source.name !== 'string')) throw new Error('The server returned an invalid collector list.');
@@ -1117,8 +1127,13 @@ async function loadDiscoverySources(preserveStatus = false, expectedState = disc
   } catch (error) {
     if (error.name === 'AbortError' || !metadataRequestCurrent(request, 'sourcesController')) return false;
     const updateStatus = !preserveStatus && state.requestToken === request.actionToken;
-    fillDiscoverySources([], updateStatus);
-    if (updateStatus && state.method === 'docker') setDiscoveryStatus('Docker hosts could not be reached. Check the collector setup and try again.', true, error.message);
+    const blocked = error.message.startsWith('Discovery access is blocked.');
+    fillDiscoverySources([], updateStatus && !blocked);
+    if (blocked) {
+      $('#discovery-docker-badge').textContent = 'Blocked';
+      $('#discovery-docker-setup').hidden = true;
+      setDiscoveryStatus(error.message, true);
+    } else if (updateStatus && state.method === 'docker') setDiscoveryStatus('Docker hosts could not be reached. Check the collector setup and try again.', true, error.message);
     return false;
   } finally {
     if (metadataRequestCurrent(request, 'sourcesController')) state.sourcesController = null;
@@ -1136,7 +1151,7 @@ function discoveryDestination() {
   return value && value !== '__new' ? project.devices.find(device => device.id === value) : null;
 }
 
-function updateDiscoveryDestination(resetActions = false) {
+function updateDiscoveryDestination(resetActions = false, preferredGroup = '') {
   if (!discoveryState?.snapshot) return;
   const deviceValue = $('#discovery-device').value;
   const newDevice = deviceValue === '__new';
@@ -1145,11 +1160,10 @@ function updateDiscoveryDestination(resetActions = false) {
   $('#discovery-group-field').hidden = false;
   const group = $('#discovery-group');
   if (device) {
-    const previous = resetActions ? '' : group.value;
     group.replaceChildren(new Option('New group · Discovered services', '__new'));
     for (const item of device.groups) group.add(new Option(item.name, item.id));
     const suggested = suggestDiscoveryGroup(device);
-    group.value = [...group.options].some(option => option.value === previous) ? previous : (suggested || '__new');
+    group.value = [...group.options].some(option => option.value === preferredGroup) ? preferredGroup : (suggested || '__new');
   } else {
     group.replaceChildren(new Option('New group · Discovered services', '__new'));
   }
@@ -1322,6 +1336,11 @@ function saveDiscoveryReview() {
 function showDiscoverySnapshot(value, message, restore = true) {
   validateDiscoverySnapshot(value);
   if (restore) saveDiscoveryReview();
+  if (!value.findings.length) {
+    setDiscoveryStep('find', true);
+    setDiscoveryStatus('No Docker apps were found. Check the selected host or snapshot, then try again.', true);
+    return;
+  }
   discoveryState.snapshot = structuredClone(value);
   const cached = restore ? discoveryState.reviewCache.get(value.source.id) : null;
   discoveryState.choices = cached?.choices || new Map(value.findings.map(item => [item.key, { selected: false, serviceId: undefined }]));
@@ -1351,12 +1370,7 @@ function showDiscoverySnapshot(value, message, restore = true) {
   device.value = cached?.device && [...device.options].some(option => option.value === cached.device) ? cached.device : (suggested || '__new');
   $('#discovery-new-device').value = cached?.deviceName || value.source.name;
   $('#discovery-new-group').value = cached?.groupName || 'Discovered services';
-  updateDiscoveryDestination(false);
-  if (cached?.group && [...$('#discovery-group').options].some(option => option.value === cached.group)) {
-    $('#discovery-group').value = cached.group;
-    $('#discovery-new-group-field').hidden = cached.group !== '__new';
-  }
-  $('#discovery-group-description').textContent = `· ${$('#discovery-group').selectedOptions[0]?.textContent || 'New group'}`;
+  updateDiscoveryDestination(false, cached?.group);
   setDiscoveryStatus(message);
 }
 
@@ -1434,7 +1448,9 @@ async function scanNmapNetwork(retry = null) {
   }
   const input = retry || currentNetworkRequest();
   if (!input.targets.trim()) {
-    setDiscoveryStatus('Enter an IPv4 address or CIDR first.', true);
+    $('#discovery-targets').setAttribute('aria-invalid', 'true');
+    $('#discovery-targets').focus();
+    setDiscoveryStatus('Enter a device IP address or network range.', true);
     return false;
   }
   const request = beginDiscoveryRequest('Finding devices… This can take up to two minutes.', true);
@@ -1520,7 +1536,7 @@ function openDiscovery(opener) {
   discoveryState?.controller?.abort();
   discoveryState?.sourcesController?.abort();
   discoveryState?.statusController?.abort();
-  discoveryState = { guard: captureProjectGuard(project), opener, step: 'choose', method: null, sources: [], bundle: null, reviewCache: new Map(), pendingDockerSource: null, pendingNmapFile: null, pendingNetworkScan: null, pendingAuthToken: null, statusBeforeAuth: null, snapshot: null, choices: new Map(), plan: null, controller: null, sourcesController: null, statusController: null, activeNetworkToken: null, requestToken: null, stale: false, query: '', page: 0 };
+  discoveryState = { guard: captureProjectGuard(project), opener, step: 'choose', method: null, sources: [], bundle: null, reviewCache: new Map(), pendingDockerSource: null, pendingNmapFile: null, pendingNetworkScan: null, pendingAuthToken: null, statusBeforeAuth: null, snapshot: null, choices: new Map(), plan: null, controller: null, sourcesController: null, statusController: null, activeNetworkToken: null, requestToken: null, stale: false, applying: false, authRequired: false, query: '', page: 0 };
   $('#discovery-source').replaceChildren(new Option('Loading sources…', ''));
   $('#discovery-device').replaceChildren(new Option('Choose a device…', ''));
   $('#discovery-findings').replaceChildren();
@@ -1539,10 +1555,12 @@ function openDiscovery(opener) {
   $('#discovery-ports').value = '';
   $('#discovery-custom-ports').hidden = true;
   $('#discovery-detect-services').checked = true;
-  $('#discovery-scope').value = 'Home network';
-  $('#discovery-import-scope').value = 'Home network';
   $('#discovery-docker-badge').textContent = 'Checking';
   $('#discovery-network-badge').textContent = 'Checking';
+  $('#discovery-docker-ready').hidden = true;
+  $('#discovery-docker-setup').hidden = true;
+  $('#discovery-network-ready').hidden = true;
+  $('#discovery-network-setup').hidden = true;
   setNetworkScanning(false);
   $('#discovery-dialog').showModal();
   setDiscoveryStep('choose');
@@ -1580,6 +1598,7 @@ async function unlockDiscoverySources() {
       const actionToken = state.requestToken;
       const ready = await refreshDiscoveryMetadata(state);
       if (ready && discoveryState === state && state.requestToken === actionToken) {
+        state.authRequired = false;
         hideDiscoveryAuth();
         if (!pendingDocker && !pendingFile && !pendingScan) setDiscoveryStatus(hadReview && statusBeforeAuth ? statusBeforeAuth : 'Discovery is ready.');
         state.statusBeforeAuth = null;
@@ -1627,6 +1646,7 @@ $('#discovery-import-scope').addEventListener('change', () => {
 });
 for (const id of ['discovery-targets', 'discovery-port-preset', 'discovery-ports', 'discovery-detect-services']) $(`#${id}`).addEventListener('input', () => {
   if (!discoveryState) return;
+  if (id === 'discovery-targets') $('#discovery-targets').removeAttribute('aria-invalid');
   if (id === 'discovery-port-preset') $('#discovery-custom-ports').hidden = $('#discovery-port-preset').value !== 'custom';
   discoveryState.pendingNetworkScan = null;
   beginDiscoveryRequest('Scan settings changed. Choose Find devices to start.', true);
@@ -1721,7 +1741,10 @@ $('#discovery-clear').addEventListener('click', () => {
 $('#discovery-apply').addEventListener('click', () => {
   const state = discoveryState;
   if (!state?.plan || !projectGuardCurrent(state.guard, project)) return invalidateDiscoveryIfStale();
-  if (change(candidate => applyDiscoveryPlan(candidate, state.plan))) {
+  let applied = false;
+  state.applying = true;
+  try { applied = change(candidate => applyDiscoveryPlan(candidate, state.plan)); } finally { state.applying = false; }
+  if (applied) {
     if (state.snapshot.format === 'homelab-atlas.nmap-discovery') {
       state.guard = captureProjectGuard(project);
       state.stale = false;

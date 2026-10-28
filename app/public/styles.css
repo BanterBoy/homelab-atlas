@@ -354,6 +354,7 @@ dialog header button { width: 32px; padding: 0; }
 .discovery-network-scan small { color: var(--muted); }
 .discovery-host-meta { margin: -5px 2px 10px; color: var(--muted); font-size: 12px; }
 .discovery-status { min-height: 20px; margin: 10px 2px; color: var(--muted); font-size: 12px; }
+.discovery-status:empty { display: none; }
 .discovery-status.error, .discovery-summary.error { color: #fca5a5; }
 .discovery-empty { display: grid; justify-items: center; gap: 5px; padding: 34px 20px; border: 1px dashed #46504f; border-radius: 8px; color: var(--muted); text-align: center; }
 .discovery-empty[hidden], #discovery-results[hidden] { display: none; }
@@ -432,8 +433,6 @@ dialog header button { width: 32px; padding: 0; }
 .discovery-technical p { margin: 6px 0 0; overflow-wrap: anywhere; }
 .discovery-error-details { margin: 8px 2px; color: var(--muted); font-size: 11px; }
 .discovery-error-details pre { max-height: 100px; overflow: auto; white-space: pre-wrap; }
-.discovery-technical { grid-column: 1 / -1; color: var(--muted); font-size: 11px; }
-.discovery-technical p { margin: 6px 0 0; overflow-wrap: anywhere; }
 #discovery-dialog footer { position: sticky; bottom: 0; z-index: 2; background: var(--panel); }
 @media (prefers-reduced-motion: reduce) {
   #discovery-dialog *, #discovery-dialog *::before, #discovery-dialog *::after { scroll-behavior: auto !important; transition: none !important; }
