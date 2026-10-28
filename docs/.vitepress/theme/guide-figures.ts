@@ -75,7 +75,7 @@ export const guideFigures = {
     marks: [
       { rect: { x: 515, y: 751.328125, width: 844, height: 32.796875 }, circle: [456, 768], target: [515, 768], caption: 'Start with one device IP from the router, or enter an allowed network range.' },
       { rect: { x: 515, y: 865.25, width: 844, height: 38.59375 }, circle: [1418, 885], target: [1359, 885], caption: 'The Homelab app ports preset is ready by default. Open Advanced settings for other ports, service identification, or the network name.' },
-      { rect: { x: 515, y: 913.84375, width: 844, height: 32 }, circle: [456, 930], target: [515, 930], caption: 'Find devices starts the bounded scan. Results remain unchanged until Review.' },
+      { rect: { x: 515, y: 913.84375, width: 844, height: 32 }, circle: [456, 930], target: [515, 930], caption: 'Find devices starts the bounded scan. Nothing is added until you review the findings and choose Add to diagram.' },
     ],
   },
   'discovery-review': {
@@ -116,7 +116,7 @@ export const guideFigures = {
     crop: { x: 477, y: 415.046875, width: 920, height: 752.890625 },
     ...dialogStyle,
     marks: [
-      { rect: { x: 515, y: 708.40625, width: 844, height: 148.96875 }, circle: [456, 783], target: [515, 783], caption: 'Generate the value yourself, then save only ATLAS_COLLECTOR_TOKEN in .env beside the Atlas Compose file on the Docker host.' },
+      { rect: { x: 515, y: 708.40625, width: 844, height: 148.96875 }, circle: [456, 783], target: [515, 783], caption: 'Generate the value yourself. Add ATLAS_COLLECTOR_TOKEN with that value to .env beside the Atlas Compose file.' },
       { rect: { x: 515, y: 867.375, width: 844, height: 129.96875 }, circle: [1418, 932], target: [1359, 932], caption: 'Use the command for a source checkout or the released Compose file. Atlas never runs these commands for you.' },
       { rect: { x: 515, y: 1036.9375, width: 103.109375, height: 32 }, circle: [456, 1053], target: [515, 1053], caption: 'Check setup only repeats the readiness check. It does not create tokens or enable the collector.' },
     ],

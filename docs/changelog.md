@@ -6,13 +6,14 @@ This file lists the notable changes in each Homelab Atlas release.
 
 ### Added
 
-- Added a beginner discovery guide that walks through choosing a method, finding candidates, reviewing results, and applying selected changes.
+- Added a guided Choose, Find, and Review discovery flow with method-specific setup, a Homelab ports preset, and collapsed advanced scan options.
+- Added unchecked findings, **Select all shown** for the current filtered page, **Clear selection** for the current device, and retained choices while reviewing multiple devices.
 - Added focused guide figures for Docker readiness, network scanning, and both review paths.
 
 ### Changed
 
 - Discovery readiness failures now stay with their method and offer an in-place retry without misreporting missing setup.
-- The repository and source ZIP now use the consolidated `app/`, `deploy/`, and `tools/` layout.
+- Repository source is consolidated under `app/`, `deploy/`, and `tools/`; the source ZIP uses `app/` and `deploy/` and omits development tools.
 - Current downloads, image tags, Compose defaults, and documentation now point to v0.10.0.
 
 ## [0.9.0] - 2026-10-28

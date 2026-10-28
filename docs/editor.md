@@ -28,15 +28,15 @@ The duplicate button copies a device and gives the copy new internal IDs without
 
 ## Discover devices
 
-Choose **Discover devices** to review an optional Docker collector, import a sanitized Docker snapshot or Nmap XML, or run a bounded Nmap TCP scan. Opening the dialog never scans. Docker and live Nmap discovery each require their explicit scan button; XML import alone runs no scanner or network probe.
+Choose **Discover devices**, then choose Docker apps, Network devices, or a saved scan. Opening discovery checks readiness but never scans. The Find step runs only after **Find Docker apps** or **Find devices**; importing a snapshot or XML runs no scanner or network probe.
 
-For Nmap, enter a stable **Network name**, then import XML or enter allowed IPv4 targets and choose **Scan network**. Optional custom TCP ports and service identification apply only to a live scan. Select a host in multi-host results. The scope, host addresses, names, vendor, scan time, and ports not imported appear in the review. Reuse the same network name for later scans.
+For live Nmap, enter allowed IPv4 targets and choose **Find devices**. **Advanced settings** contains the optional network name, port preset, custom TCP ports, and service identification. Select a device in multi-device results. The scope, host addresses, names, vendor, scan time, and ports not imported appear in Review. Reuse the same network name for later scans.
 
 Choose a destination device and service group. Every finding starts unchecked. Docker and Nmap endpoint rows can add a service or link to one already on the destination device. Nmap host rows add a host card or link the host identity to an existing card. Ping-only hosts therefore work without a fake service. Suggestions never check a row automatically.
 
 Linking keeps existing metadata and layout unchanged. Docker additions use the discovered name, logo match, and replica count. Nmap endpoint names include the detected product or service plus protocol and port. New Nmap cards persist bounded canonical IP addresses as hardware facts. Missing findings never delete existing services.
 
-The review summary shows additions, links, new cards/groups, and card-height changes. **Apply selected** is disabled for an empty or invalid review. One application creates one undo step. A Nmap file stays open after applying one host so another can be reviewed. Canceling, pressing `Escape`, scanning, or importing without applying does not change the project. See [Discovery](/discovery) for setup, limits, and security boundaries.
+The review summary shows additions, links, new cards/groups, and card-height changes. **Add to diagram** is disabled for an empty or invalid review. Adding the current device creates one undo step, and Nmap results stay open so another device can be reviewed. Canceling, pressing `Escape`, finding, or importing without choosing **Add to diagram** does not change the project. See [Discovery](/discovery) for setup, limits, and security boundaries.
 
 ## Add service tiles
 

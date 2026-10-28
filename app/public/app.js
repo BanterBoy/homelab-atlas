@@ -1145,6 +1145,7 @@ async function loadDiscoverySources(preserveStatus = false, expectedState = disc
     $('#discovery-docker-setup').hidden = true;
     $('#discovery-docker-error p').textContent = error.message;
     $('#discovery-docker-error').hidden = false;
+    if (!preserveStatus && state.requestToken === request.actionToken && state.method === 'docker' && state.step === 'find' && !state.authRequired) setDiscoveryStatus('');
     return false;
   } finally {
     if (metadataRequestCurrent(request, 'sourcesController')) state.sourcesController = null;
