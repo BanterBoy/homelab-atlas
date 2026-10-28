@@ -115,7 +115,7 @@ ATLAS_ALLOWED_HOSTS=localhost,127.0.0.1,::1,atlas.lan
 ATLAS_API_TOKEN=replace-with-at-least-32-random-characters
 ```
 
-Generate the API token with `openssl rand -hex 32`. Replace `atlas.lan` with the exact hostname or IP used in the browser. Atlas prompts for this token after an API `401` and keeps it in memory only. Use a trusted LAN or a TLS reverse proxy.
+Generate the API token with `openssl rand -hex 32`. Replace `atlas.lan` with the exact hostname or IP used in the browser. After an API `401`, Atlas shows a masked token field; enter the token and choose **Unlock**. It stays in memory only. Use a trusted LAN or a TLS reverse proxy.
 
 ## First diagram
 

@@ -49,7 +49,23 @@ Applying a review is one undoable change. Existing card positions and widths sta
 
 ## Import a snapshot
 
-Run the collector once and redirect its sanitized JSON output to a file outside the repository:
+Docker users can run the published collector once and redirect its sanitized JSON output to a file outside the repository:
+
+```sh
+docker run --rm \
+  --user 0:0 \
+  --read-only \
+  --network none \
+  --cap-drop ALL \
+  --security-opt no-new-privileges=true \
+  -e ATLAS_HOST_ID=nas \
+  -e 'ATLAS_HOST_NAME=NAS Docker' \
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  ghcr.io/aiden0rchad/homelab-atlas:0.6.0 collect \
+  > ../nas-docker-snapshot.json
+```
+
+The one-off container runs as root only to reach the read-only Docker socket. It has no network, capabilities, or writable container filesystem. If you are developing from source, the equivalent command is:
 
 ```sh
 ATLAS_HOST_ID=nas ATLAS_HOST_NAME="NAS Docker" go run . collect > ../nas-docker-snapshot.json

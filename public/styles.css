@@ -332,7 +332,7 @@ dialog header button { width: 32px; padding: 0; }
 #discovery-dialog form { display: flex; max-height: calc(100vh - 42px); flex-direction: column; }
 #discovery-dialog [hidden] { display: none; }
 #discovery-dialog header, #discovery-dialog footer { flex: none; }
-#discovery-dialog footer { padding-top: 14px; border-top: 1px solid var(--line); }
+#discovery-dialog footer { display: grid; align-items: stretch; justify-content: stretch; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
 .discovery-body { min-height: 0; overflow: auto; padding: 0 2px 4px; }
 .discovery-body > .help { margin: 0 0 14px; }
 .discovery-body a { color: #68d5c9; }
@@ -372,7 +372,8 @@ dialog header button { width: 32px; padding: 0; }
 .discovery-target { min-width: 0; margin: 0; }
 .discovery-target span { overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .discovery-target select { width: 100%; }
-.discovery-summary { min-height: 40px; margin-top: 10px; padding: 10px 12px; border-radius: 7px; background: #162221; color: #b9d9d5; font-size: 12px; }
+.discovery-summary { min-height: 34px; max-height: 72px; overflow: auto; padding: 8px 10px; border-radius: 7px; background: #162221; color: #b9d9d5; font-size: 12px; }
+.discovery-footer-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .logo-preview { overflow: auto; }
 .upload-preview-surface { display: grid; place-items: center; min-height: 180px; border: 1px solid var(--line); border-radius: 8px; background-color: #c7cecc; background-image: linear-gradient(45deg, #aeb7b4 25%, transparent 25%), linear-gradient(-45deg, #aeb7b4 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #aeb7b4 75%), linear-gradient(-45deg, transparent 75%, #aeb7b4 75%); background-position: 0 0, 0 8px, 8px -8px, -8px 0; background-size: 16px 16px; }
 .upload-preview-surface.preview-light { background: #f8fafc; }

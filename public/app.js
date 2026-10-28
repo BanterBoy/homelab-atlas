@@ -864,10 +864,16 @@ function discoveryRequestCurrent(request) {
     && projectGuardCurrent(request.state.guard, project) && $('#discovery-dialog').open;
 }
 
+function hideDiscoveryAuth() {
+  $('#discovery-auth').hidden = true;
+  $('#discovery-api-token').value = '';
+}
+
 function requestDiscoveryUnlock(request) {
   if (!discoveryRequestCurrent(request)) return;
   $('#discovery-source').disabled = true;
   $('#discovery-scan').disabled = true;
+  $('#discovery-auth').hidden = false;
   setDiscoveryStatus('Authentication required. Enter the API token and choose Unlock.', true);
   $('#discovery-api-token').focus();
 }
@@ -901,10 +907,12 @@ async function loadDiscoverySources() {
     const sources = await response.json();
     if (!Array.isArray(sources) || sources.length > 16 || sources.some(source => !source || Object.keys(source).length !== 2 || typeof source.id !== 'string' || typeof source.name !== 'string')) throw new Error('The server returned an invalid collector list.');
     if (!discoveryRequestCurrent(request)) return;
+    hideDiscoveryAuth();
     discoveryState.sources = sources;
     fillDiscoverySources(sources);
   } catch (error) {
     if (error.name === 'AbortError' || !discoveryRequestCurrent(request)) return;
+    hideDiscoveryAuth();
     fillDiscoverySources([]);
     setDiscoveryStatus(error.message, true);
   }
@@ -1100,7 +1108,7 @@ async function scanDiscoverySource() {
     validateDiscoverySnapshot(value);
     if (value.source.id !== sourceId) throw new Error('The collector returned a different source identity.');
     if (!discoveryRequestCurrent(request)) return;
-    showDiscoverySnapshot(value, `Scan complete: ${value.findings.length} findings. Nothing is selected.`);
+    showDiscoverySnapshot(value, `Scan complete: ${value.findings.length} findings.`);
   } catch (error) {
     if (error.name === 'AbortError' || !discoveryRequestCurrent(request)) return;
     setDiscoveryStatus(error.message, true);
@@ -1114,7 +1122,7 @@ async function importDiscoverySnapshot(file) {
     if (file.size > 2_000_000) throw new Error('Snapshot is larger than 2 MB.');
     const value = parseDiscoverySnapshot(await file.text());
     if (!discoveryRequestCurrent(request)) return;
-    showDiscoverySnapshot(value, `Snapshot loaded: ${value.findings.length} findings. Nothing is selected.`);
+    showDiscoverySnapshot(value, `Snapshot loaded: ${value.findings.length} findings.`);
   } catch (error) {
     if (error.name === 'AbortError' || !discoveryRequestCurrent(request)) return;
     setDiscoveryStatus(error.message, true);
@@ -1131,7 +1139,7 @@ function openDiscovery(opener) {
   $('#discovery-findings').replaceChildren();
   $('#discovery-summary').textContent = '';
   $('#discovery-search').value = '';
-  $('#discovery-api-token').value = '';
+  hideDiscoveryAuth();
   $('#discovery-range').textContent = '';
   $('#discovery-previous').disabled = true;
   $('#discovery-next').disabled = true;
@@ -1204,7 +1212,7 @@ $('#discovery-dialog').addEventListener('close', () => {
   state?.controller?.abort();
   discoveryState = null;
   $('#discovery-file').value = '';
-  $('#discovery-api-token').value = '';
+  hideDiscoveryAuth();
   if (state?.opener?.isConnected) state.opener.focus();
 });
 
