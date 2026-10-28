@@ -62,11 +62,12 @@
 .guide-figure__svg { display: block; width: 100%; height: auto }
 .guide-figure__scroller.is-expanded .guide-figure__svg { width: var(--guide-natural-width); max-width: none }
 .guide-figure__surface { fill: #071018 }
-.guide-figure__mark { fill: rgb(85 214 201 / 8%); stroke: #55d6c9; stroke-width: 5; vector-effect: non-scaling-stroke }
-.guide-figure__arrow { stroke: #55d6c9; stroke-width: 5; vector-effect: non-scaling-stroke }
-.guide-figure marker path { fill: #55d6c9 }
-.guide-figure__number { fill: #071018; stroke: #55d6c9; stroke-width: 5; vector-effect: non-scaling-stroke }
-.guide-figure__number-text { fill: #fff; font: 700 22px ui-sans-serif, system-ui, sans-serif; text-anchor: middle; dominant-baseline: central }
+.guide-figure__mark { fill: rgb(85 214 201 / 5%); stroke: #55d6c9; stroke-width: 2; vector-effect: non-scaling-stroke }
+.guide-figure__arrow { stroke: #55d6c9; stroke-width: 2; vector-effect: non-scaling-stroke }
+.guide-figure__arrow-head { fill: #55d6c9 }
+.guide-figure__arrow-head--accent { fill: #f5b942 }
+.guide-figure__number { fill: #071018; stroke: #55d6c9; stroke-width: 2; vector-effect: non-scaling-stroke }
+.guide-figure__number-text { fill: #fff; font: 700 var(--guide-number-font-size) ui-sans-serif, system-ui, sans-serif; text-anchor: middle; dominant-baseline: central }
 .guide-figure .is-accent .guide-figure__mark, .guide-figure .is-accent .guide-figure__number { stroke: #f5b942 }
 .guide-figure .is-accent .guide-figure__arrow { stroke: #f5b942 }
 .guide-figure__captions { margin: 0 !important; padding: 1rem 1.1rem 1rem 3.2rem !important }

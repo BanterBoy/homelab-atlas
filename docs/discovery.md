@@ -8,7 +8,7 @@ Discovery is optional. Atlas needs no account or AI service, and manual diagrams
 |---|---|
 | Manual diagram | Running Atlas and a browser. No scanner or Docker socket. |
 | Docker | Optional collector with access to the intended Docker daemon, matching collector token of at least 32 characters, and a server-configured source. Snapshot import needs no live daemon. The collector lists that daemon, not every LAN host. |
-| Live Nmap | Nmap and its detection data on the Atlas server, plus the opt-in source build. The server or container needs IPv4 route and firewall reachability, and targets must be inside configured CIDRs. The fixed TCP-connect scan needs no root, privileged container, or extra capability. |
+| Live Nmap | Nmap and its detection data installed on the Atlas server. Docker deployments use the opt-in source build. The server or container needs IPv4 route and firewall reachability, and targets must be inside configured CIDRs. The fixed TCP-connect scan needs no root, privileged container, or extra capability. |
 | Nmap XML | A complete supported XML file selected by the user. Atlas needs no installed scanner. Explicitly open TCP/UDP and IPv4/IPv6 results use the same review. |
 
 ## Network scan
@@ -118,6 +118,8 @@ Findings are sorted by name and shown 50 at a time. Search checks names, image r
 Applying a review is one undoable change. Existing card positions and widths stay fixed. If an added service needs card height that would collide with another card, Atlas asks you to make room or use a new card. A new card is placed below existing cards.
 
 <GuideFigure name="docker-review" />
+
+This fictional example was imported from a Docker snapshot, not scanned from a live host.
 
 ## Import a snapshot
 

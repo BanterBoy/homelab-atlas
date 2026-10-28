@@ -32,7 +32,7 @@ Set `ATLAS_COLLECTOR_TOKEN` to the same value of at least 32 characters for the 
 
 ### What can Docker discovery see?
 
-Only inventory from the Docker daemon configured for that collector—not every LAN host, Kubernetes, or Podman automatically. A remote collector or [Hawser Standard mode](/discovery#hawser-standard-mode) can point at another daemon. Hawser Edge is not supported, and Atlas never needs an exposed unauthenticated Docker API.
+Only inventory from the Docker daemon configured for that collector is listed. Other LAN hosts, Kubernetes, and Podman are not discovered automatically. A remote collector or [Hawser Standard mode](/discovery#hawser-standard-mode) can point at another daemon. Hawser Edge is not supported, and Atlas never needs an exposed unauthenticated Docker API.
 
 ### Are the API and collector tokens interchangeable? {#api-vs-collector-token}
 
@@ -42,7 +42,7 @@ No. `ATLAS_API_TOKEN` unlocks the editor server's discovery API. `ATLAS_COLLECTO
 
 - `401`: enter the server's separate `ATLAS_API_TOKEN` and choose **Unlock**.
 - `403`: add the exact browser hostname or IP to `ATLAS_ALLOWED_HOSTS`; a non-loopback host also requires an API token of at least 32 characters.
-- `502`: check collector reachability, token agreement, TLS, fixed source URL, socket access, and collector logs.
+- `502`: for Docker, check collector reachability, token agreement, TLS, fixed source URL, socket access, and collector logs. For Nmap, narrow the targets or ports, then check Atlas's Nmap installation, detection data, and displayed scan error.
 
 See the [troubleshooting table](/troubleshooting).
 
@@ -56,11 +56,11 @@ Blank ports means Nmap's common 100 TCP ports. Custom ports and ranges may expan
 
 ### Why was my network target rejected?
 
-Use a numeric IPv4 address or canonical IPv4 CIDR—not a hostname or URL—inside `ATLAS_NMAP_ALLOWED_CIDRS`. Defaults are the RFC 1918 ranges. A scan accepts at most 16 terms and 256 expanded addresses. See [Network scan](/discovery#network-scan).
+Use a numeric IPv4 address or canonical IPv4 CIDR, not a hostname or URL, inside `ATLAS_NMAP_ALLOWED_CIDRS`. Defaults are the RFC 1918 ranges. A scan accepts at most 16 terms and 256 expanded addresses. See [Network scan](/discovery#network-scan).
 
 ### Why are hosts or endpoints missing after a slow scan?
 
-One scan may run at a time, with 120 seconds total, 15 seconds per ordinary host, or 45 seconds per host with service identification. A timeout can omit a host and its endpoints. Narrow the targets or ports, or import separately produced complete XML. Atlas does not promise partial results or retry with a broader brute-force scan.
+One scan may run at a time, with 120 seconds total, 15 seconds per ordinary host, or 45 seconds per host with service identification. A timeout can omit a host and its endpoints. Narrow the targets or ports, or import separately produced complete XML.
 
 ### Why did a device appear again after its address changed?
 
