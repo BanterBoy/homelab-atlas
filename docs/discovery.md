@@ -30,6 +30,8 @@ The editor and collector use the same image but have separate privileges:
 - `collector` has a read-only `/var/run/docker.sock` mount, no published port, an internal-only network, no capabilities, a read-only filesystem, and `no-new-privileges`.
 - The collector refuses to start unless `ATLAS_COLLECTOR_TOKEN` is at least 32 characters.
 
+The read-only socket mount does not restrict Docker API operations, so treat the collector as privileged.
+
 Treat the token like a password. Do not commit `.env`; it is ignored by Git.
 
 ## Review findings

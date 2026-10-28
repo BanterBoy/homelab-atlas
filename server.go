@@ -84,6 +84,7 @@ func newAtlasServer(public fs.FS) (*atlasServer, error) {
 
 func loadStaticAssets(public fs.FS) (map[string]staticAsset, error) {
 	assets := make(map[string]staticAsset)
+	var writer *gzip.Writer
 	err := fs.WalkDir(public, ".", func(name string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -102,7 +103,11 @@ func loadStaticAssets(public fs.FS) (map[string]staticAsset, error) {
 		asset := staticAsset{contentType: contentType, raw: makeRepresentation(data)}
 		if compressible(contentType) {
 			var buffer bytes.Buffer
-			writer := gzip.NewWriter(&buffer)
+			if writer == nil {
+				writer = gzip.NewWriter(&buffer)
+			} else {
+				writer.Reset(&buffer)
+			}
 			if _, err := writer.Write(data); err != nil {
 				return err
 			}

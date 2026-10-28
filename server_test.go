@@ -31,46 +31,51 @@ func testAtlasServer(t *testing.T) *atlasServer {
 
 func TestStaticCompressionCachingAndHead(t *testing.T) {
 	server := testAtlasServer(t)
-	source, err := fs.ReadFile(embeddedFiles, "public/app.js")
-	if err != nil {
-		t.Fatal(err)
-	}
-	gzipped := request(server, http.MethodGet, "/app.js", nil, map[string]string{"Accept-Encoding": "gzip"})
-	if gzipped.Code != http.StatusOK || gzipped.Header().Get("Content-Encoding") != "gzip" || gzipped.Header().Get("Vary") != "Accept-Encoding" || gzipped.Header().Get("Cache-Control") != "no-cache" {
-		t.Fatalf("gzip response: status=%d headers=%v", gzipped.Code, gzipped.Header())
-	}
-	if gzipped.Body.Len() >= len(source) {
-		t.Fatalf("gzip did not reduce app.js: raw=%d gzip=%d", len(source), gzipped.Body.Len())
-	}
-	reader, err := gzip.NewReader(bytes.NewReader(gzipped.Body.Bytes()))
-	if err != nil {
-		t.Fatal(err)
-	}
-	decoded, err := io.ReadAll(reader)
-	if closeErr := reader.Close(); err == nil {
-		err = closeErr
-	}
-	if err != nil || !bytes.Equal(decoded, source) {
-		t.Fatalf("gzip did not decode to source: err=%v", err)
-	}
+	for _, name := range []string{"app.js", "styles.css"} {
+		t.Run(name, func(t *testing.T) {
+			source, err := fs.ReadFile(embeddedFiles, "public/"+name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			target := "/" + name
+			gzipped := request(server, http.MethodGet, target, nil, map[string]string{"Accept-Encoding": "gzip"})
+			if gzipped.Code != http.StatusOK || gzipped.Header().Get("Content-Encoding") != "gzip" || gzipped.Header().Get("Vary") != "Accept-Encoding" || gzipped.Header().Get("Cache-Control") != "no-cache" {
+				t.Fatalf("gzip response: status=%d headers=%v", gzipped.Code, gzipped.Header())
+			}
+			if gzipped.Body.Len() >= len(source) {
+				t.Fatalf("gzip did not reduce %s: raw=%d gzip=%d", name, len(source), gzipped.Body.Len())
+			}
+			reader, err := gzip.NewReader(bytes.NewReader(gzipped.Body.Bytes()))
+			if err != nil {
+				t.Fatal(err)
+			}
+			decoded, err := io.ReadAll(reader)
+			if closeErr := reader.Close(); err == nil {
+				err = closeErr
+			}
+			if err != nil || !bytes.Equal(decoded, source) {
+				t.Fatalf("gzip did not decode to source: err=%v", err)
+			}
 
-	identity := request(server, http.MethodGet, "/app.js", nil, map[string]string{"Accept-Encoding": "gzip;q=0, identity"})
-	if identity.Header().Get("Content-Encoding") != "" || !bytes.Equal(identity.Body.Bytes(), source) {
-		t.Fatal("q=0 did not select the identity representation")
-	}
-	if identity.Header().Get("ETag") == gzipped.Header().Get("ETag") {
-		t.Fatal("gzip and identity ETags match")
-	}
+			identity := request(server, http.MethodGet, target, nil, map[string]string{"Accept-Encoding": "gzip;q=0, identity"})
+			if identity.Header().Get("Content-Encoding") != "" || !bytes.Equal(identity.Body.Bytes(), source) {
+				t.Fatal("q=0 did not select the identity representation")
+			}
+			if identity.Header().Get("ETag") == gzipped.Header().Get("ETag") {
+				t.Fatal("gzip and identity ETags match")
+			}
 
-	conditional := request(server, http.MethodGet, "/app.js", nil, map[string]string{
-		"Accept-Encoding": "gzip", "If-None-Match": gzipped.Header().Get("ETag"),
-	})
-	if conditional.Code != http.StatusNotModified || conditional.Body.Len() != 0 || conditional.Header().Get("Content-Length") != "" {
-		t.Fatalf("conditional response: status=%d body=%d headers=%v", conditional.Code, conditional.Body.Len(), conditional.Header())
-	}
-	head := request(server, http.MethodHead, "/app.js", nil, map[string]string{"Accept-Encoding": "gzip"})
-	if head.Code != http.StatusOK || head.Body.Len() != 0 || head.Header().Get("Content-Encoding") != "gzip" || head.Header().Get("ETag") != gzipped.Header().Get("ETag") || head.Header().Get("Content-Length") != strconv.Itoa(gzipped.Body.Len()) {
-		t.Fatalf("HEAD response: status=%d body=%d headers=%v", head.Code, head.Body.Len(), head.Header())
+			conditional := request(server, http.MethodGet, target, nil, map[string]string{
+				"Accept-Encoding": "gzip", "If-None-Match": gzipped.Header().Get("ETag"),
+			})
+			if conditional.Code != http.StatusNotModified || conditional.Body.Len() != 0 || conditional.Header().Get("Content-Length") != "" {
+				t.Fatalf("conditional response: status=%d body=%d headers=%v", conditional.Code, conditional.Body.Len(), conditional.Header())
+			}
+			head := request(server, http.MethodHead, target, nil, map[string]string{"Accept-Encoding": "gzip"})
+			if head.Code != http.StatusOK || head.Body.Len() != 0 || head.Header().Get("Content-Encoding") != "gzip" || head.Header().Get("ETag") != gzipped.Header().Get("ETag") || head.Header().Get("Content-Length") != strconv.Itoa(gzipped.Body.Len()) {
+				t.Fatalf("HEAD response: status=%d body=%d headers=%v", head.Code, head.Body.Len(), head.Header())
+			}
+		})
 	}
 }
 
