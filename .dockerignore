@@ -11,6 +11,7 @@ docs
 /dist
 node_modules
 *.md
+!THIRD_PARTY_NOTICES.md
 server.py
 compose.yaml
 package-lock.json

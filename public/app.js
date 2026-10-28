@@ -914,14 +914,14 @@ function requestDiscoveryUnlock(request) {
   $('#discovery-api-token').focus();
 }
 
-function fillDiscoverySources(sources) {
+function fillDiscoverySources(sources, updateStatus = true) {
   const select = $('#discovery-source');
   select.replaceChildren();
   if (!sources.length) {
     select.add(new Option('No configured collectors', ''));
     select.disabled = true;
     $('#discovery-scan').disabled = true;
-    setDiscoveryStatus('No collector is configured. You can still import a sanitized snapshot or Nmap XML.');
+    if (updateStatus) setDiscoveryStatus('No collector is configured. You can still import a sanitized snapshot or Nmap XML.');
     return;
   }
   select.add(new Option('Choose a collector…', ''));
@@ -929,11 +929,11 @@ function fillDiscoverySources(sources) {
   if (sources.length === 1) select.value = sources[0].id;
   select.disabled = false;
   $('#discovery-scan').disabled = false;
-  setDiscoveryStatus(sources.length === 1 ? `${sources[0].name} is ready. Select Scan to start.` : 'Choose a collector and select Scan, or import a snapshot.');
+  if (updateStatus) setDiscoveryStatus(sources.length === 1 ? `${sources[0].name} is ready. Select Scan to start.` : 'Choose a collector and select Scan, or import a snapshot.');
 }
 
-async function loadDiscoverySources() {
-  const request = beginDiscoveryRequest('Loading configured collectors…');
+async function loadDiscoverySources(preserveStatus = false) {
+  const request = beginDiscoveryRequest(preserveStatus ? $('#discovery-status').textContent : 'Loading configured collectors…');
   $('#discovery-source').disabled = true;
   $('#discovery-scan').disabled = true;
   try {
@@ -945,12 +945,12 @@ async function loadDiscoverySources() {
     if (!discoveryRequestCurrent(request)) return;
     hideDiscoveryAuth();
     discoveryState.sources = sources;
-    fillDiscoverySources(sources);
+    fillDiscoverySources(sources, !preserveStatus);
   } catch (error) {
     if (error.name === 'AbortError' || !discoveryRequestCurrent(request)) return;
     hideDiscoveryAuth();
-    fillDiscoverySources([]);
-    setDiscoveryStatus(error.message, true);
+    fillDiscoverySources([], !preserveStatus);
+    if (!preserveStatus) setDiscoveryStatus(error.message, true);
   }
 }
 
@@ -1185,9 +1185,11 @@ async function importNmapXML(file) {
     if (!bundle.snapshots.length) {
       $('#discovery-empty').hidden = false;
       setDiscoveryStatus(`No usable up hosts. ${quantity(bundle.skippedHosts, 'host')} and ${quantity(bundle.skippedPorts, 'port')} were not imported.`);
+      loadDiscoverySources(true);
       return;
     }
     showDiscoverySnapshot(bundle.snapshots[0], `Nmap import loaded ${quantity(bundle.snapshots.length, 'host')}. ${quantity(bundle.skippedHosts, 'host')} and ${quantity(bundle.skippedPorts, 'port')} were not imported.`);
+    loadDiscoverySources(true);
   } catch (error) {
     if (error.name === 'AbortError' || !discoveryRequestCurrent(request)) return;
     discoveryState.pendingNmapFile = null;
