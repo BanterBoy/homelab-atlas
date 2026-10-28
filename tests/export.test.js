@@ -30,6 +30,14 @@ test('network literals are hidden without matching ordinary numbers', () => {
 
   assert.equal(redactExportText('Gateway (192.168.10.1/24)'), `Gateway (${HIDDEN_TEXT})`);
   assert.equal(redactExportText('IP 2001:db8::1.'), `IP ${HIDDEN_TEXT}.`);
+  for (const [value, expected] of [
+    ['IP ::...', `IP ${HIDDEN_TEXT}...`],
+    ['IP ::1...', `IP ${HIDDEN_TEXT}...`],
+    ['IP 2001:db8::1...', `IP ${HIDDEN_TEXT}...`],
+    ['IP ::1: details', `IP ${HIDDEN_TEXT}: details`],
+    ['IP 2001:db8::1: details', `IP ${HIDDEN_TEXT}: details`],
+  ]) assert.equal(redactExportText(value), expected, value);
+  assert.equal(redactExportText('IP 2001:db8::'), `IP ${HIDDEN_TEXT}`);
   assert.equal(redactExportText('11:22:33:44:55:66:77:88'), HIDDEN_TEXT);
   assert.equal(redactExportText('10.0.0.1/99'), `${HIDDEN_TEXT}/99`);
   assert.equal(redactExportText('2001:db8::1/129'), `${HIDDEN_TEXT}/129`);

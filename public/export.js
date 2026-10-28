@@ -77,8 +77,13 @@ function replaceValid(text, pattern, valid) {
 function replaceAddress(text, pattern, valid) {
   return text.replace(pattern, candidate => {
     if (valid(candidate)) return HIDDEN_TEXT;
-    const punctuation = candidate.endsWith('.') ? '.' : '';
-    const literal = punctuation ? candidate.slice(0, -1) : candidate;
+    let literal = candidate;
+    let punctuation = '';
+    while (/[.:]$/u.test(literal)) {
+      punctuation = literal.at(-1) + punctuation;
+      literal = literal.slice(0, -1);
+      if (valid(literal)) return `${HIDDEN_TEXT}${punctuation}`;
+    }
     const suffix = literal.match(/\/\d+$/u)?.[0] || '';
     const address = suffix ? literal.slice(0, -suffix.length) : literal;
     return valid(address) ? `${HIDDEN_TEXT}${suffix}${punctuation}` : candidate;
