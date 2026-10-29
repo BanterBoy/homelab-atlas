@@ -221,6 +221,26 @@ dialog header button { width: 34px; padding: 0; }
 .discovery-methods span { display: grid; } .discovery-methods small { color: var(--muted); font-weight: 400; }
 .discovery-methods i { grid-column: 2; color: var(--muted); font-size: 11px; font-style: normal; }
 .discovery-panel, .discovery-setup { margin-top: 12px; padding: 14px; border: 1px solid var(--line-soft); border-radius: 9px; background: #151a25; }
+.discovery-panel > :first-child, .discovery-wizard > :first-child { margin-top: 0; }
+.discovery-wizard { max-width: 700px; margin-inline: auto; }
+.setup-step-head { display: grid; gap: 3px; margin-bottom: 12px; }
+.setup-step-head > span { color: var(--muted); font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .05em; }
+.setup-step-head h4, .discovery-instruction h4, .discovery-section-title { margin: 0; }
+.setup-choices { display: grid; gap: 8px; margin: 14px 0; }
+.setup-choices label { display: flex; align-items: flex-start; gap: 9px; margin: 0; padding: 11px; border: 1px solid var(--line-soft); border-radius: 8px; cursor: pointer; }
+.setup-choices label:has(input:checked) { border-color: var(--accent); background: #1d2638; }
+.setup-choices input { width: 16px; height: 16px; flex: none; margin: 2px 0 0; padding: 0; }
+.setup-choices span { display: grid; gap: 2px; }
+.setup-choices small, .discovery-layout-note { color: var(--muted); font-size: 11px; font-weight: 400; }
+.setup-nav { display: flex; justify-content: space-between; gap: 8px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+.setup-alternative { margin-top: 12px; }
+.discovery-inline-error { display: grid; gap: 6px; margin-top: 10px; padding: 10px 12px; border: 1px solid #78434b; border-radius: 8px; background: #25191e; color: #ffc4c4; }
+.discovery-inline-error .discovery-actions { margin-top: 3px; }
+.discovery-instruction { display: grid; grid-template-columns: 30px minmax(0,1fr); gap: 10px; }
+.discovery-instruction > span { display: grid; width: 28px; height: 28px; place-items: center; border: 1px solid var(--accent); border-radius: 50%; color: #d8e0ff; }
+.discovery-instruction label { margin-top: 10px; }
+.discovery-section-title { margin: 16px 0 8px; font-size: 14px; }
+.discovery-layout-note { margin: 7px 2px 0; }
 .discovery-advanced { margin: 12px 0; padding: 10px 12px; border: 1px solid var(--line-soft); border-radius: 8px; }
 .discovery-back { margin-bottom: 10px; border-color: transparent; background: transparent; }
 .discovery-auth { display: grid; grid-template-columns: minmax(180px,1fr) auto; align-items: end; gap: 4px 8px; margin-top: 8px; }
@@ -260,7 +280,7 @@ dialog header button { width: 34px; padding: 0; }
 .discovery-error-details pre { min-width: 0; max-width: 100%; max-height: 100px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
 .discovery-footer-actions { flex-wrap: wrap; justify-content: flex-end; }
 .command-row { display: flex; min-width: 0; align-items: center; gap: 6px; }
-.command-row code { min-width: 0; flex: 1 1 auto; padding: 7px 9px; overflow: auto; border: 1px solid var(--line-soft); border-radius: 6px; background: #111722; white-space: nowrap; user-select: all; }
+.command-row code { min-width: 0; max-height: 180px; flex: 1 1 auto; padding: 7px 9px; overflow: auto; border: 1px solid var(--line-soft); border-radius: 6px; background: #111722; white-space: pre; user-select: all; }
 .command-row button { flex: none; }
 code, pre { color: #cad6ff; }
 
@@ -337,6 +357,13 @@ code, pre { color: #cad6ff; }
   .discovery-list-tools > label { width: 100%; flex: none; }
   .discovery-host-navigation { grid-template-columns: 1fr; }
   .discovery-host-navigation button { width: 100%; }
+  #discovery-dialog { width: calc(100vw - 12px); max-height: calc(100vh - 12px); }
+  #discovery-dialog form { max-height: calc(100vh - 12px); }
+  .discovery-progress { margin-bottom: 12px; }
+  .discovery-progress li { padding-inline: 4px; font-size: 11px; }
+  .discovery-panel, .discovery-setup { padding: 10px; }
+  .discovery-actions, .discovery-network-actions, .setup-nav { flex-wrap: wrap; }
+  .command-row { align-items: flex-start; }
   .export-body, .export-options { grid-template-columns: 1fr; }
   .export-preview-section { min-height: 220px; }
   .connection-add { grid-template-columns: 1fr; } .connection-add > span { display: none; }

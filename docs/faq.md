@@ -10,7 +10,7 @@ A manual diagram needs only a running Atlas server and a current browser. There 
 
 ### Why is Nmap unavailable in the released image? {#nmap-unavailable}
 
-The published GHCR image is intentionally scanner-free. From the project root of a source checkout or extracted release ZIP, run `ATLAS_WITH_NMAP=true docker compose up -d --build`. Put `ATLAS_WITH_NMAP=true` in `.env` to retain the choice on later builds. For a native install, install Nmap and its detection data with the operating-system package manager, then restart Atlas. See [Network scan](/discovery#network-scan).
+The published GHCR image is intentionally scanner-free; setting an environment flag on that image cannot add Nmap. The in-app guide separates Docker Compose from native Go. From a source checkout or extracted release ZIP, preserve the existing `.env`, add `ATLAS_WITH_NMAP=true`, then run `ATLAS_WITH_NMAP=true docker compose up -d --build`. For a native install, install Nmap and its detection data with the operating-system package manager, restart Atlas, then choose **Check setup**. **Import Nmap XML instead** remains available throughout. See [Network scan](/discovery#network-scan).
 
 ### Why is my project empty after changing the URL or updating Atlas?
 
@@ -28,7 +28,7 @@ The whole file must pass schema and reference validation before Atlas replaces t
 
 ### Why are no Docker collectors listed? {#no-docker-collectors}
 
-Set `ATLAS_COLLECTOR_TOKEN` to the same value of at least 32 characters for the configured local collector, then start the discovery profile with `docker compose --profile discovery up -d` and check its logs. Include `-f compose.release.yaml` for the released Compose file. An explicit `ATLAS_DISCOVERY_SOURCES` file overrides the local source. Follow [Local Compose setup](/discovery#local-compose-setup).
+Open **Docker apps** and follow the setup guide for the server where Docker runs. For local Compose, set `ATLAS_COLLECTOR_TOKEN` to the same value of at least 32 characters, preserve other `.env` entries, then start the profile with `docker compose --profile discovery up -d`. Include `-f compose.release.yaml` for the downloaded Compose file. An explicit `ATLAS_DISCOVERY_SOURCES` file overrides the local source. For another server, the guide recommends a one-time snapshot before the advanced remote collector path. Follow [Local Compose setup](/discovery#local-compose-setup).
 
 ### Why could Atlas not check discovery readiness?
 
@@ -70,9 +70,9 @@ One scan may run at a time, with 120 seconds total, 15 seconds per ordinary host
 
 Reuse a stable network name. Atlas prefers MAC identity, then falls back to IP; an address change without a MAC, or a change in MAC availability, can look new. Review it and explicitly choose the existing destination. Missing results never delete old cards or services.
 
-### Why is Add to diagram disabled or asking me to make room? {#apply-disabled}
+### Why is Add selected to diagram disabled or asking me to make room? {#apply-disabled}
 
-Check at least one row. Atlas always shows a destination and group suggestion; changing the destination clears selections. **Select all shown** affects only the filtered visible page and skips rows already on the diagram. Additions may need card height; if growth would collide, move a card or use a new card. New cards go below existing cards, while existing positions and widths stay fixed. Each **Add to diagram** is one session-only Undo.
+Check at least one row. Atlas always shows a destination diagram card and group suggestion; changing the destination clears selections. **Select all shown** affects only the filtered visible page and skips rows already on the diagram. Additions may need card height; if growth would collide, move a card or use a new card. New cards go below existing cards, while existing positions and widths stay fixed. Each **Add selected to diagram** is one session-only Undo.
 
 ### Can discovery build cabling, VLANs, or switch ports automatically?
 
@@ -82,7 +82,7 @@ No. Discovery offers hosts and services for review. Logical connections, VLAN la
 
 ### Why did Undo stop working after a reload?
 
-Undo history lasts only for the current page session. Save project JSON for durable editing and backup. Each **Add to diagram** creates one undo step, but reloading clears it.
+Undo history lasts only for the current page session. Save project JSON for durable editing and backup. Each **Add selected to diagram** creates one undo step, but reloading clears it.
 
 ### Does private export remove every secret? {#private-export-limits}
 

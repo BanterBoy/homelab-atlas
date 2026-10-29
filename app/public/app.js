@@ -11,6 +11,7 @@ import {
   parseDiscoverySnapshot, planDiscoveryMerge, projectGuardCurrent, setVisibleDiscoverySelection, suggestDiscoveryDestination,
   suggestDiscoveryGroup, suggestDiscoveryService, validateDiscoverySnapshot, validateNmapBundle,
 } from './discovery.js';
+import { discoverySetupSteps, SETUP_COMMANDS } from './discovery-setup.js';
 
 const $ = selector => document.querySelector(selector);
 const STORAGE_KEY = 'homelab-atlas.project';
@@ -900,6 +901,75 @@ function cancelDiscoveryWork() {
   if (discoveryState.authRequired) showDiscoveryAuth(); else hideDiscoveryAuth();
 }
 
+function commandRow(command) {
+  return `<span class="command-row"><code>${escapeHtml(command)}</code><button type="button" data-copy-command>Copy</button></span>`;
+}
+
+function setupStepContent(step) {
+  const docs = 'https://aiden0rchad.github.io/homelab-atlas/discovery';
+  const content = {
+    'docker-location': ['Where is Docker running?', '<p>Choose the server whose containers you want to list.</p>', [['same', 'Same server as Atlas', 'Best for Atlas Compose installs.'], ['another', 'Another server', 'Use a one-time snapshot or configure a remote collector.']]],
+    'docker-install': ['How did you install Atlas?', '<p>This selects the instructions and command that match your install.</p>', [['released', 'Downloaded Compose file', 'You use compose.release.yaml.'], ['source', 'Source checkout', 'You cloned the repository.'], ['native', 'Native Go', 'You run the Atlas binary directly.']]],
+    'nmap-install': ['How is Atlas installed?', '<p>Nmap must be installed on the same server or container that runs Atlas.</p>', [['compose', 'Docker Compose', 'Requires a source checkout or extracted release ZIP.'], ['native', 'Native Go', 'Install Nmap on the Atlas machine.']]],
+  };
+  if (content[step]) {
+    const [title, body, choices] = content[step];
+    const key = step.endsWith('location') ? 'location' : 'install';
+    return { title, body: `${body}<div class="setup-choices">${choices.map(([value, label, help]) => `<label><input type="radio" name="setup-choice" value="${value}" data-setup-answer="${key}"><span><strong>${label}</strong><small>${help}</small></span></label>`).join('')}</div>` };
+  }
+  const pages = {
+    'docker-token': ['Prepare a collector token', `<p>This token protects the restricted collector. Run this command on the Atlas server:</p>${commandRow(SETUP_COMMANDS.token)}<p class="discovery-notice">Do not enter or paste this token into the browser.</p>`],
+    'docker-env': ['Save the token in .env', `<p>Open the existing <code>.env</code> beside <code>${discoveryState.setup.answers.install === 'released' ? 'compose.release.yaml' : 'compose.yaml'}</code>. Add this line without overwriting other settings:</p>${commandRow(SETUP_COMMANDS.collectorEnv)}<p class="discovery-notice">The collector needs access to Docker. The main Atlas editor does not.</p>`],
+    'docker-start-released': ['Start the collector', `<p>From that Compose folder, run only the command for the downloaded Compose file:</p>${commandRow(SETUP_COMMANDS.composeRelease)}`],
+    'docker-start-source': ['Start the collector', `<p>From the source checkout, run:</p>${commandRow(SETUP_COMMANDS.composeSource)}`],
+    'docker-check': ['Check your setup', '<p>Atlas will reload the configured server list. This check does not scan Docker; scanning starts only when you choose <strong>Find Docker apps</strong>.</p>'],
+    'docker-native': ['Use the native or remote collector guide', `<p>A native install needs a separately configured collector. Atlas cannot grant Docker access or create that service from the browser.</p><p><a href="${docs}#remote-collectors" target="_blank" rel="noopener noreferrer">Open native and remote collector setup</a></p>`],
+    'docker-snapshot': ['Import a one-time snapshot', `<p>The simplest path needs no network connection between servers. Run this restricted command on the Docker server:</p>${commandRow(SETUP_COMMANDS.snapshot)}<p>The file contains sanitized inventory for review. For ongoing live discovery, use the <a href="${docs}#remote-collectors" target="_blank" rel="noopener noreferrer">remote collector guide</a>.</p>`],
+    'nmap-source': ['Use source files', '<p>The published container image is scanner-free. Use a source checkout or an extracted release ZIP; an environment flag cannot add Nmap to the published image.</p><p><a href="https://github.com/aiden0rchad/homelab-atlas/releases/latest" target="_blank" rel="noopener noreferrer">Download the current source release</a></p>'],
+    'nmap-env': ['Enable the Nmap build', `<p>Open the existing <code>.env</code> in that source folder. Add this line without overwriting other settings:</p>${commandRow(SETUP_COMMANDS.nmapEnv)}`],
+    'nmap-build': ['Build and start Atlas', `<p>Run this from the source checkout or extracted release folder:</p>${commandRow(SETUP_COMMANDS.nmapBuild)}`],
+    'nmap-native': ['Install Nmap on the Atlas server', '<p>Use the operating-system package manager to install Nmap and its service-detection data on the machine running Atlas. Then restart Atlas.</p><p><a href="https://nmap.org/download.html" target="_blank" rel="noopener noreferrer">Official Nmap install downloads</a></p>'],
+    'nmap-check': ['Check your setup', '<p>Atlas will check whether Nmap and its service data are available. It will not start a scan.</p>'],
+  };
+  const [title, body] = pages[step];
+  return { title, body };
+}
+
+function renderDiscoverySetup(focus = true) {
+  const setup = discoveryState?.setup;
+  if (!setup) return;
+  const steps = discoverySetupSteps(setup.method, setup.answers);
+  setup.index = Math.min(setup.index, steps.length - 1);
+  const step = steps[setup.index];
+  const page = setupStepContent(step);
+  const root = $(`#discovery-${setup.method}-setup`);
+  const choice = ['docker-location', 'docker-install', 'nmap-install'].includes(step);
+  const last = setup.index === steps.length - 1;
+  const check = step.endsWith('-check');
+  const snapshot = step === 'docker-snapshot';
+  root.innerHTML = `<div class="setup-step-head"><span>Step ${setup.index + 1} of ${steps.length}</span><h4 tabindex="-1">${page.title}</h4></div>${page.body}<div class="setup-alternative">${setup.method === 'network' ? '<button type="button" data-setup-import="nmap">Import Nmap XML instead</button>' : ''}</div><div class="setup-nav"><button type="button" data-setup-back>${setup.index ? 'Back' : 'Back to methods'}</button>${check ? `<button type="button" class="primary" data-setup-check="${setup.method}">Check setup</button>` : snapshot ? '<button type="button" class="primary" data-setup-import="docker">Import Docker snapshot</button>' : last && step === 'docker-native' ? '' : `<button type="button" class="primary" data-setup-next${choice ? ' disabled' : ''}>Continue</button>`}</div>`;
+  root.hidden = false;
+  if (setup.method === 'docker') $('#discovery-docker-ready').hidden = true;
+  else $('#discovery-network-ready').hidden = true;
+  if (focus) root.querySelector('h4').focus();
+}
+
+function openDiscoverySetup(method) {
+  if (!discoveryState || discoveryState.step === 'review') return;
+  discoveryState.setup = { method, answers: {}, index: 0 };
+  renderDiscoverySetup();
+  setDiscoveryStatus('');
+}
+
+function closeDiscoverySetup() {
+  const setup = discoveryState?.setup;
+  if (!setup) return;
+  $(`#discovery-${setup.method}-setup`).hidden = true;
+  discoveryState.setup = null;
+  if (setup.method === 'docker' && discoveryState.sources.length) $('#discovery-docker-ready').hidden = false;
+  else showDiscoveryChooser();
+}
+
 function chooseDiscoveryMethod(method, focus = true) {
   if (!discoveryState) return;
   cancelDiscoveryWork();
@@ -908,10 +978,17 @@ function chooseDiscoveryMethod(method, focus = true) {
   discoveryState.snapshot = null;
   discoveryState.plan = null;
   discoveryState.reviewCache.clear();
+  discoveryState.setup = null;
+  $('#discovery-docker-setup').hidden = true;
+  $('#discovery-network-setup').hidden = true;
+  $('#discovery-docker-ready').hidden = !discoveryState.sources.length;
+  $('#discovery-network-ready').hidden = !discoveryState.nmapStatus?.available;
   for (const name of ['docker', 'network', 'import']) $(`#discovery-${name}-panel`).hidden = name !== method;
-  const titles = { docker: 'Find Docker apps', network: 'Find network devices', import: 'Import a scan' };
+  const titles = { docker: 'Find Docker apps', network: 'Find network devices with Nmap', import: 'Import saved scan' };
   $('#discovery-find-title').textContent = titles[method];
   setDiscoveryStep('find', focus);
+  if (method === 'docker' && !discoveryState.sources.length) openDiscoverySetup('docker');
+  if (method === 'network' && discoveryState.nmapStatus && !discoveryState.nmapStatus.available) openDiscoverySetup('network');
   if (discoveryState.authRequired) showDiscoveryAuth(); else setDiscoveryStatus('');
 }
 
@@ -1043,6 +1120,7 @@ function setNetworkScanning(active, request = null) {
   $('#discovery-network-stop').hidden = !active;
   for (const id of ['discovery-targets', 'discovery-port-preset', 'discovery-ports', 'discovery-detect-services']) $(`#${id}`).disabled = active;
   $('#discovery-network-start').textContent = active ? 'Finding devices…' : 'Find devices';
+  if (!active) $('#discovery-network-start').disabled = !discoveryState.nmapStatus?.available || !$('#discovery-targets').value.trim();
 }
 
 function metadataRequestCurrent(request, field) {
@@ -1093,14 +1171,16 @@ async function loadNmapStatus(expectedState = discoveryState) {
       || value.allowedCidrs.some(item => typeof item !== 'string') || value.maxHosts !== 256 || value.timeoutSeconds !== 120) throw new Error('The server returned invalid Nmap status.');
     if (!metadataRequestCurrent(request, 'statusController')) return false;
     state.nmapStatus = value;
-    $('#discovery-network-start').disabled = !value.available;
+    $('#discovery-network-start').disabled = !value.available || !$('#discovery-targets').value.trim();
     $('#discovery-network-badge').textContent = value.available ? 'Ready' : 'Setup needed';
     $('#discovery-network-ready').hidden = !value.available;
-    $('#discovery-network-setup').hidden = value.available;
+    $('#discovery-network-setup').hidden = true;
     $('#discovery-network-error').hidden = true;
     $('#discovery-network-help').textContent = value.available
       ? `Runs from this Atlas server. Allowed ranges: ${value.allowedCidrs.join(', ')}. Up to ${value.maxHosts} hosts and ${value.timeoutSeconds} seconds; firewalls may hide hosts.`
       : `Nmap is not installed on this Atlas server. XML import and Docker discovery are still available. Allowed ranges: ${value.allowedCidrs.join(', ')}.`;
+    if (!value.available && state.method === 'network' && state.step === 'find') openDiscoverySetup('network');
+    if (value.available && state.setup?.method === 'network' && state.step === 'find') state.setup = null;
     return true;
   } catch (error) {
     if (error.name === 'AbortError' || !metadataRequestCurrent(request, 'statusController')) return false;
@@ -1109,7 +1189,7 @@ async function loadNmapStatus(expectedState = discoveryState) {
     $('#discovery-network-help').textContent = error.message;
     $('#discovery-network-ready').hidden = true;
     $('#discovery-network-setup').hidden = true;
-    $('#discovery-network-error p').textContent = error.message;
+    $('#discovery-network-error span').textContent = error.message;
     $('#discovery-network-error').hidden = false;
     return false;
   } finally {
@@ -1119,6 +1199,7 @@ async function loadNmapStatus(expectedState = discoveryState) {
 
 function fillDiscoverySources(sources, updateStatus = true) {
   const select = $('#discovery-source');
+  const selectedSource = select.value;
   select.replaceChildren();
   if (!sources.length) {
     select.add(new Option('No configured collectors', ''));
@@ -1126,21 +1207,25 @@ function fillDiscoverySources(sources, updateStatus = true) {
     $('#discovery-scan').disabled = true;
     $('#discovery-docker-badge').textContent = 'Setup needed';
     $('#discovery-docker-ready').hidden = true;
-    $('#discovery-docker-setup').hidden = false;
+    $('#discovery-docker-setup').hidden = true;
     $('#discovery-docker-error').hidden = true;
-    if (updateStatus && discoveryState?.method === 'docker') setDiscoveryStatus('Connect a Docker host, then check the connection.');
+    if (discoveryState?.method === 'docker' && discoveryState.step === 'find') openDiscoverySetup('docker');
+    if (updateStatus && discoveryState?.method === 'docker') setDiscoveryStatus('Connect a Docker server, then check setup.');
     return;
   }
-  select.add(new Option('Choose a collector…', ''));
+  select.add(new Option('Choose a server…', ''));
   for (const source of sources) select.add(new Option(source.name, source.id));
-  if (sources.length === 1) select.value = sources[0].id;
+  if (sources.some(source => source.id === selectedSource)) select.value = selectedSource;
+  else if (sources.length === 1) select.value = sources[0].id;
   select.disabled = false;
-  $('#discovery-scan').disabled = false;
-  $('#discovery-docker-badge').textContent = 'Ready';
+  $('#discovery-scan').disabled = !select.value;
+  $('#discovery-docker-badge').textContent = 'Configured';
   $('#discovery-docker-ready').hidden = false;
+  if (discoveryState?.setup?.method === 'docker' && discoveryState.step === 'find') discoveryState.setup = null;
   $('#discovery-docker-setup').hidden = true;
   $('#discovery-docker-error').hidden = true;
-  if (updateStatus && discoveryState?.method === 'docker') setDiscoveryStatus(sources.length === 1 ? `${sources[0].name} is ready.` : 'Choose a Docker host.');
+  discoveryState.dockerRetry = null;
+  if (updateStatus && discoveryState?.method === 'docker') setDiscoveryStatus(sources.length === 1 ? `${sources[0].name} is configured.` : 'Choose a Docker server.');
 }
 
 async function loadDiscoverySources(preserveStatus = false, expectedState = discoveryState) {
@@ -1152,8 +1237,9 @@ async function loadDiscoverySources(preserveStatus = false, expectedState = disc
   const request = { state, controller, apiToken, actionToken: state.requestToken };
   if (!preserveStatus && expectedState.method === 'docker') setDiscoveryStatus('Checking Docker hosts…');
   $('#discovery-docker-badge').textContent = 'Checking';
-  $('#discovery-docker-ready').hidden = true;
-  $('#discovery-docker-setup').hidden = true;
+  const hadSources = state.sources.length > 0;
+  $('#discovery-docker-ready').hidden = !hadSources;
+  if (!state.setup) $('#discovery-docker-setup').hidden = true;
   $('#discovery-docker-error').hidden = true;
   $('#discovery-source').disabled = true;
   $('#discovery-scan').disabled = true;
@@ -1176,13 +1262,16 @@ async function loadDiscoverySources(preserveStatus = false, expectedState = disc
     return true;
   } catch (error) {
     if (error.name === 'AbortError' || !metadataRequestCurrent(request, 'sourcesController')) return false;
-    $('#discovery-source').replaceChildren(new Option('Readiness unavailable', ''));
-    $('#discovery-source').disabled = true;
-    $('#discovery-scan').disabled = true;
+    state.dockerRetry = 'sources';
+    if (state.sources.length) fillDiscoverySources(state.sources, false);
+    else {
+      $('#discovery-source').replaceChildren(new Option('No configured servers loaded', ''));
+      $('#discovery-source').disabled = true;
+      $('#discovery-scan').disabled = true;
+    }
     $('#discovery-docker-badge').textContent = 'Check failed';
-    $('#discovery-docker-ready').hidden = true;
-    $('#discovery-docker-setup').hidden = true;
-    $('#discovery-docker-error p').textContent = error.message;
+    $('#discovery-docker-ready').hidden = !state.sources.length;
+    $('#discovery-docker-error span').textContent = error.message;
     $('#discovery-docker-error').hidden = false;
     if (!preserveStatus && state.requestToken === request.actionToken && state.method === 'docker' && state.step === 'find' && !state.authRequired) setDiscoveryStatus('');
     return false;
@@ -1458,9 +1547,11 @@ async function scanDiscoverySource() {
   } catch (error) {
     if (error.name === 'AbortError' || !discoveryRequestCurrent(request)) return;
     if (/collector|Docker host/i.test(error.message)) {
-      $('#discovery-docker-badge').textContent = 'Setup needed';
-      $('#discovery-docker-ready').hidden = true;
-      $('#discovery-docker-setup').hidden = false;
+      discoveryState.dockerRetry = 'scan';
+      $('#discovery-docker-badge').textContent = 'Check failed';
+      $('#discovery-docker-ready').hidden = false;
+      $('#discovery-docker-error span').textContent = error.message;
+      $('#discovery-docker-error').hidden = false;
     }
     setDiscoveryStatus(error.message, true);
     return false;
@@ -1587,7 +1678,7 @@ function openDiscovery(opener) {
   discoveryState?.controller?.abort();
   discoveryState?.sourcesController?.abort();
   discoveryState?.statusController?.abort();
-  discoveryState = { guard: captureProjectGuard(project), opener, step: 'choose', method: null, sources: [], bundle: null, reviewCache: new Map(), pendingDockerSource: null, pendingNmapFile: null, pendingNetworkScan: null, pendingAuthToken: null, statusBeforeAuth: null, snapshot: null, choices: new Map(), plan: null, controller: null, sourcesController: null, statusController: null, activeNetworkToken: null, requestToken: null, stale: false, applying: false, authRequired: false, query: '', page: 0 };
+  discoveryState = { guard: captureProjectGuard(project), opener, step: 'choose', method: null, sources: [], nmapStatus: null, setup: null, dockerRetry: null, bundle: null, reviewCache: new Map(), pendingDockerSource: null, pendingNmapFile: null, pendingNetworkScan: null, pendingAuthToken: null, statusBeforeAuth: null, snapshot: null, choices: new Map(), plan: null, controller: null, sourcesController: null, statusController: null, activeNetworkToken: null, requestToken: null, stale: false, applying: false, authRequired: false, query: '', page: 0 };
   $('#discovery-source').replaceChildren(new Option('Loading sources…', ''));
   $('#discovery-device').replaceChildren(new Option('Choose a device…', ''));
   $('#discovery-findings').replaceChildren();
@@ -1670,10 +1761,31 @@ document.querySelectorAll('[data-discovery-method]').forEach(button => button.ad
 $('#discovery-back').addEventListener('click', showDiscoveryChooser);
 $('#discovery-start-over').addEventListener('click', showDiscoveryChooser);
 $('#discovery-check-docker').addEventListener('click', () => loadDiscoverySources(false));
-$('#discovery-check-network').addEventListener('click', () => loadNmapStatus());
-$('#discovery-retry-docker').addEventListener('click', () => loadDiscoverySources(false));
+$('#discovery-retry-docker').addEventListener('click', () => discoveryState?.dockerRetry === 'scan' ? scanDiscoverySource() : loadDiscoverySources(false));
 $('#discovery-retry-network').addEventListener('click', () => loadNmapStatus());
-document.querySelectorAll('[data-copy-command]').forEach(button => button.addEventListener('click', async () => {
+$('#discovery-dialog').addEventListener('click', async event => {
+  const button = event.target.closest('button');
+  if (!button) return;
+  if (button.dataset.openSetup) return openDiscoverySetup(button.dataset.openSetup);
+  if (button.id === 'discovery-connect-docker') return openDiscoverySetup('docker');
+  if (button.dataset.setupImport) {
+    chooseDiscoveryMethod('import');
+    return (button.dataset.setupImport === 'docker' ? $('#discovery-file') : $('#discovery-nmap-file')).click();
+  }
+  if (button.dataset.setupCheck) return button.dataset.setupCheck === 'docker' ? loadDiscoverySources(false) : loadNmapStatus();
+  const setup = discoveryState?.setup;
+  if (button.hasAttribute('data-setup-back') && setup) {
+    if (!setup.index) return closeDiscoverySetup();
+    setup.index -= 1;
+    return renderDiscoverySetup();
+  }
+  if (button.hasAttribute('data-setup-next') && setup) {
+    const selected = $(`#discovery-${setup.method}-setup input[name="setup-choice"]:checked`);
+    if (selected) setup.answers[selected.dataset.setupAnswer] = selected.value;
+    setup.index += 1;
+    return renderDiscoverySetup();
+  }
+  if (!button.hasAttribute('data-copy-command')) return;
   const command = button.parentElement.querySelector('code').textContent;
   try {
     await navigator.clipboard.writeText(command);
@@ -1684,9 +1796,15 @@ document.querySelectorAll('[data-copy-command]').forEach(button => button.addEve
     button.parentElement.querySelector('code').focus();
     setDiscoveryStatus('Copy failed. Select the command text and copy it manually.', true);
   }
-}));
+});
+$('#discovery-dialog').addEventListener('change', event => {
+  if (event.target.matches('[data-setup-answer]')) event.target.closest('.discovery-wizard').querySelector('[data-setup-next]').disabled = false;
+});
 $('#discovery-source').addEventListener('change', () => {
   if (!discoveryState) return;
+  discoveryState.dockerRetry = null;
+  $('#discovery-docker-error').hidden = true;
+  $('#discovery-scan').disabled = !$('#discovery-source').value;
   beginDiscoveryRequest('Docker host changed. Choose Find Docker apps to continue.', true);
 });
 $('#discovery-scope').addEventListener('change', () => {
@@ -1701,7 +1819,10 @@ $('#discovery-import-scope').addEventListener('change', () => {
 });
 for (const id of ['discovery-targets', 'discovery-port-preset', 'discovery-ports', 'discovery-detect-services']) $(`#${id}`).addEventListener('input', () => {
   if (!discoveryState) return;
-  if (id === 'discovery-targets') $('#discovery-targets').removeAttribute('aria-invalid');
+  if (id === 'discovery-targets') {
+    $('#discovery-targets').removeAttribute('aria-invalid');
+    $('#discovery-network-start').disabled = !discoveryState.nmapStatus?.available || !$('#discovery-targets').value.trim();
+  }
   if (id === 'discovery-port-preset') $('#discovery-custom-ports').hidden = $('#discovery-port-preset').value !== 'custom';
   discoveryState.pendingNetworkScan = null;
   beginDiscoveryRequest('Scan settings changed. Choose Find devices to start.', true);

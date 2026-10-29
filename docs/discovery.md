@@ -4,9 +4,9 @@ Discovery is optional. Atlas needs no account or AI service, and manual diagrams
 
 Choose **Discover devices** at the bottom of the inventory, then follow three steps:
 
-1. **Choose** Docker apps, network devices, or a saved scan. Opening discovery only checks readiness.
-2. **Find** results with that method. Setup help appears only when needed.
-3. **Review** unchecked findings, choose their destination, then select **Add to diagram**.
+1. **Choose** Docker apps, Network devices / Nmap, or Import saved scan. Opening discovery only checks readiness.
+2. **Find** results with that method. One-step-at-a-time setup help appears when needed.
+3. **Review** unchecked findings, choose their destination diagram card, then select **Add selected to diagram**.
 
 <GuideFigure name="discovery-choose" />
 
@@ -29,7 +29,7 @@ The fixed scan uses unprivileged TCP connect mode, no DNS, conservative timing, 
 
 The default allowed ranges are `10.0.0.0/8`, `172.16.0.0/12`, and `192.168.0.0/16`. Administrators can set canonical comma-separated IPv4 prefixes with `ATLAS_NMAP_ALLOWED_CIDRS`. Atlas reports the configured ranges to the editor but does not expose server credentials or configuration secrets.
 
-Install Nmap and its service-detection data on the server with its operating-system package manager. A native Go setup must restart Atlas after installation because Nmap availability is resolved at startup. The published GHCR image stays scanner-free. From the project root of a source checkout or extracted release ZIP, the opt-in Alpine build installs `nmap`, `nmap-nselibs`, and `nmap-scripts`:
+When Nmap is unavailable, Atlas asks whether it runs with Docker Compose or native Go. Native Go users install Nmap and its service-detection data on the server with its operating-system package manager, restart Atlas, then choose **Check setup**. Compose users must use a source checkout or extracted release ZIP: the published GHCR image stays scanner-free and cannot gain Nmap from an environment flag alone. From that source folder, the opt-in Alpine build installs `nmap`, `nmap-nselibs`, and `nmap-scripts`:
 
 ```sh
 ATLAS_WITH_NMAP=true docker compose up -d --build
@@ -39,7 +39,7 @@ Put `ATLAS_WITH_NMAP=true` in `.env` to retain the choice on later builds.
 
 Nmap is independently licensed under the [Nmap Public Source License](https://nmap.org/npsl/npsl-annotated.html). The source ZIP contains only Atlas and the local build recipe, not Nmap binaries or data.
 
-Choose **Discover devices → Network devices**, then:
+Choose **Discover devices → Network devices / Nmap**, then:
 
 1. Enter one device IP or an allowed network range.
 2. Open **Advanced settings** only to change the port preset, service identification, or stable network name.
@@ -51,7 +51,7 @@ The form uses fictional `192.0.2.10`. No real lab was scanned.
 
 ### Review network findings
 
-Move between discovered devices, choose a destination, and check only the rows to add or link. Pending choices stay with each device while the scan remains open. **Add to diagram** affects only the current device and creates one Undo step.
+Move between discovered devices, choose a destination, and check only the rows to add or link. Pending choices stay with each device while the scan remains open. **Add selected to diagram** affects only the current device and creates one Undo step.
 
 <GuideFigure name="discovery-review" />
 
@@ -64,22 +64,24 @@ Import accepts a user-selected file and does not execute a scanner or network pr
 In Atlas:
 
 1. Choose **Discover devices**.
-2. Choose **Import a scan**, then **Nmap scan**.
+2. Choose **Import saved scan**, then **Nmap scan**.
 3. Under advanced settings, keep or change the **Import scope name**. Reuse it for later imports or scans from the same network.
 4. Select a device and destination card, or keep the suggested new card.
-5. Check the host or endpoints you want, then choose **Add to diagram**.
+5. Check the host or endpoints you want, then choose **Add selected to diagram**.
 
-Every row starts unchecked. **Select all shown** affects only the filtered visible page and skips items already on the diagram; **Clear selection** clears the current device across pages. A host row adds or links a device card. An endpoint adds or links a service. Ping-only scans still offer the host row. Review choices are retained while moving between devices in the same open scan. Each **Add to diagram** affects only the current device and creates one Undo step. MAC identity survives an IP change; without a MAC, an IP change creates a new identity. A scan changing between MAC-present and MAC-absent can also appear new, so review and link it explicitly.
+Every row starts unchecked. **Select all shown** affects only the filtered visible page and skips items already on the diagram; **Clear selection** clears the current device across pages. A host row adds or links a device card. An endpoint adds or links a service. Ping-only scans still offer the host row. Review choices are retained while moving between devices in the same open scan. Each **Add selected to diagram** affects only the current device and creates one Undo step. MAC identity survives an IP change; without a MAC, an IP change creates a new identity. A scan changing between MAC-present and MAC-absent can also appear new, so review and link it explicitly.
 
 Only explicitly up hosts with a valid IP and explicitly open TCP/UDP ports qualify. Filtered, `open|filtered`, closed, unsupported, down, and summarized `extraports` results count as ports not imported. Even a summarized `open` state lacks individual protocol/port identity, so Atlas does not fabricate endpoints from it. Limits are 2 MB, 256 host records, 1,000 normalized findings, 16 addresses and 16 names per host, and 64 XML nesting levels. Eligible output over a limit is rejected instead of silently truncated.
 
-The full XML or live output is held transiently for parsing. Results are not saved on the server. Normalized review data discards command arguments, NSE/script output, service fingerprints, traces, and unknown XML fields. Retained hostnames, vendor, service, product, and version text can still contain private or credential-like content; inspect it before adding or sharing. Canceling before **Add to diagram** changes nothing. Existing names, metadata, connections, and card geometry are never overwritten; card growth that would overlap another card is blocked. Existing SVG/PNG privacy filtering applies after findings are explicitly added.
+The full XML or live output is held transiently for parsing. Results are not saved on the server. Normalized review data discards command arguments, NSE/script output, service fingerprints, traces, and unknown XML fields. Retained hostnames, vendor, service, product, and version text can still contain private or credential-like content; inspect it before adding or sharing. Canceling before **Add selected to diagram** changes nothing. Existing names, metadata, connections, and card geometry are never overwritten; card growth that would overlap another card is blocked. Existing SVG/PNG privacy filtering applies after findings are explicitly added.
 
 ## Docker discovery
 
-Docker discovery is optional and explicit. Opening the dialog performs only readiness checks; it does not scan. Choose **Docker apps**, then **Find Docker apps**. Every finding starts unchecked, and the project changes only after **Add to diagram**.
+Docker discovery is optional and explicit. A **Configured** badge means Atlas has one or more server entries; it does not prove a collector is reachable. Choose **Docker apps**, select **Which server runs your containers?**, then choose **Find Docker apps**. The button stays disabled until a server is selected. Every finding starts unchecked, and the project changes only after **Add selected to diagram**.
 
 ## Local Compose setup
+
+If no server is configured, the in-app guide first asks where Docker runs. For **Same server as Atlas**, choose the matching install type. The guide shows one instruction at a time: generate a token, preserve the existing `.env`, run only the matching Compose command, then **Check setup**. It never runs commands, creates or stores a token, edits configuration, or grants Docker access. The restricted collector needs Docker access; the main Atlas editor does not. **Connect another server** opens the same guide without removing configured server choices.
 
 Generate a collector token:
 
@@ -99,7 +101,7 @@ Start the editor and collector profile:
 docker compose --profile discovery up -d
 ```
 
-For the released Compose file, run `docker compose -f compose.release.yaml --profile discovery up -d`. Open Atlas, choose **Discover devices → Docker apps**, then **Find Docker apps**. The setup panel can copy these commands, but it never generates or stores a token, edits `.env`, enables the profile, or mounts a socket.
+For the released Compose file, run `docker compose -f compose.release.yaml --profile discovery up -d`. Open Atlas, choose **Discover devices → Docker apps**, then **Find Docker apps**. **Check setup** reloads configuration only; it does not contact or scan a collector.
 
 <GuideFigure name="docker-setup" />
 
@@ -126,7 +128,7 @@ An exact unique service-name match is shown as **Use existing [name]**, but the 
 
 Findings are sorted by name and shown 50 at a time. Search checks names, image references, and Compose project/service metadata. Selections and actions persist while searching or changing pages; changing the destination clears them across the full result set. **Select all shown** selects only the filtered visible page and skips existing bindings.
 
-**Add to diagram** is one undoable change. Existing card positions and widths stay fixed. If an added service needs card height that would collide with another card, Atlas asks you to make room or use a new card. A new card is placed below existing cards.
+**Add selected to diagram** is one undoable change. Existing card positions and widths stay fixed. If an added service needs card height that would collide with another card, Atlas asks you to make room or use a new card. A new card is placed below existing cards.
 
 <GuideFigure name="docker-review" />
 
@@ -156,7 +158,7 @@ The one-off container runs as root only to reach the read-only Docker socket. It
 ATLAS_HOST_ID=nas ATLAS_HOST_NAME="NAS Docker" go run ./app collect > ../nas-docker-snapshot.json
 ```
 
-`ATLAS_DOCKER_HOST` defaults to `unix:///var/run/docker.sock`. Then choose **Discover devices → Import a scan → Docker snapshot**. Snapshot import has the same unchecked review and 2 MB limit as a live scan.
+`ATLAS_DOCKER_HOST` defaults to `unix:///var/run/docker.sock`. The **Another server** setup branch presents this one-time snapshot as the simplest no-network-setup route; **Import Docker snapshot** opens the existing import directly. You can also choose **Discover devices → Import saved scan → Docker snapshot**. Snapshot import has the same unchecked review and 2 MB limit as a live scan. Ongoing live collection remains available through [Remote collectors](#remote-collectors).
 
 Snapshots contain only:
 
