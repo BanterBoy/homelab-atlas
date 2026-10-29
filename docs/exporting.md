@@ -1,6 +1,6 @@
 # Exporting
 
-Choose **Export** to preview and download SVG or PNG. Use **Save project** for editable JSON.
+Choose **Export** to preview and download SVG or PNG. Use **File → Save project** for editable JSON.
 
 <GuideFigure name="private-export" />
 

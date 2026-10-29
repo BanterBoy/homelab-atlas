@@ -1,6 +1,6 @@
 # Project format
 
-**Save project** downloads schema-version-6 JSON. Atlas imports schema versions 1 through 5 after strict validation. Version 1 gains automatic layout, versions 1 and 2 gain empty network-logo fields, versions 1 through 3 gain an empty `customLogos` array, and versions 1 through 4 gain empty discovery bindings. A valid version-5 project keeps every Docker binding, inventory field, uploaded logo, connection, manual rectangle, and revision; only `schemaVersion` changes. Older Atlas versions cannot open schema version 6.
+**File → Save project** downloads schema-version-6 JSON. **File → Import project** accepts schema versions 1 through 5 after strict validation. Version 1 gains automatic layout, versions 1 and 2 gain empty network-logo fields, versions 1 through 3 gain an empty `customLogos` array, and versions 1 through 4 gain empty discovery bindings. A valid version-5 project keeps every Docker binding, inventory field, uploaded logo, connection, manual rectangle, and revision; only `schemaVersion` changes. Older Atlas versions cannot open schema version 6.
 
 ## Top-level fields
 

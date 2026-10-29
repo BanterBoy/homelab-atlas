@@ -2,7 +2,7 @@
 
 Discovery is optional. Atlas needs no account or AI service, and manual diagrams work without a scanner or Docker socket.
 
-Choose **Discover devices**, then follow three steps:
+Choose **Discover devices** at the bottom of the inventory, then follow three steps:
 
 1. **Choose** Docker apps, network devices, or a saved scan. Opening discovery only checks readiness.
 2. **Find** results with that method. Setup help appears only when needed.

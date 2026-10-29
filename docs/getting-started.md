@@ -121,11 +121,11 @@ Generate the API token with `openssl rand -hex 32`. Replace `atlas.lan` with the
 
 ## First diagram
 
-1. Choose **Load example** to explore or **Start empty**.
+1. Open **File** and choose **Load example** to explore or **Start empty**.
 2. Add a device from the inventory rail.
 3. Select its card or inventory row to open the inspector.
 4. Add a service group and local logo tiles.
-5. Choose **Save project** before sharing or changing origins.
+5. Choose **File → Save project** before sharing or changing origins.
 
 The [annotated editor overview](/editor#editor-guide) covers the controls. The [privacy and deployment page](/privacy) explains what stays in the browser and why Atlas should stay off the public internet. For setup or discovery failures, check the [FAQ](/faq).
 

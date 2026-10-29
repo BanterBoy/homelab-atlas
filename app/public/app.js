@@ -1842,7 +1842,7 @@ function closeFileMenu(restoreFocus = false) {
 }
 
 document.addEventListener('click', event => {
-  if (!event.target.closest('#file-menu')) closeFileMenu(true);
+  if (!event.target.closest('#file-menu')) closeFileMenu();
 });
 $('#file-menu a').addEventListener('click', () => closeFileMenu());
 $('#sample').addEventListener('click', () => { closeFileMenu(); if (confirm('Replace this project with the example? You can undo afterward.')) replaceProject(sampleProject()); });

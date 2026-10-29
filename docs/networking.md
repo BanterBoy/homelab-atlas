@@ -21,7 +21,7 @@ Search by provider name, `ISP`, `US`, `Europe`, country, or a known brand alias 
 
 ## VLAN chips and device labels
 
-Open **Settings** to add, rename, recolor, or remove VLAN chips. Atlas shows them as a reference row in the diagram.
+Choose **Diagram settings** in the canvas header to add, rename, recolor, or remove VLAN chips. Atlas shows them as a reference row in the diagram.
 
 Each device also has a free-text **Network / VLAN** field. Use the same name as a chip when you want the card to show that membership. Atlas does not link this field to the VLAN chip behind the scenes. You can type reserved VLANs, management networks, or other special segments directly into the field.
 

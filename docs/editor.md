@@ -6,29 +6,27 @@ You enter your devices and services, and Atlas starts with an automatic layout. 
 
 ## Start from a sample or empty project
 
-**Load example** replaces the current project with the included fictional sample. **Start empty** gives you a blank project. Atlas asks before doing either one, and you can undo it until you reload the page.
+Open **File** and choose **Load example** to replace the current project with the included fictional sample, or **Start empty** for a blank project. Atlas asks before doing either one, and you can undo it until you reload the page. **Import project** opens editable JSON, and **Save project** downloads a JSON backup.
 
 ## Add and organize devices
 
 Choose **Add device** in the inventory on the left, then pick a template such as Server, NAS, Hypervisor, Media server, AI server, Raspberry Pi, or Cloud server. The Router, Switch, Wi-Fi, and Internet templates add network nodes instead of device cards.
 
-Use **Search inventory** to filter devices by name or role and network nodes by name or kind. It only changes the visible list. Your selection and project stay intact. On a narrow screen, open or close the inventory with the **Inventory** button below the canvas.
+Use **Search inventory** to filter devices by name or role and network nodes by name or kind. It only changes the visible list. Your selection and project stay intact. On a narrow screen, open or close the inventory with the **Inventory** button in the canvas header.
 
 Select a network node to edit its name, kind, accent, and logos. **Logo** starts on Auto, which follows the node kind. **Secondary logo** can show an optional backup provider in the same node. Both selectors include the bundled catalog and uploaded project logos. Choosing Auto or None clears the corresponding explicit choice.
 
-Select a device to edit:
+Select a device to open its inspector:
 
-- name, role, and accent color
-- a free-text **Network / VLAN** label
-- a visual device icon picker
-- hardware facts, one per line, optionally written as `Label: value`
-- named service groups and their services
+- **Details** covers identity, the **Network / VLAN** label, device icon, and hardware facts
+- **Apps** covers named service groups and their services
+- **Layout** covers exact X, Y, Width, and Height position fields
 
 The duplicate button copies a device and gives the copy new internal IDs without copying discovery bindings. Use the arrow buttons to reorder devices or services. Deleting a device or network node also deletes its connections. Deleting a device, group, or service removes discovery bindings that point to it.
 
 ## Discover devices
 
-Choose **Discover devices**, then choose Docker apps, Network devices, or a saved scan. Opening discovery checks readiness but never scans. The Find step runs only after **Find Docker apps** or **Find devices**; importing a snapshot or XML runs no scanner or network probe.
+Choose **Discover devices** at the bottom of the inventory, then choose Docker apps, Network devices, or a saved scan. Opening discovery checks readiness but never scans. The Find step runs only after **Find Docker apps** or **Find devices**; importing a snapshot or XML runs no scanner or network probe.
 
 For live Nmap, enter allowed IPv4 targets and choose **Find devices**. **Advanced settings** contains the optional network name, port preset, custom TCP ports, and service identification. Select a device in multi-device results. The scope, host addresses, names, vendor, scan time, and ports not imported appear in Review. Reuse the same network name for later scans.
 
@@ -40,7 +38,7 @@ The review summary shows additions, links, new cards/groups, and card-height cha
 
 ## Add service tiles
 
-Create a service group, then choose **Apps**. You can search the logo catalog and select more than one service. Selections stay checked across searches. Click the logo beside an existing service to replace it without changing its name, count, ID, or position.
+Open the device inspector's **Apps** tab and add a service group. The group-level **Apps** button opens the Add services flow, where you can search the logo catalog and select more than one service. Selections stay checked across searches. Click the logo beside an existing service to replace it without changing its name, count, ID, or position.
 
 <GuideFigure name="service-logos" />
 
@@ -52,7 +50,7 @@ Groups with one or two services use readable horizontal rows. Groups with three 
 
 ## Appearance
 
-Open **Settings** to change:
+Choose **Diagram settings** in the canvas header to change:
 
 - project subtitle
 - Navy, Light, or Midnight diagram theme
@@ -64,15 +62,15 @@ The project title is in the top bar. These settings change your diagram. They ar
 
 ## Preview and layout
 
-Use **Fit page**, **Fit width**, zoom in, or zoom out to adjust the preview. You can select devices and network nodes in the preview with a pointer or keyboard.
+Use zoom, **Fit page**, or **Fit width** at the bottom left of the canvas to adjust the preview. You can select devices and network nodes in the preview with a pointer or keyboard.
 
-**Focus canvas** hides the inventory and inspector. Select a card or press `Escape` to leave focus view. On mobile, opening **Inventory** also leaves focus view so the drawer is visible.
+**Focus canvas** at the bottom right hides the inventory and inspector. Select a card or press `Escape` to leave focus view. On mobile, opening **Inventory** also leaves focus view so the drawer is visible.
 
-Automatic layout uses inventory order, column count, content length, and density. Choose **Arrange** to move or resize device cards without moving network nodes or VLANs. Drag a card to move it or use its lower-right handle to resize it. Movement snaps to an 8-unit grid, nearby card edges and centers, and a 24-unit vertical gap. Hold `Alt` while dragging to bypass snapping.
+Automatic layout uses inventory order, column count, content length, and density. Choose **Arrange** in the canvas header to move or resize device cards without moving network nodes or VLANs. Drag a card to move it or use its lower-right handle to resize it. Movement snaps to an 8-unit grid, nearby card edges and centers, and a 24-unit vertical gap. Hold `Alt` while dragging to bypass snapping.
 
-With a card selected in Arrange mode, arrow keys move it by 8 units and `Shift` increases that to 32. `Alt` plus an arrow resizes it. The Position fields in the device inspector accept exact X, Y, Width, and Height values.
+With a card selected in Arrange mode, arrow keys move it by 8 units and `Shift` increases that to 32. `Alt` plus an arrow resizes it. The device inspector's **Layout** tab accepts exact X, Y, Width, and Height values.
 
-**Columns** still controls the poster width. Cards stay inside that width, and their minimum height grows when their hardware or services need more room. A larger height adds whitespace. New or duplicated devices appear below existing manually placed cards. **Auto layout** clears all saved card rectangles; use **Undo** if you change your mind.
+**Columns** still controls the poster width. Cards stay inside that width, and their minimum height grows when their hardware or services need more room. A larger height adds whitespace. New or duplicated devices appear below existing manually placed cards. **Auto layout** in the canvas header clears all saved card rectangles; use **Undo** if you change your mind.
 
 Manual positions are part of the project JSON and appear in SVG and PNG exports. Arrange handles, selection outlines, and alignment guides are editor-only.
 
