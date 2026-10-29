@@ -333,6 +333,7 @@ code, pre { color: #cad6ff; }
   .logo-tools { grid-template-columns: 1fr auto; } .logo-tools .search { grid-column: 1 / -1; }
   .discovery-auth, .discovery-destination, .discovery-finding { grid-template-columns: 1fr; }
   .discovery-auth small { grid-column: auto; } .discovery-list-tools { align-items: stretch; flex-direction: column; }
+  .discovery-list-tools > label { width: 100%; flex: none; }
   .discovery-host-navigation { grid-template-columns: 1fr; }
   .discovery-host-navigation button { width: 100%; }
   .export-body, .export-options { grid-template-columns: 1fr; }

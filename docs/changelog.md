@@ -2,6 +2,17 @@
 
 This file lists the notable changes in each Homelab Atlas release.
 
+## [0.11.0] - 2026-10-28
+
+### Changed
+
+- Reworked the editor into a calmer workspace with separate inventory, canvas, and inspector areas.
+- Added a File menu and split device editing into **Details**, **Apps**, and **Layout** tabs.
+- Clarified app rows, dialogs, canvas controls, and mobile access to Undo and Redo.
+- Kept diagram and export output unchanged; schema version 6 projects, saved layouts, Docker collectors, and discovery imports remain compatible.
+- Updated current downloads, image tags, Compose defaults, screenshots, and documentation for v0.11.0.
+- Added no runtime dependency.
+
 ## [0.10.0] - 2026-10-28
 
 ### Added
@@ -129,3 +140,4 @@ This file lists the notable changes in each Homelab Atlas release.
 [0.8.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.8.0
 [0.9.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.9.0
 [0.10.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.10.0
+[0.11.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.11.0
