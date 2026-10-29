@@ -33,3 +33,14 @@ export function discoverySetupSteps(method, answers = {}) {
   }
   return [];
 }
+
+export function discoverySetupProgress(method, answers, index) {
+  const steps = discoverySetupSteps(method, answers);
+  const branchKnown = method === 'docker' ? answers.location === 'another' || Boolean(answers.install) : Boolean(answers.install);
+  return `Setup · Step ${index + 1}${branchKnown ? ` of ${steps.length}` : ''}`;
+}
+
+export function updateDiscoverySetupAnswers(answers, key, value) {
+  if (key === 'location' && answers.location !== value) return { location: value };
+  return { ...answers, [key]: value };
+}
