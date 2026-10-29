@@ -11,7 +11,7 @@ import {
   parseDiscoverySnapshot, planDiscoveryMerge, projectGuardCurrent, setVisibleDiscoverySelection, suggestDiscoveryDestination,
   suggestDiscoveryGroup, suggestDiscoveryService, validateDiscoverySnapshot, validateNmapBundle,
 } from './discovery.js';
-import { discoverySetupProgress, discoverySetupSteps, SETUP_COMMANDS, updateDiscoverySetupAnswers } from './discovery-setup.js';
+import { discoverySetupProgress, discoverySetupSteps, SETUP_COMMANDS, shouldOpenDockerSetup, updateDiscoverySetupAnswers } from './discovery-setup.js';
 
 const $ = selector => document.querySelector(selector);
 const STORAGE_KEY = 'homelab-atlas.project';
@@ -955,9 +955,9 @@ function renderDiscoverySetup(focus = true) {
   if (focus) root.querySelector('h4').focus();
 }
 
-function openDiscoverySetup(method) {
+function openDiscoverySetup(method, cancel = true) {
   if (!discoveryState || discoveryState.step === 'review') return;
-  cancelDiscoveryWork();
+  if (cancel) cancelDiscoveryWork();
   discoveryState.setup = { method, answers: {}, index: 0 };
   renderDiscoverySetup();
   setDiscoveryStatus('');
@@ -998,9 +998,11 @@ function chooseDiscoveryMethod(method, focus = true) {
   const titles = { docker: 'Find Docker apps', network: 'Find network devices with Nmap', import: 'Import saved scan' };
   $('#discovery-find-title').textContent = titles[method];
   setDiscoveryStep('find', focus);
-  if (method === 'docker' && !discoveryState.sources.length) openDiscoverySetup('docker');
+  if (method === 'docker' && shouldOpenDockerSetup(discoveryState.dockerSourcesStatus, discoveryState.sources)) openDiscoverySetup('docker');
   if (method === 'network' && discoveryState.nmapStatus && !discoveryState.nmapStatus.available) openDiscoverySetup('network');
-  if (discoveryState.authRequired) showDiscoveryAuth(); else setDiscoveryStatus('');
+  if (discoveryState.authRequired) showDiscoveryAuth();
+  else if (method === 'docker' && ['unknown', 'loading'].includes(discoveryState.dockerSourcesStatus)) setDiscoveryStatus('Checking Docker setup…');
+  else setDiscoveryStatus('');
 }
 
 function showDiscoveryChooser() {
@@ -1194,7 +1196,7 @@ async function loadNmapStatus(expectedState = discoveryState) {
         const steps = discoverySetupSteps('network', state.setup.answers);
         if (steps[state.setup.index] === 'nmap-check') state.setup.feedback = 'Nmap is still unavailable. Check the build or installation, restart Atlas, then try again.';
         renderDiscoverySetup(false);
-      } else openDiscoverySetup('network');
+      } else openDiscoverySetup('network', false);
     }
     if (value.available && state.setup?.method === 'network' && state.step === 'find') {
       state.setup = null;
@@ -1232,7 +1234,7 @@ function fillDiscoverySources(sources, updateStatus = true) {
         const steps = discoverySetupSteps('docker', discoveryState.setup.answers);
         if (steps[discoveryState.setup.index] === 'docker-check') discoveryState.setup.feedback = 'No Docker server is configured yet. Check the collector command and token, then try again.';
         renderDiscoverySetup(false);
-      } else openDiscoverySetup('docker');
+      } else openDiscoverySetup('docker', false);
     } else $('#discovery-docker-setup').hidden = true;
     if (updateStatus && discoveryState?.method === 'docker') setDiscoveryStatus(discoveryState.setup?.feedback ? '' : 'Connect a Docker server, then check setup.');
     return;
@@ -1256,6 +1258,7 @@ async function loadDiscoverySources(preserveStatus = false, expectedState = disc
   if (!expectedState || discoveryState !== expectedState) return false;
   expectedState.sourcesController?.abort();
   const state = expectedState;
+  state.dockerSourcesStatus = 'loading';
   const controller = new AbortController();
   state.sourcesController = controller;
   const request = { state, controller, apiToken, actionToken: state.requestToken };
@@ -1271,6 +1274,7 @@ async function loadDiscoverySources(preserveStatus = false, expectedState = disc
     const response = await discoveryFetch('/api/discovery/sources', { signal: controller.signal }, request.apiToken);
     if (response.status === 401) {
       if (metadataRequestCurrent(request, 'sourcesController')) {
+        state.dockerSourcesStatus = 'error';
         state.pendingAuthToken = state.requestToken;
         requestDiscoveryUnlock({ state, token: state.requestToken, controller: state.controller });
       }
@@ -1281,11 +1285,13 @@ async function loadDiscoverySources(preserveStatus = false, expectedState = disc
     const sources = await boundedResponseJSON(response);
     if (!Array.isArray(sources) || sources.length > 16 || sources.some(source => !source || Object.keys(source).length !== 2 || typeof source.id !== 'string' || typeof source.name !== 'string')) throw new Error('The server returned an invalid collector list.');
     if (!metadataRequestCurrent(request, 'sourcesController')) return false;
+    state.dockerSourcesStatus = 'loaded';
     state.sources = sources;
     fillDiscoverySources(sources, !preserveStatus && state.requestToken === request.actionToken);
     return true;
   } catch (error) {
     if (error.name === 'AbortError' || !metadataRequestCurrent(request, 'sourcesController')) return false;
+    state.dockerSourcesStatus = 'error';
     if (state.sources.length) fillDiscoverySources(state.sources, false);
     else {
       $('#discovery-source').replaceChildren(new Option('No configured servers loaded', ''));
@@ -1698,7 +1704,7 @@ function openDiscovery(opener) {
   discoveryState?.controller?.abort();
   discoveryState?.sourcesController?.abort();
   discoveryState?.statusController?.abort();
-  discoveryState = { guard: captureProjectGuard(project), opener, step: 'choose', method: null, sources: [], nmapStatus: null, setup: null, dockerRetry: null, bundle: null, reviewCache: new Map(), pendingDockerSource: null, pendingNmapFile: null, pendingNetworkScan: null, pendingAuthToken: null, statusBeforeAuth: null, snapshot: null, choices: new Map(), plan: null, controller: null, sourcesController: null, statusController: null, activeNetworkToken: null, requestToken: null, stale: false, applying: false, authRequired: false, query: '', page: 0 };
+  discoveryState = { guard: captureProjectGuard(project), opener, step: 'choose', method: null, sources: [], dockerSourcesStatus: 'unknown', nmapStatus: null, setup: null, dockerRetry: null, bundle: null, reviewCache: new Map(), pendingDockerSource: null, pendingNmapFile: null, pendingNetworkScan: null, pendingAuthToken: null, statusBeforeAuth: null, snapshot: null, choices: new Map(), plan: null, controller: null, sourcesController: null, statusController: null, activeNetworkToken: null, requestToken: null, stale: false, applying: false, authRequired: false, query: '', page: 0 };
   $('#discovery-source').replaceChildren(new Option('Loading sources…', ''));
   $('#discovery-device').replaceChildren(new Option('Choose a device…', ''));
   $('#discovery-findings').replaceChildren();

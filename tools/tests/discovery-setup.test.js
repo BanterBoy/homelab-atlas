@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { discoverySetupProgress, discoverySetupSteps, SETUP_COMMANDS, updateDiscoverySetupAnswers } from '../../app/public/discovery-setup.js';
+import { discoverySetupProgress, discoverySetupSteps, SETUP_COMMANDS, shouldOpenDockerSetup, updateDiscoverySetupAnswers } from '../../app/public/discovery-setup.js';
 
 test('Docker setup branches to local Compose, native, or remote snapshot paths', () => {
   assert.deepEqual(discoverySetupSteps('docker'), ['docker-location']);
@@ -23,6 +23,12 @@ test('setup progress waits for a known branch and branch changes clear stale ans
   assert.equal(discoverySetupProgress('network', { install: 'native' }, 1), 'Setup · Step 2 of 3');
   assert.deepEqual(updateDiscoverySetupAnswers({ location: 'same', install: 'released' }, 'location', 'another'), { location: 'another' });
   assert.deepEqual(updateDiscoverySetupAnswers({ location: 'same', install: 'released' }, 'location', 'same'), { location: 'same', install: 'released' });
+});
+
+test('Docker setup opens only after a successful empty readiness response', () => {
+  for (const readiness of ['unknown', 'loading', 'error']) assert.equal(shouldOpenDockerSetup(readiness, []), false);
+  assert.equal(shouldOpenDockerSetup('loaded', [{ id: 'local' }]), false);
+  assert.equal(shouldOpenDockerSetup('loaded', []), true);
 });
 
 test('setup commands keep the documented release and restricted snapshot forms', () => {

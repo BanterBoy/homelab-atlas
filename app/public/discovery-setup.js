@@ -44,3 +44,7 @@ export function updateDiscoverySetupAnswers(answers, key, value) {
   if (key === 'location' && answers.location !== value) return { location: value };
   return { ...answers, [key]: value };
 }
+
+export function shouldOpenDockerSetup(readiness, sources) {
+  return readiness === 'loaded' && sources.length === 0;
+}
