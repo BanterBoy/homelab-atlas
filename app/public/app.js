@@ -41,6 +41,8 @@ let inventoryQuery = '';
 let focusMode = false;
 let inventoryOpen = false;
 let arrangeMode = false;
+let inspectorTab = 'details';
+let inspectorTabDevice = null;
 let gesture = null;
 let suppressDiagramClick = false;
 let saveTimer;
@@ -209,6 +211,7 @@ function render() {
   $('#focus-canvas span').textContent = focusMode ? 'Exit focus' : 'Focus canvas';
   $('#focus-canvas').setAttribute('aria-pressed', String(focusMode));
   $('#arrange').setAttribute('aria-pressed', String(arrangeMode));
+  $('#diagram-summary').textContent = `${quantity(project.devices.length, 'device')} · ${quantity(countServices(), 'app')}`;
   $('#auto-layout').disabled = project.layout.mode === 'auto';
   $('#arrange-hint').hidden = !arrangeMode;
   $('#undo').disabled = !history.length;
@@ -277,6 +280,7 @@ function renderInventory() {
   const networks = filterInventory(project.networks, inventoryQuery, ['name', 'kind']);
   $('#device-count').textContent = project.devices.length;
   $('#network-count').textContent = project.networks.length;
+  $('#inventory-summary').textContent = `${quantity(project.devices.length, 'device')} · ${quantity(countServices(), 'app')}`;
   const deviceList = $('#device-list');
   deviceList.replaceChildren(...devices.map(device => {
     const index = project.devices.indexOf(device);
@@ -329,11 +333,13 @@ function renderInspector() {
   const device = project.devices.find(item => item.id === selected);
   const network = project.networks.find(item => item.id === selected);
   if (!device && !network) {
+    inspectorTabDevice = null;
     root.innerHTML = `<span class="eyebrow">Project</span><h2>Diagram settings</h2><p class="muted">Select a device or network node to edit it.</p>${projectForm()}`;
     bindProjectForm(root);
     return;
   }
   if (network) {
+    inspectorTabDevice = null;
     const logoChoice = (field, label) => {
       const id = field === 'icon' ? networkLogoId(network) : network.secondaryIcon;
       const value = network[field];
@@ -341,15 +347,26 @@ function renderInspector() {
       const thumbnail = id ? `<img class="${logoPlateClass(id)}" alt="" src="${logoSource(id)}">` : '<span class="logo-none" aria-hidden="true">—</span>';
       return `<div class="network-logo-field"><span>${label}</span><button type="button" data-network-logo="${field}" aria-haspopup="dialog" aria-label="Choose ${label.toLowerCase()}: ${escapeHtml(text)}">${thumbnail}<span>${escapeHtml(text)}</span></button></div>`;
     };
-    root.innerHTML = `<div class="inspector-head"><div><span class="eyebrow">Network node</span><h2>${escapeHtml(network.name)}</h2></div><button data-delete-network class="danger">Delete</button></div><section class="inspector-section"><h3>Identity</h3><label>Name<input data-network="name" maxlength="120"></label><div class="form-grid"><label>Kind<input data-network="kind" maxlength="120"></label><label>Accent<input data-network="accent" type="color"></label></div>${logoChoice('icon', 'Logo')}${logoChoice('secondaryIcon', 'Secondary logo')}<p class="help">Add a secondary logo for an optional backup provider in the same node.</p></section>`;
+    const networkIcon = networkLogoId(network);
+    root.innerHTML = `<div class="inspector-head"><div class="inspector-identity"><img class="inspector-logo ${logoPlateClass(networkIcon)}" alt="" src="${logoSource(networkIcon)}"><div><span class="eyebrow">Network node</span><h2>${escapeHtml(network.name)}</h2></div></div></div><div class="inspector-actions"><button data-delete-network class="danger">Delete</button></div><section class="inspector-section"><h3>Identity</h3><label>Name<input data-network="name" maxlength="120"></label><div class="form-grid"><label>Kind<input data-network="kind" maxlength="120"></label><label>Accent<input data-network="accent" type="color"></label></div>${logoChoice('icon', 'Logo')}${logoChoice('secondaryIcon', 'Secondary logo')}<p class="help">Add a secondary logo for an optional backup provider in the same node.</p></section>`;
     for (const key of ['name', 'kind', 'accent']) root.querySelector(`[data-network=${key}]`).value = network[key];
     return;
   }
   const deviceLogo = logoFor(device.icon);
+  if (inspectorTabDevice !== device.id) {
+    inspectorTabDevice = device.id;
+    inspectorTab = 'details';
+  }
   const diagram = layoutProject(project);
   const card = diagram.cards.find(item => item.id === device.id);
   const position = { x: Math.round(card.x - diagram.margin), y: Math.round(card.y - diagram.cardsY), w: Math.round(card.w), h: Math.round(card.h) };
-  root.innerHTML = `<div class="inspector-head"><div><span class="eyebrow">Device</span><h2>${escapeHtml(device.name)}</h2></div><div><button data-duplicate title="Duplicate" aria-label="Duplicate device">Copy</button><button data-delete class="danger">Delete</button></div></div><section class="inspector-section"><h3>Identity</h3><label>Name<input data-device="name" maxlength="120"></label><label>Role<input data-device="role" maxlength="120"></label><div class="form-grid"><label>Network / VLAN<input data-device="network" maxlength="120"></label><label>Accent<input data-device="accent" type="color"></label></div><div class="network-logo-field"><span>Device icon</span><button type="button" data-device-logo aria-haspopup="dialog" aria-label="Choose device icon: ${escapeHtml(deviceLogo.label)}"><img class="${logoPlateClass(device.icon)}" alt="" src="${logoSource(device.icon)}"><span>${escapeHtml(deviceLogo.label)}</span></button></div></section><section class="inspector-section"><h3>Position</h3><div class="position-grid"><label>X<input data-position="x" type="number" min="0" max="100000" step="1" value="${position.x}"></label><label>Y<input data-position="y" type="number" min="0" max="100000" step="1" value="${position.y}"></label><label>Width<input data-position="w" type="number" min="240" max="100000" step="1" value="${position.w}"></label><label>Height<input data-position="h" type="number" min="100" max="100000" step="1" value="${position.h}"></label></div><p class="help">Positions use diagram units. Content sets the minimum height.</p></section><section class="inspector-section"><h3>Hardware</h3><label>Facts <span class="muted">One per line. Optional Label: value.</span><textarea data-hardware maxlength="1451"></textarea></label></section><section class="inspector-section"><div class="section-head"><h3>Service groups</h3><button data-add-group>${icon('add')}Group</button></div><div id="groups"></div></section>`;
+  const serviceCount = device.groups.reduce((sum, group) => sum + group.services.length, 0);
+  const tabs = [
+    ['details', 'Details'],
+    ['apps', `Apps (${serviceCount})`],
+    ['layout', 'Layout'],
+  ];
+  root.innerHTML = `<div class="inspector-head"><div class="inspector-identity"><img class="inspector-logo ${logoPlateClass(device.icon)}" alt="" src="${logoSource(device.icon)}"><div><span class="eyebrow">Device</span><h2>${escapeHtml(device.name)}</h2></div></div></div><div class="inspector-actions"><button data-duplicate title="Duplicate" aria-label="Duplicate device">Copy</button><button data-delete class="danger">Delete</button></div><div class="inspector-tabs" role="tablist" aria-label="Device inspector">${tabs.map(([id, label]) => `<button id="inspector-tab-${id}" role="tab" aria-selected="${inspectorTab === id}" aria-controls="inspector-panel-${id}" tabindex="${inspectorTab === id ? 0 : -1}" data-inspector-tab="${id}">${label}</button>`).join('')}</div><div id="inspector-panel-details" class="tab-panel" role="tabpanel" aria-labelledby="inspector-tab-details" ${inspectorTab === 'details' ? '' : 'hidden'}><section class="inspector-section"><h3>Identity</h3><label>Name<input data-device="name" maxlength="120"></label><label>Role<input data-device="role" maxlength="120"></label><div class="form-grid"><label>Network / VLAN<input data-device="network" maxlength="120"></label><label>Accent<input data-device="accent" type="color"></label></div><div class="network-logo-field"><span>Device icon</span><button type="button" data-device-logo aria-haspopup="dialog" aria-label="Choose device icon: ${escapeHtml(deviceLogo.label)}"><img class="${logoPlateClass(device.icon)}" alt="" src="${logoSource(device.icon)}"><span>${escapeHtml(deviceLogo.label)}</span></button></div></section><section class="inspector-section"><h3>Hardware</h3><label>Facts <span class="muted">One per line. Optional Label: value.</span><textarea data-hardware maxlength="1451"></textarea></label></section></div><div id="inspector-panel-apps" class="tab-panel" role="tabpanel" aria-labelledby="inspector-tab-apps" ${inspectorTab === 'apps' ? '' : 'hidden'}><section class="inspector-section"><div class="section-head"><h3>Service groups</h3><button data-add-group>${icon('add')}Group</button></div><div id="groups"></div></section></div><div id="inspector-panel-layout" class="tab-panel" role="tabpanel" aria-labelledby="inspector-tab-layout" ${inspectorTab === 'layout' ? '' : 'hidden'}><section class="inspector-section"><h3>Position</h3><div class="position-grid"><label>X<input data-position="x" type="number" min="0" max="100000" step="1" value="${position.x}"></label><label>Y<input data-position="y" type="number" min="0" max="100000" step="1" value="${position.y}"></label><label>Width<input data-position="w" type="number" min="240" max="100000" step="1" value="${position.w}"></label><label>Height<input data-position="h" type="number" min="100" max="100000" step="1" value="${position.h}"></label></div><p class="help">Positions use diagram units. Content sets the minimum height.</p></section></div>`;
   for (const key of ['name', 'role', 'network', 'accent']) root.querySelector(`[data-device=${key}]`).value = device[key];
   root.querySelector('[data-hardware]').value = device.hardware.join('\n');
   root.querySelector('#groups').replaceChildren(...device.groups.map(groupElement));
@@ -365,7 +382,7 @@ function groupElement(group) {
     const row = document.createElement('div');
     row.className = 'service-row';
     row.dataset.service = service.id;
-    row.innerHTML = `<button type="button" data-service-logo class="service-logo" aria-haspopup="dialog" aria-label="Change logo for ${escapeHtml(service.name)}"><img class="${logoPlateClass(service.logo)}" alt="" src="${logoSource(service.logo)}"></button><input data-service-name maxlength="120" aria-label="Service name"><input data-service-count type="number" min="1" max="99" step="1" aria-label="Instance count"><button data-service-up class="mini" aria-label="Move up">${icon('up')}</button><button data-service-down class="mini" aria-label="Move down">${icon('down')}</button><button data-remove-service class="mini danger" aria-label="Remove service">${icon('close')}</button>`;
+    row.innerHTML = `<button type="button" data-service-logo class="service-logo" aria-haspopup="dialog" aria-label="Change logo for ${escapeHtml(service.name)}"><img class="${logoPlateClass(service.logo)}" alt="" src="${logoSource(service.logo)}"></button><input data-service-name maxlength="120" aria-label="Service name"><div class="service-controls"><input data-service-count type="number" min="1" max="99" step="1" aria-label="Instance count"><button data-service-up class="mini" aria-label="Move up">${icon('up')}</button><button data-service-down class="mini" aria-label="Move down">${icon('down')}</button><button data-remove-service class="mini danger" aria-label="Remove service">${icon('close')}</button></div>`;
     row.querySelector('[data-service-name]').value = service.name;
     row.querySelector('[data-service-count]').value = service.count;
     return row;
@@ -374,6 +391,7 @@ function groupElement(group) {
 }
 
 function selectInventoryItem(id) {
+  if (id !== selected) inspectorTabDevice = null;
   selected = id;
   inspectorOpen = true;
   focusMode = false;
@@ -453,6 +471,16 @@ $('#inspector-content').addEventListener('change', event => {
 $('#inspector-content').addEventListener('click', event => {
   const button = event.target.closest('button');
   if (!button) return;
+  if (button.dataset.inspectorTab) {
+    inspectorTab = button.dataset.inspectorTab;
+    for (const tab of $('#inspector-content').querySelectorAll('[role="tab"]')) {
+      const active = tab === button;
+      tab.setAttribute('aria-selected', String(active));
+      tab.tabIndex = active ? 0 : -1;
+      $(`#${tab.getAttribute('aria-controls')}`).hidden = !active;
+    }
+    return;
+  }
   const deviceId = project.devices.some(item => item.id === selected) ? selected : null;
   const networkId = project.networks.some(item => item.id === selected) ? selected : null;
   if (button.matches('[data-delete]') && deviceId) {
@@ -517,6 +545,17 @@ $('#inspector-content').addEventListener('click', event => {
       });
     }
   }
+});
+
+$('#inspector-content').addEventListener('keydown', event => {
+  const tab = event.target.closest('[role="tab"]');
+  if (!tab || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+  event.preventDefault();
+  const tabs = [...tab.parentElement.querySelectorAll('[role="tab"]')];
+  const index = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1
+    : (tabs.indexOf(tab) + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+  tabs[index].click();
+  tabs[index].focus();
 });
 
 function buildTemplates() {
@@ -1794,8 +1833,20 @@ $('#discovery-dialog').addEventListener('close', () => {
   if (state?.opener?.isConnected) state.opener.focus();
 });
 
-$('#sample').addEventListener('click', () => { if (confirm('Replace this project with the example? You can undo afterward.')) replaceProject(sampleProject()); });
-$('#empty').addEventListener('click', () => { if (confirm('Start empty? You can undo afterward.')) replaceProject(emptyProject()); });
+function closeFileMenu(restoreFocus = false) {
+  const menu = $('#file-menu');
+  if (!menu.open) return false;
+  menu.open = false;
+  if (restoreFocus) menu.querySelector('summary').focus();
+  return true;
+}
+
+document.addEventListener('click', event => {
+  if (!event.target.closest('#file-menu')) closeFileMenu(true);
+});
+$('#file-menu a').addEventListener('click', () => closeFileMenu());
+$('#sample').addEventListener('click', () => { closeFileMenu(); if (confirm('Replace this project with the example? You can undo afterward.')) replaceProject(sampleProject()); });
+$('#empty').addEventListener('click', () => { closeFileMenu(); if (confirm('Start empty? You can undo afterward.')) replaceProject(emptyProject()); });
 
 function undo() {
   if (!history.length) return;
@@ -1823,6 +1874,10 @@ $('#undo').addEventListener('click', undo);
 $('#redo').addEventListener('click', redo);
 addEventListener('keydown', event => {
   const editing = event.target.matches('input, select, textarea, [contenteditable=true]');
+  if (event.key === 'Escape' && closeFileMenu(true)) {
+    event.preventDefault();
+    return;
+  }
   if (event.key === 'Escape' && gesture) {
     event.preventDefault();
     finishGesture(false);
@@ -1849,7 +1904,7 @@ addEventListener('keydown', event => {
   }
 });
 
-$('#import').addEventListener('click', () => $('#file-input').click());
+$('#import').addEventListener('click', () => { closeFileMenu(); $('#file-input').click(); });
 $('#file-input').addEventListener('change', async event => {
   const file = event.target.files[0];
   if (!file) return;
@@ -1877,7 +1932,7 @@ function download(blob, name) {
   setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 }
 
-$('#save-json').addEventListener('click', () => download(new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' }), filename('.json')));
+$('#save-json').addEventListener('click', () => { closeFileMenu(); download(new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' }), filename('.json')); });
 const exportOptions = () => ({ hideNetworkDetails: $('#export-hide-network').checked, customTerms: $('#export-custom-terms').value });
 let exportPreviewFrame;
 function updateExportPreview() {
