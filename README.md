@@ -25,11 +25,11 @@ Atlas lays out your diagram automatically, with optional manual positioning and 
 You'll need Docker with Compose v2:
 
 ```sh
-curl -fsSLO https://github.com/aiden0rchad/homelab-atlas/releases/download/v0.11.1/compose.release.yaml
+curl -fsSLO https://github.com/aiden0rchad/homelab-atlas/releases/download/v0.12.0/compose.release.yaml
 docker compose -f compose.release.yaml up -d
 ```
 
-Open `http://localhost:8080`. This uses the `0.11.1` image and only listens on the machine running Docker. Images are available for Linux AMD64 and ARM64.
+Open `http://localhost:8080`. This uses the `0.12.0` image and only listens on the machine running Docker. Images are available for Linux AMD64 and ARM64.
 
 For access from another computer, updates, or running without Docker, see the [setup guide](https://aiden0rchad.github.io/homelab-atlas/getting-started). The [release page](https://github.com/aiden0rchad/homelab-atlas/releases/latest) has the portable ZIP, Compose file, and checksums.
 
@@ -39,7 +39,7 @@ Open **File** and start with **Load example** to see how it works, or **Start em
 
 You can upload PNG, JPG, WebP, or SVG logos up to 2 MB, preview their contrast background, and reuse them across devices, services, and network nodes. SVG uploads are converted to PNG, and stored images are at most 512px. They stay in project JSON and work offline and in exports. The bundled catalog still includes 27 provider marks. Atlas starts with an automatic layout; **Arrange** in the canvas header lets you move or resize device cards. **Export** previews and downloads a PNG or SVG, with network details hidden by default and optional literal terms for custom names. Use **File → Save project** to download a JSON copy you can edit later.
 
-**Discover devices** guides you through **Choose → Find → Review** for Docker apps, network devices, or a saved Docker JSON/Nmap XML scan. Nothing scans automatically, every result starts unchecked, and **Add to diagram** is one undoable change that preserves existing card positions. See the [discovery guide](https://aiden0rchad.github.io/homelab-atlas/discovery).
+**Discover devices** guides you through **Choose → Find → Review** for Docker apps, network devices, or a saved Docker JSON/Nmap XML scan. Nothing scans automatically, every result starts unchecked, and **Add selected to diagram** is one undoable change that preserves existing card positions. See the [discovery guide](https://aiden0rchad.github.io/homelab-atlas/discovery).
 
 The [editor guide](https://aiden0rchad.github.io/homelab-atlas/editor) covers the controls, and the [networking guide](https://aiden0rchad.github.io/homelab-atlas/networking) explains connections and VLANs.
 

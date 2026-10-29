@@ -148,7 +148,7 @@ docker run --rm \
   -e ATLAS_HOST_ID=nas \
   -e 'ATLAS_HOST_NAME=NAS Docker' \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
-  ghcr.io/aiden0rchad/homelab-atlas:0.11.1 collect \
+  ghcr.io/aiden0rchad/homelab-atlas:0.12.0 collect \
   > ../nas-docker-snapshot.json
 ```
 

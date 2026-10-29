@@ -2,6 +2,14 @@
 
 This file lists the notable changes in each Homelab Atlas release.
 
+## [0.12.0] - 2026-10-28
+
+### Changed
+
+- Discovery setup now presents one focused step at a time for local or remote Docker and Docker Compose or native Nmap installs.
+- Configured Docker servers keep the fast path, while missing inputs disable scan actions and readiness, authentication, and collector failures provide specific retry guidance.
+- Unchecked review, layout overlap protection, and one-step Undo behavior remain unchanged.
+
 ## [0.11.1] - 2026-10-28
 
 ### Fixed
@@ -148,3 +156,4 @@ This file lists the notable changes in each Homelab Atlas release.
 [0.10.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.10.0
 [0.11.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.11.0
 [0.11.1]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.11.1
+[0.12.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.12.0

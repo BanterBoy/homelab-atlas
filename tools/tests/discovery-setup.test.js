@@ -34,6 +34,6 @@ test('Docker setup opens only after a successful empty readiness response', () =
 test('setup commands keep the documented release and restricted snapshot forms', () => {
   assert.match(SETUP_COMMANDS.composeRelease, /compose\.release\.yaml --profile discovery/);
   assert.match(SETUP_COMMANDS.snapshot, /--network none/);
-  assert.match(SETUP_COMMANDS.snapshot, /homelab-atlas:0\.11\.1 collect/);
+  assert.match(SETUP_COMMANDS.snapshot, /homelab-atlas:0\.12\.0 collect/);
   assert.equal(SETUP_COMMANDS.nmapBuild, 'ATLAS_WITH_NMAP=true docker compose up -d --build');
 });
