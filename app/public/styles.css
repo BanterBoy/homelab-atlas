@@ -297,6 +297,7 @@ code, pre { color: #cad6ff; }
 
 @media (max-width: 1200px) {
   .workspace, .workspace.inspector-open { grid-template-columns: 248px minmax(0,1fr); }
+  .workspace.focus-mode { grid-template-columns: minmax(0,1fr); }
   .inspector { position: absolute; z-index: 8; top: 0; right: 0; bottom: 0; width: min(350px,92vw); box-shadow: -16px 0 40px #0009; }
   .stage-title > span { display: none; }
   .stage-actions button { padding-inline: 8px; } .stage-actions button svg { display: none; }

@@ -16,7 +16,7 @@ Manual diagrams need only Atlas and a browser. Discovery is optional and has sep
 Download the release Compose file, then start the container:
 
 ```sh
-curl -fsSLO https://github.com/aiden0rchad/homelab-atlas/releases/download/v0.11.0/compose.release.yaml
+curl -fsSLO https://github.com/aiden0rchad/homelab-atlas/releases/download/v0.11.1/compose.release.yaml
 docker compose -f compose.release.yaml up -d
 ```
 
@@ -26,14 +26,14 @@ Open `http://localhost:8080`. Verify the server if needed:
 curl http://localhost:8080/healthz
 ```
 
-A healthy response is `ok`. By default, the Compose file pulls `ghcr.io/aiden0rchad/homelab-atlas:0.11.0`. It only listens on the machine running Docker and keeps the container read-only, drops its capabilities, and enables the no-new-privileges setting. Docker discovery stays off unless you enable its profile.
+A healthy response is `ok`. By default, the Compose file pulls `ghcr.io/aiden0rchad/homelab-atlas:0.11.1`. It only listens on the machine running Docker and keeps the container read-only, drops its capabilities, and enables the no-new-privileges setting. Docker discovery stays off unless you enable its profile.
 
 ## Pin and update versions
 
 To pin a version, create `.env` next to `compose.release.yaml`:
 
 ```dotenv
-ATLAS_VERSION=0.11.0
+ATLAS_VERSION=0.11.1
 ```
 
 When you want to update, change `ATLAS_VERSION` in `.env` to a version that has been published. Then pull it and recreate the container without changing the hostname or port:
@@ -47,7 +47,7 @@ Save an editable JSON project before you update or downgrade. Your project is st
 
 The image tags work like this:
 
-- `0.11.0` and `v0.11.0` identify this release.
+- `0.11.1` and `v0.11.1` identify this release.
 - `0.11` moves to the newest compatible 0.11 patch.
 - `latest` moves to the newest stable release.
 - A published image digest never changes; the [release guide](/releases/) explains how to pin one.
@@ -92,8 +92,8 @@ go run ./app
 For the portable release, extract the ZIP and move into its top-level directory first:
 
 ```sh
-unzip homelab-atlas-0.11.0.zip
-cd homelab-atlas-0.11.0
+unzip homelab-atlas-0.11.1.zip
+cd homelab-atlas-0.11.1
 go run ./app
 ```
 

@@ -2,6 +2,12 @@
 
 This file lists the notable changes in each Homelab Atlas release.
 
+## [0.11.1] - 2026-10-28
+
+### Fixed
+
+- Focus canvas now uses the full tablet width when the inspector was open.
+
 ## [0.11.0] - 2026-10-28
 
 ### Changed
@@ -141,3 +147,4 @@ This file lists the notable changes in each Homelab Atlas release.
 [0.9.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.9.0
 [0.10.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.10.0
 [0.11.0]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.11.0
+[0.11.1]: https://github.com/aiden0rchad/homelab-atlas/releases/tag/v0.11.1

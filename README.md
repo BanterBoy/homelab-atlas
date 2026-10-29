@@ -25,11 +25,11 @@ Atlas lays out your diagram automatically, with optional manual positioning and 
 You'll need Docker with Compose v2:
 
 ```sh
-curl -fsSLO https://github.com/aiden0rchad/homelab-atlas/releases/download/v0.11.0/compose.release.yaml
+curl -fsSLO https://github.com/aiden0rchad/homelab-atlas/releases/download/v0.11.1/compose.release.yaml
 docker compose -f compose.release.yaml up -d
 ```
 
-Open `http://localhost:8080`. This uses the `0.11.0` image and only listens on the machine running Docker. Images are available for Linux AMD64 and ARM64.
+Open `http://localhost:8080`. This uses the `0.11.1` image and only listens on the machine running Docker. Images are available for Linux AMD64 and ARM64.
 
 For access from another computer, updates, or running without Docker, see the [setup guide](https://aiden0rchad.github.io/homelab-atlas/getting-started). The [release page](https://github.com/aiden0rchad/homelab-atlas/releases/latest) has the portable ZIP, Compose file, and checksums.
 
