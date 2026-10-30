@@ -31,6 +31,10 @@ docker compose -f compose.release.yaml up -d
 
 Open `http://localhost:8080`. This uses the `0.12.0` image and only listens on the machine running Docker. Images are available for Linux AMD64 and ARM64.
 
+### Home Assistant
+
+Atlas can run as a Home Assistant add-on with its own sidebar panel. Add `https://github.com/BanterBoy/homelab-atlas` under **Settings → Add-ons → Add-on Store → ⋮ → Repositories**, install **Homelab Atlas**, turn on **Show in sidebar**, and start it. Projects are saved in the add-on's storage, so they follow you between browsers and are included in Home Assistant backups. See [homelab_atlas/DOCS.md](homelab_atlas/DOCS.md).
+
 For access from another computer, updates, or running without Docker, see the [setup guide](https://aiden0rchad.github.io/homelab-atlas/getting-started). The [release page](https://github.com/aiden0rchad/homelab-atlas/releases/latest) has the portable ZIP, Compose file, and checksums.
 
 ## Making a diagram

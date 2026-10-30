@@ -15,9 +15,11 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -26,6 +28,11 @@ import (
 )
 
 const securityPolicy = "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+
+// ingressSecurityPolicy lets Home Assistant embed Atlas in its own same-origin ingress iframe.
+const ingressSecurityPolicy = "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'"
+
+const maxProjectBytes = 16 << 20
 
 var hostnamePattern = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$`)
 
@@ -37,6 +44,8 @@ type atlasServer struct {
 	apiToken     string
 	httpClient   *http.Client
 	nmap         *nmapScanner
+	ingressPeers map[string]bool
+	dataDir      string
 }
 
 type staticAsset struct {
@@ -71,7 +80,17 @@ func newAtlasServer(public fs.FS) (*atlasServer, error) {
 	if token != "" && len(token) < 32 {
 		return nil, errors.New("ATLAS_API_TOKEN must be at least 32 characters")
 	}
-	if remote && token == "" {
+	ingress, err := ingressPeerSet(os.Getenv("ATLAS_INGRESS_PROXY"))
+	if err != nil {
+		return nil, err
+	}
+	dataDir := os.Getenv("ATLAS_DATA_DIR")
+	if dataDir != "" {
+		if info, err := os.Stat(dataDir); err != nil || !info.IsDir() {
+			return nil, errors.New("ATLAS_DATA_DIR must name an existing directory")
+		}
+	}
+	if remote && token == "" && ingress == nil {
 		return nil, errors.New("ATLAS_API_TOKEN is required when ATLAS_ALLOWED_HOSTS includes a non-loopback host")
 	}
 	transport := &http.Transport{
@@ -81,6 +100,7 @@ func newAtlasServer(public fs.FS) (*atlasServer, error) {
 	}
 	return &atlasServer{
 		assets: assets, assetPrefix: assetPrefix, sources: sources, allowedHosts: allowed, apiToken: token, nmap: nmapScanner,
+		ingressPeers: ingress, dataDir: dataDir,
 		httpClient: &http.Client{
 			Transport:     transport,
 			Timeout:       12 * time.Second,
@@ -110,8 +130,8 @@ func loadStaticAssets(public fs.FS) (map[string]staticAsset, string, error) {
 		}
 		if name == "index.html" {
 			for _, replacement := range [][2]string{
-				{`href="/styles.css"`, `href="` + assetPrefix + `styles.css"`},
-				{`src="/app.js"`, `src="` + assetPrefix + `app.js"`},
+				{`href="styles.css"`, `href="` + strings.TrimPrefix(assetPrefix, "/") + `styles.css"`},
+				{`src="app.js"`, `src="` + strings.TrimPrefix(assetPrefix, "/") + `app.js"`},
 			} {
 				if bytes.Count(data, []byte(replacement[0])) != 1 {
 					return fmt.Errorf("index.html must contain exactly one %s", replacement[0])
@@ -214,11 +234,45 @@ func allowedHostSet(raw string) (map[string]bool, bool, error) {
 	return result, remote, nil
 }
 
+// ingressPeerSet parses the proxy addresses allowed to reach Atlas when it runs behind Home Assistant ingress.
+func ingressPeerSet(raw string) (map[string]bool, error) {
+	if strings.TrimSpace(raw) == "" {
+		return nil, nil
+	}
+	result := make(map[string]bool)
+	for _, value := range strings.Split(raw, ",") {
+		parsed, err := netip.ParseAddr(strings.TrimSpace(value))
+		if err != nil {
+			return nil, errors.New("ATLAS_INGRESS_PROXY must be a comma-separated list of IP addresses")
+		}
+		result[parsed.Unmap().String()] = true
+	}
+	return result, nil
+}
+
+func (server *atlasServer) fromIngress(request *http.Request) bool {
+	host, _, err := net.SplitHostPort(request.RemoteAddr)
+	if err != nil {
+		return false
+	}
+	parsed, err := netip.ParseAddr(host)
+	return err == nil && server.ingressPeers[parsed.Unmap().String()]
+}
+
 func (server *atlasServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	setSecurityHeaders(writer.Header())
+	if server.ingressPeers != nil {
+		writer.Header().Set("Content-Security-Policy", ingressSecurityPolicy)
+		if !server.fromIngress(request) && !(request.URL.Path == "/healthz" && isLoopbackRemote(request)) {
+			http.Error(writer, "open Homelab Atlas from the Home Assistant sidebar", http.StatusForbidden)
+			return
+		}
+	}
 	switch {
 	case request.URL.Path == "/healthz":
 		serveHealth(writer, request)
+	case request.URL.Path == "/api/project" && server.dataDir != "":
+		server.serveProject(writer, request)
 	case request.URL.Path == "/api/discovery/sources":
 		server.serveSources(writer, request)
 	case request.URL.Path == "/api/discovery/scan":
@@ -331,19 +385,20 @@ func (server *atlasServer) authorizeAPI(writer http.ResponseWriter, request *htt
 		http.Error(writer, "missing request header", http.StatusForbidden)
 		return false
 	}
-	host := request.Host
-	if parsed, _, err := net.SplitHostPort(host); err == nil {
-		host = parsed
-	} else if strings.HasPrefix(host, "[") && strings.HasSuffix(host, "]") {
-		host = strings.TrimSuffix(strings.TrimPrefix(host, "["), "]")
-	}
-	if !server.allowedHosts[strings.ToLower(host)] {
+	requestHost := request.Host
+	if server.ingressPeers != nil {
+		// Home Assistant authenticates the user and proxies every request, so the browser-facing
+		// host is reported by the proxy instead of matching a fixed allowlist.
+		if forwarded := request.Header.Get("X-Forwarded-Host"); forwarded != "" {
+			requestHost = forwarded
+		}
+	} else if !server.allowedRequestHost(requestHost) {
 		http.Error(writer, "request host is not allowed", http.StatusForbidden)
 		return false
 	}
 	if origin := request.Header.Get("Origin"); origin != "" {
 		parsed, err := url.Parse(origin)
-		if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || !strings.EqualFold(parsed.Host, request.Host) || parsed.User != nil || parsed.Path != "" || parsed.RawQuery != "" || parsed.Fragment != "" {
+		if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || !strings.EqualFold(parsed.Host, requestHost) || parsed.User != nil || parsed.Path != "" || parsed.RawQuery != "" || parsed.Fragment != "" {
 			http.Error(writer, "request origin does not match", http.StatusForbidden)
 			return false
 		}
@@ -354,6 +409,81 @@ func (server *atlasServer) authorizeAPI(writer http.ResponseWriter, request *htt
 		return false
 	}
 	return true
+}
+
+func (server *atlasServer) allowedRequestHost(host string) bool {
+	if parsed, _, err := net.SplitHostPort(host); err == nil {
+		host = parsed
+	} else if strings.HasPrefix(host, "[") && strings.HasSuffix(host, "]") {
+		host = strings.TrimSuffix(strings.TrimPrefix(host, "["), "]")
+	}
+	return server.allowedHosts[strings.ToLower(host)]
+}
+
+func isLoopbackRemote(request *http.Request) bool {
+	host, _, err := net.SplitHostPort(request.RemoteAddr)
+	if err != nil {
+		return false
+	}
+	parsed, err := netip.ParseAddr(host)
+	return err == nil && parsed.IsLoopback()
+}
+
+// serveProject stores one project JSON document on disk so diagrams survive browser changes.
+func (server *atlasServer) serveProject(writer http.ResponseWriter, request *http.Request) {
+	if !server.authorizeAPI(writer, request) {
+		return
+	}
+	file := filepath.Join(server.dataDir, "project.json")
+	switch request.Method {
+	case http.MethodGet:
+		data, err := os.ReadFile(file)
+		if errors.Is(err, fs.ErrNotExist) {
+			writer.WriteHeader(http.StatusNoContent)
+			return
+		}
+		if err != nil {
+			log.Printf("project read failed: %v", err)
+			http.Error(writer, "project could not be read", http.StatusInternalServerError)
+			return
+		}
+		writeBody(writer, request, http.StatusOK, "application/json; charset=utf-8", data)
+	case http.MethodPut:
+		if media := strings.TrimSpace(strings.Split(request.Header.Get("Content-Type"), ";")[0]); media != "application/json" {
+			http.Error(writer, "Content-Type must be application/json", http.StatusUnsupportedMediaType)
+			return
+		}
+		data, err := io.ReadAll(io.LimitReader(request.Body, maxProjectBytes+1))
+		if err != nil {
+			http.Error(writer, "could not read project", http.StatusBadRequest)
+			return
+		}
+		if len(data) > maxProjectBytes {
+			http.Error(writer, "project is larger than 16 MB", http.StatusRequestEntityTooLarge)
+			return
+		}
+		if !json.Valid(data) || len(bytes.TrimSpace(data)) == 0 || bytes.TrimSpace(data)[0] != '{' {
+			http.Error(writer, "project must be a JSON object", http.StatusBadRequest)
+			return
+		}
+		temporary, err := os.CreateTemp(server.dataDir, ".project-*.json")
+		if err != nil {
+			log.Printf("project write failed: %v", err)
+			http.Error(writer, "project could not be saved", http.StatusInternalServerError)
+			return
+		}
+		_, writeErr := temporary.Write(data)
+		closeErr := temporary.Close()
+		if writeErr != nil || closeErr != nil || os.Rename(temporary.Name(), file) != nil {
+			_ = os.Remove(temporary.Name())
+			log.Printf("project write failed: %v %v", writeErr, closeErr)
+			http.Error(writer, "project could not be saved", http.StatusInternalServerError)
+			return
+		}
+		writer.WriteHeader(http.StatusNoContent)
+	default:
+		methodNotAllowed(writer, "GET, PUT")
+	}
 }
 
 func constantTokenMatch(header, token string) bool {

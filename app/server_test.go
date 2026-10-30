@@ -102,10 +102,11 @@ func TestVersionedStaticAssets(t *testing.T) {
 
 	index := request(server, http.MethodGet, "/", nil, nil)
 	body := index.Body.String()
-	if index.Code != http.StatusOK || strings.Count(body, server.assetPrefix) != 2 ||
-		!strings.Contains(body, `href="`+server.assetPrefix+`styles.css"`) ||
-		!strings.Contains(body, `src="`+server.assetPrefix+`app.js"`) ||
-		strings.Contains(body, `href="/styles.css"`) || strings.Contains(body, `src="/app.js"`) {
+	relativePrefix := strings.TrimPrefix(server.assetPrefix, "/")
+	if index.Code != http.StatusOK || strings.Count(body, relativePrefix) != 2 ||
+		!strings.Contains(body, `href="`+relativePrefix+`styles.css"`) ||
+		!strings.Contains(body, `src="`+relativePrefix+`app.js"`) ||
+		strings.Contains(body, `href="styles.css"`) || strings.Contains(body, `src="app.js"`) || strings.Contains(body, `="/`) {
 		t.Fatalf("index does not reference one versioned asset prefix: status=%d prefix=%q", index.Code, server.assetPrefix)
 	}
 
@@ -359,5 +360,71 @@ func TestConfiguredRemoteHostsRequireAPIToken(t *testing.T) {
 	}
 	if _, _, err := allowedHostSet("localhost:8080"); err == nil {
 		t.Fatal("port in allowed host was accepted")
+	}
+}
+
+func TestIngressModeRestrictsPeersAndAllowsFraming(t *testing.T) {
+	server := testAtlasServer(t)
+	server.ingressPeers = map[string]bool{"172.30.32.2": true}
+	send := func(remote, target string, headers map[string]string) *httptest.ResponseRecorder {
+		record := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, target, nil)
+		req.Host = "homeassistant.local:8123"
+		req.RemoteAddr = remote
+		for key, value := range headers {
+			req.Header.Set(key, value)
+		}
+		server.ServeHTTP(record, req)
+		return record
+	}
+	if got := send("172.30.32.2:40000", "/", nil); got.Code != http.StatusOK || !strings.Contains(got.Header().Get("Content-Security-Policy"), "frame-ancestors 'self'") {
+		t.Fatalf("ingress index: status=%d csp=%q", got.Code, got.Header().Get("Content-Security-Policy"))
+	}
+	if got := send("172.30.33.5:40000", "/", nil); got.Code != http.StatusForbidden {
+		t.Fatalf("non-ingress peer status=%d", got.Code)
+	}
+	if got := send("127.0.0.1:40000", "/healthz", nil); got.Code != http.StatusOK {
+		t.Fatalf("loopback healthcheck status=%d", got.Code)
+	}
+	api := map[string]string{"X-Atlas-Request": "1", "X-Forwarded-Host": "ha.example.net", "Origin": "https://ha.example.net"}
+	if got := send("172.30.32.2:40000", "/api/discovery/sources", api); got.Code != http.StatusOK {
+		t.Fatalf("ingress API status=%d body=%q", got.Code, got.Body.String())
+	}
+	api["Origin"] = "https://evil.example"
+	if got := send("172.30.32.2:40000", "/api/discovery/sources", api); got.Code != http.StatusForbidden {
+		t.Fatalf("mismatched origin status=%d", got.Code)
+	}
+	if _, err := ingressPeerSet("not-an-ip"); err == nil {
+		t.Fatal("invalid ingress peer was accepted")
+	}
+}
+
+func TestProjectStorage(t *testing.T) {
+	server := testAtlasServer(t)
+	headers := map[string]string{"X-Atlas-Request": "1", "Content-Type": "application/json"}
+	if got := request(server, http.MethodGet, "/api/project", nil, headers); got.Code != http.StatusNotFound {
+		t.Fatalf("project API without data dir: status=%d", got.Code)
+	}
+	server.dataDir = t.TempDir()
+	if got := request(server, http.MethodGet, "/api/project", nil, headers); got.Code != http.StatusNoContent {
+		t.Fatalf("empty project: status=%d", got.Code)
+	}
+	for _, body := range []string{"", "[]", "{", `"text"`} {
+		if got := request(server, http.MethodPut, "/api/project", []byte(body), headers); got.Code != http.StatusBadRequest {
+			t.Errorf("invalid project %q: status=%d", body, got.Code)
+		}
+	}
+	if got := request(server, http.MethodPut, "/api/project", []byte(`{"title":"Lab"}`), map[string]string{"Content-Type": "application/json"}); got.Code != http.StatusForbidden {
+		t.Fatalf("missing request header: status=%d", got.Code)
+	}
+	if got := request(server, http.MethodPut, "/api/project", []byte(`{"title":"Lab"}`), headers); got.Code != http.StatusNoContent {
+		t.Fatalf("save project: status=%d body=%q", got.Code, got.Body.String())
+	}
+	got := request(server, http.MethodGet, "/api/project", nil, headers)
+	if got.Code != http.StatusOK || got.Body.String() != `{"title":"Lab"}` {
+		t.Fatalf("load project: status=%d body=%q", got.Code, got.Body.String())
+	}
+	if got := request(server, http.MethodDelete, "/api/project", nil, headers); got.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("delete project: status=%d", got.Code)
 	}
 }

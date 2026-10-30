@@ -152,7 +152,36 @@ function hideConflict() {
   $('#conflict-banner').hidden = true;
 }
 
+// serverStorage is true when the server keeps a copy of the project (for example in the Home Assistant app).
+let serverStorage = false;
+let serverSaveQueue = Promise.resolve();
+
+function saveProjectToServer(data) {
+  serverSaveQueue = serverSaveQueue.then(async () => {
+    try {
+      const response = await discoveryFetch('api/project', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: data });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      setSaveStatus('Saved');
+    } catch {
+      setSaveStatus('Not saved to server — use Save project', true);
+    }
+  });
+}
+
+async function loadProjectFromServer() {
+  try {
+    const response = await discoveryFetch('api/project');
+    if (response.status === 204) { serverStorage = true; return ''; }
+    if (!response.ok) return '';
+    serverStorage = true;
+    return await response.text();
+  } catch {
+    return '';
+  }
+}
+
 function saveProject(force = false) {
+  if (serverStorage) saveProjectToServer(JSON.stringify(project));
   try {
     const existing = localStorage.getItem(STORAGE_KEY);
     if (!force && hasStorageConflict(existing, lastStored, TAB_ID)) {
@@ -174,7 +203,16 @@ function saveProject(force = false) {
 
 async function loadProject() {
   let fresh = false;
+  const stored = await loadProjectFromServer();
   try {
+    if (stored) {
+      const loaded = parseProject(stored);
+      await verifyCustomLogoDecodes(loaded.customLogos);
+      project = loaded;
+      render();
+      saveProject(true);
+      return;
+    }
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const loaded = parseProject(JSON.parse(raw).data);
@@ -193,7 +231,7 @@ async function loadProject() {
     return;
   }
   render();
-  if (fresh) saveProject(); else setSaveStatus('Saved locally');
+  if (fresh || serverStorage) saveProject(); else setSaveStatus('Saved locally');
 }
 
 function render() {
@@ -1169,7 +1207,7 @@ async function loadNmapStatus(expectedState = discoveryState) {
   if (!state.setup) $('#discovery-network-setup').hidden = true;
   $('#discovery-network-error').hidden = true;
   try {
-    const response = await discoveryFetch('/api/discovery/nmap/status', { signal: controller.signal }, request.apiToken);
+    const response = await discoveryFetch('api/discovery/nmap/status', { signal: controller.signal }, request.apiToken);
     if (response.status === 401) {
       if (metadataRequestCurrent(request, 'statusController')) {
         state.pendingAuthToken = state.requestToken;
@@ -1271,7 +1309,7 @@ async function loadDiscoverySources(preserveStatus = false, expectedState = disc
   $('#discovery-source').disabled = true;
   $('#discovery-scan').disabled = true;
   try {
-    const response = await discoveryFetch('/api/discovery/sources', { signal: controller.signal }, request.apiToken);
+    const response = await discoveryFetch('api/discovery/sources', { signal: controller.signal }, request.apiToken);
     if (response.status === 401) {
       if (metadataRequestCurrent(request, 'sourcesController')) {
         state.dockerSourcesStatus = 'error';
@@ -1548,7 +1586,7 @@ async function scanDiscoverySource() {
   if (!sourceId) return setDiscoveryStatus('Choose a collector first.', true);
   const request = beginDiscoveryRequest('Scanning Docker…', true);
   try {
-    const response = await discoveryFetch('/api/discovery/scan', {
+    const response = await discoveryFetch('api/discovery/scan', {
       method: 'POST', signal: request.controller.signal,
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sourceId }),
     });
@@ -1625,7 +1663,7 @@ async function scanNmapNetwork(retry = null) {
   request.input = structuredClone(input);
   setNetworkScanning(true, request);
   try {
-    const response = await discoveryFetch('/api/discovery/nmap/scan', {
+    const response = await discoveryFetch('api/discovery/nmap/scan', {
       method: 'POST', signal: request.controller.signal,
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input),
     });
@@ -1661,7 +1699,7 @@ async function importNmapXML(file) {
   discoveryState.pendingNmapFile = file;
   try {
     if (file.size > 2_000_000) throw new Error('Nmap XML is larger than 2 MB.');
-    const response = await discoveryFetch(`/api/discovery/nmap?scope=${encodeURIComponent(scope)}`, {
+    const response = await discoveryFetch(`api/discovery/nmap?scope=${encodeURIComponent(scope)}`, {
       method: 'POST', signal: request.controller.signal, headers: { 'Content-Type': 'application/xml' }, body: file,
     });
     if (response.status === 401) {
