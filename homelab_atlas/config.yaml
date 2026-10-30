@@ -14,11 +14,8 @@ ingress_port: 8080
 ingress_stream: false
 panel_icon: mdi:lan
 panel_title: Homelab Atlas
-options:
-  nmap_allowed_cidrs: ""
-  collector_url: ""
-  collector_token: ""
+options: {}
 schema:
   nmap_allowed_cidrs: str?
-  collector_url: url?
+  collector_url: str?
   collector_token: password?
