@@ -1,0 +1,21 @@
+name: Homelab Atlas
+version: "0.12.0-ha1"
+slug: homelab_atlas
+description: Build homelab and home network diagrams from the Home Assistant sidebar
+url: https://github.com/BanterBoy/homelab-atlas
+arch:
+  - amd64
+  - aarch64
+  - armv7
+startup: application
+boot: auto
+ingress: true
+ingress_port: 8080
+ingress_stream: false
+panel_icon: mdi:lan
+panel_title: Homelab Atlas
+options: {}
+schema:
+  nmap_allowed_cidrs: str?
+  collector_url: str?
+  collector_token: password?

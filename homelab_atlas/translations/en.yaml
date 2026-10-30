@@ -1,0 +1,14 @@
+configuration:
+  nmap_allowed_cidrs:
+    name: Networks Nmap may scan
+    description: >-
+      Comma-separated private IPv4 ranges, for example 192.168.1.0/24.
+      Leave empty to turn off network scanning.
+  collector_url:
+    name: Docker collector URL
+    description: >-
+      Optional. Address of a Homelab Atlas collector, ending in /inventory,
+      for example http://192.168.1.20:8081/inventory.
+  collector_token:
+    name: Docker collector token
+    description: The ATLAS_COLLECTOR_TOKEN set on the collector (at least 32 characters).
